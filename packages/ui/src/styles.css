@@ -71,6 +71,7 @@ select {
 }
 
 .nl-card {
+  width: 100%;
   background: var(--nl-surface-raised);
   border: 1px solid var(--nl-border);
   border-radius: var(--nl-radius);

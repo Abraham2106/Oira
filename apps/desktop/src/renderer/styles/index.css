@@ -31,6 +31,7 @@
 
 .page,
 .recording-screen {
+  width: 100%;
   padding: 24px;
 }
 
@@ -38,7 +39,8 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  max-width: 760px;
+  width: 100%;
+  max-width: none;
 }
 
 .field {
@@ -100,10 +102,6 @@
 .recording-idle {
   font-weight: 650;
   color: var(--nl-text);
-}
-
-.recording-screen {
-  max-width: 760px;
 }
 
 .recording-banner {
