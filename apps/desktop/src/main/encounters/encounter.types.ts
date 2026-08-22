@@ -14,10 +14,15 @@ export type EncounterRecord = {
   updatedAt: string
   completedAt: string | null
   transcriptId: string | null
+  label: string
+  visitType: string
 }
 
 export type EncounterPort = {
-  start: () => Promise<{ encounterId: string }>
+  start: (input?: {
+    label?: string
+    visitType?: string
+  }) => Promise<{ encounterId: string; startedAt: string }>
   stop: (encounterId: string) => Promise<{ status: EncounterStatus }>
 }
 

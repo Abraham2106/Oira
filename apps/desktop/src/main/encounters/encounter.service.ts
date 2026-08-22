@@ -32,7 +32,7 @@ export function createEncounterService(
   const createId = deps.createId ?? (() => crypto.randomUUID())
 
   return {
-    async start() {
+    async start(input = {}) {
       const active = await repository.findActive()
       if (active) {
         throw encounterAlreadyActiveError()
@@ -48,6 +48,8 @@ export function createEncounterService(
         updatedAt: now,
         completedAt: null,
         transcriptId: null,
+        label: input.label ?? "",
+        visitType: input.visitType ?? "",
       }
       await repository.insert(created)
 
@@ -59,7 +61,7 @@ export function createEncounterService(
         updatedAt: now,
       }
       await repository.update(recording)
-      return { encounterId: recording.id }
+      return { encounterId: recording.id, startedAt: now }
     },
 
     async stop(encounterId) {

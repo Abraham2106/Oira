@@ -1,5 +1,9 @@
 import { createAuthStub, type SessionPort } from "../auth"
-import { createEncounterService, type EncounterPort } from "../encounters"
+import {
+  createEncounterService,
+  createMemoryEncounterRepository,
+  type EncounterPort,
+} from "../encounters"
 import { createExportStub, type ExportPort } from "../export"
 import { createNotesStub, type NotesPort } from "../notes"
 import { registerAuthIpc } from "./auth.ipc"
@@ -30,9 +34,10 @@ export function createJsonIpcLogger(): IpcLogger {
 }
 
 export function createStubIpcDeps(logger: IpcLogger = createSilentIpcLogger()): IpcDeps {
+  const repository = createMemoryEncounterRepository()
   return {
-    encounters: createEncounterService(),
-    notes: createNotesStub(),
+    encounters: createEncounterService({ repository }),
+    notes: createNotesStub({ encounters: repository }),
     exportNote: createExportStub(),
     session: createAuthStub(),
     logger,

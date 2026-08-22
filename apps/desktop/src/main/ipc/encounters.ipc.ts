@@ -18,7 +18,7 @@ export function registerEncounterIpc(
       schema: startEncounterInputSchema,
       session: deps.session,
       logger: deps.logger,
-      run: () => deps.encounters.start(),
+      run: (input) => deps.encounters.start(input),
     })(raw),
   )
 

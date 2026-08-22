@@ -1,3 +1,4 @@
+import type { ClinicalNote, TranscriptSegment } from "@notalocal/types"
 import type { EncounterStatus } from "../constants/encounter-status"
 import type {
   GenerateNoteInput,
@@ -7,13 +8,9 @@ import type {
 } from "../schemas/ipc.schema"
 import type { Result } from "./result"
 
-export type DraftNote = {
-  encounterId: string
-  body: string
-}
-
 export type StartEncounterResult = {
   encounterId: string
+  startedAt: string
 }
 
 export type StopEncounterResult = {
@@ -21,7 +18,8 @@ export type StopEncounterResult = {
 }
 
 export type GenerateNoteResult = {
-  draft: DraftNote
+  transcript: TranscriptSegment[]
+  note: ClinicalNote
 }
 
 export type SaveNoteResult = {
@@ -29,8 +27,8 @@ export type SaveNoteResult = {
 }
 
 /**
- * IPC contract Justin owns (guide §10.2). Renderer must re-export this,
- * not declare a parallel NotaLocalBridge in packages/types.
+ * IPC contract (guide §10.2). Renderer consumes this via `window.notalocal`.
+ * Draft notes are structured (I4 sections + transcript), not a free-text body.
  */
 export type NotaLocalAPI = {
   startEncounter: (

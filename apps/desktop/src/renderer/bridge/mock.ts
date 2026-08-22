@@ -99,7 +99,7 @@ export function createMockBridge(): DemoBridge {
 
   return {
     async startEncounter() {
-      activeId = `enc-demo-${Date.now()}`
+      activeId = crypto.randomUUID()
       return { encounterId: activeId, startedAt: new Date().toISOString() }
     },
     async stopEncounter(encounterId) {

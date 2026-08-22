@@ -1,4 +1,9 @@
 export {
+  clinicalNoteSchema,
+  fieldValueSchema,
+  transcriptSegmentSchema,
+} from "./clinical.schema"
+export {
   exportNoteInputSchema,
   generateNoteInputSchema,
   lockInputSchema,
