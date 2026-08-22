@@ -50,7 +50,7 @@ Esto significa: **un médico, una computadora, una consulta a la vez.** No hay m
 
 | Persona | Responsabilidad | Frontera con Antonio |
 | --- | --- | --- |
-| **Antonio** | Website, renderer de desktop, design system, UX, investigación de experiencia y privacidad percibida | consume el bridge de `preload`; no entra a `electron/` |
+| **Antonio** | Website, renderer de desktop, design system, UX, investigación de experiencia y privacidad percibida | consume el bridge de `preload`; no entra a `src/main/` ni `src/preload/` |
 | **Justin** | Electron Main, backend local, IPC, SQLite, adapter QVAC | expone `window.notalocal` y los estados reales |
 | **IA** | STT, estructuración, prompts, evaluación | define el **contrato de forma** de transcript y nota |
 
@@ -116,45 +116,60 @@ notalocal/
 │   │       └── styles/
 │   │           └── index.css
 │   │
-│   └── desktop/                  # app Electron
+│   └── desktop/                  # app Electron (electron-vite: src/main + src/preload + src/renderer)
 │       ├── index.html
 │       ├── vite.config.ts
 │       ├── tailwind.config.ts
-│       ├── electron/             # PROPIEDAD DE JUSTIN — Antonio no edita
-│       │   ├── main.ts
-│       │   └── preload.ts
-│       └── src/                  # renderer — PROPIEDAD DE ANTONIO
-│           ├── main.tsx
-│           ├── App.tsx           # shell + máquina de pantallas
-│           ├── screens/          # una carpeta por pantalla del médico
-│           │   ├── DeviceReady/
-│           │   ├── NewConsultation/
-│           │   ├── Recording/
-│           │   ├── Processing/
-│           │   ├── Review/       # transcript + nota + evidencia
-│           │   ├── Export/
-│           │   └── Settings/
-│           ├── components/       # componentes con semántica clínica
-│           │   ├── TranscriptViewer.tsx
-│           │   ├── TranscriptSegment.tsx
-│           │   ├── ClinicalNoteSection.tsx
-│           │   ├── SourceEvidencePopover.tsx
-│           │   ├── AudioRecorder.tsx
-│           │   ├── RecordingTimer.tsx
-│           │   ├── ReviewActions.tsx
-│           │   ├── ExportDialog.tsx
-│           │   ├── PrivacyStatusPanel.tsx
-│           │   └── ModelStatus.tsx
-│           ├── state/
-│           │   ├── encounterMachine.ts   # estados de producto (sección 5)
-│           │   └── useEncounter.ts       # hook único de acceso al estado
-│           ├── bridge/
-│           │   ├── notalocal.ts          # ÚNICO módulo que toca window.notalocal
-│           │   └── mock.ts               # backend falso para desarrollar solo
-│           ├── lib/
-│           │   └── format.ts
-│           └── styles/
-│               └── index.css
+│       └── src/
+│           ├── main/             # PROPIEDAD DE JUSTIN — Antonio no edita
+│           │   ├── config/
+│           │   ├── ipc/
+│           │   ├── encounters/
+│           │   ├── audio/
+│           │   ├── transcription/
+│           │   ├── notes/
+│           │   ├── storage/
+│           │   ├── auth/
+│           │   ├── privacy/
+│           │   ├── export/
+│           │   ├── qvac/
+│           │   ├── logging/
+│           │   └── utils/
+│           ├── preload/          # PROPIEDAD DE JUSTIN — Antonio no edita
+│           ├── shared/           # contrato IPC / Zod — dueño Justin; Antonio consume
+│           ├── tests/            # tests de backend — Justin
+│           └── renderer/         # renderer — PROPIEDAD DE ANTONIO
+│               ├── main.tsx
+│               ├── App.tsx           # shell + máquina de pantallas
+│               ├── screens/          # una carpeta por pantalla del médico
+│               │   ├── DeviceReady/
+│               │   ├── NewConsultation/
+│               │   ├── Recording/
+│               │   ├── Processing/
+│               │   ├── Review/       # transcript + nota + evidencia
+│               │   ├── Export/
+│               │   └── Settings/
+│               ├── components/       # componentes con semántica clínica
+│               │   ├── TranscriptViewer.tsx
+│               │   ├── TranscriptSegment.tsx
+│               │   ├── ClinicalNoteSection.tsx
+│               │   ├── SourceEvidencePopover.tsx
+│               │   ├── AudioRecorder.tsx
+│               │   ├── RecordingTimer.tsx
+│               │   ├── ReviewActions.tsx
+│               │   ├── ExportDialog.tsx
+│               │   ├── PrivacyStatusPanel.tsx
+│               │   └── ModelStatus.tsx
+│               ├── state/
+│               │   ├── encounterMachine.ts   # estados de producto (sección 5)
+│               │   └── useEncounter.ts       # hook único de acceso al estado
+│               ├── bridge/
+│               │   ├── notalocal.ts          # ÚNICO módulo que toca window.notalocal
+│               │   └── mock.ts               # backend falso para desarrollar solo
+│               ├── lib/
+│               │   └── format.ts
+│               └── styles/
+│                   └── index.css
 │
 ├── packages/
 │   ├── ui/                       # design system sin conocimiento clínico
@@ -206,32 +221,32 @@ notalocal/
 - **Qué va:** favicon, imagen OG, capturas de pantalla, binarios de descarga si se sirven estáticamente.
 - **Qué NO va:** ninguna captura que contenga datos reales de un paciente. **Todas las capturas usan datos sintéticos** (ver sección 8).
 
-#### `apps/desktop/electron/`
+#### `apps/desktop/src/main/` y `apps/desktop/src/preload/`
 
 - **Dueño:** Justin.
-- **Qué va:** `main.ts`, `preload.ts`, ventanas, IPC, permisos, arranque de QVAC, SQLite.
+- **Qué va:** proceso Main (servicios, IPC, SQLite, adapter QVAC) y el `contextBridge` cerrado. Entry: `src/main/index.ts`.
 - **Regla para Antonio:** leer sí, editar no. Si el renderer necesita un dato nuevo, se pide un canal nuevo, no se agrega Node al renderer.
 
-#### `apps/desktop/src/screens/`
+#### `apps/desktop/src/renderer/screens/`
 
 - **Qué va:** una carpeta por pantalla, con su componente principal y los subcomponentes que **solo** esa pantalla usa.
 - **Por qué:** el flujo del médico es lineal y con estados; agrupar por pantalla hace obvio dónde vive cada estado visual.
 - **Ejemplo:** `screens/Recording/Recording.tsx` + `screens/Recording/RecordingControls.tsx`.
 - **Qué NO va:** llamadas directas a `window.notalocal` (van vía `bridge/`), ni definiciones de tipos compartidos (van a `packages/types`).
 
-#### `apps/desktop/src/components/`
+#### `apps/desktop/src/renderer/components/`
 
 - **Qué va:** componentes con **semántica clínica** reutilizados entre pantallas: `TranscriptViewer`, `ClinicalNoteSection`, `PrivacyStatusPanel`.
 - **Por qué:** saben qué es un segmento de transcript o una sección SOAP; por eso no pueden vivir en `packages/ui`, que debe seguir siendo genérico.
 - **Qué NO va:** `Button`, `Card`, `Dialog`, tokens de color.
 
-#### `apps/desktop/src/state/`
+#### `apps/desktop/src/renderer/state/`
 
 - **Qué va:** la máquina de estados del encuentro y el hook que la expone. Fuente única de verdad de "en qué punto del flujo estamos".
 - **Por qué:** la sección 5 define nueve estados de producto; si cada pantalla los deduce por su cuenta, la UI se desincroniza del backend.
 - **Qué NO va:** datos clínicos persistidos. El renderer **no** es el dueño de la nota guardada; SQLite lo es.
 
-#### `apps/desktop/src/bridge/`
+#### `apps/desktop/src/renderer/bridge/`
 
 - **Qué va:** `notalocal.ts`, la **única** referencia a `window.notalocal` en todo el renderer, con tipos de `packages/types`. Y `mock.ts`, una implementación falsa del mismo contrato.
 - **Por qué:** dos razones. (1) Antonio puede construir todas las pantallas antes de que el adapter QVAC exista. (2) Cuando Justin cambie una firma, se rompe un archivo, no veinte.
@@ -256,14 +271,14 @@ notalocal/
 
 | Carpeta | Por qué no |
 | --- | --- |
-| `apps/desktop/src/api/` | no hay HTTP en el renderer; el bridge ya cubre la comunicación |
-| `apps/desktop/src/services/` | nombre vacío que acaba siendo un basurero; la lógica vive en `state/` o `bridge/` |
+| `apps/desktop/src/renderer/api/` | no hay HTTP en el renderer; el bridge ya cubre la comunicación |
+| `apps/desktop/src/renderer/services/` | nombre vacío que acaba siendo un basurero; la lógica vive en `state/` o `bridge/` |
 | `apps/*/src/hooks/` | los hooks viven junto a lo que sirven; una carpeta global de hooks no dice nada |
 | `apps/*/src/utils/` | `lib/` con archivos nombrados por tema (`format.ts`) es suficiente y más honesto |
 | `packages/config/` | dos apps no justifican extraer configuración de Tailwind/TS hasta que duela |
 | `packages/store/` | no hay estado global compartido entre website y desktop, y no debería haberlo |
 | `apps/mobile/` | fuera de alcance (sección 15) |
-| `apps/desktop/src/assets/` | los pocos assets del desktop caben en `public/`; evitamos dos lugares para lo mismo |
+| `apps/desktop/src/renderer/assets/` | los pocos assets del desktop caben en `public/`; evitamos dos lugares para lo mismo |
 
 Regla: **una carpeta nueva necesita un párrafo que explique qué va y qué NO va.** Si no se puede escribir ese párrafo, la carpeta no debe existir.
 
@@ -424,7 +439,7 @@ Flujo lineal y predecible. El médico nunca debe preguntarse "¿está grabando?"
 
 Dos familias:
 - `packages/ui` → genéricos, sin dominio clínico, sin estado global.
-- `apps/desktop/src/components` → dominio clínico, presentación de datos que reciben por props.
+- `apps/desktop/src/renderer/components` → dominio clínico, presentación de datos que reciben por props.
 
 **Regla común a todos:** ningún componente llama a `window.notalocal`. Reciben datos y disparan callbacks. La única excepción autorizada es `bridge/`, que no es un componente.
 
@@ -660,7 +675,7 @@ Antonio no configura Electron, pero el renderer es superficie de ataque y muchas
 | Capturas y material de demo | **Antonio** | siempre pacientes ficticios; ninguna captura de una consulta real, en ningún commit |
 | Dependencias | **Antonio** | pocas dependencias en el renderer; nada que cargue recursos remotos en tiempo de ejecución |
 
-**No escribimos configuraciones de seguridad falsas en este documento.** Los valores concretos de CSP, `webPreferences` y permisos los define Justin en `electron/`; esta tabla es el requisito, no la implementación.
+**No escribimos configuraciones de seguridad falsas en este documento.** Los valores concretos de CSP, `webPreferences` y permisos los define Justin en `src/main/` y `src/preload/`; esta tabla es el requisito, no la implementación.
 
 ---
 

@@ -194,34 +194,38 @@ build si se violan estas direcciones. Documentarlo no basta.
 
 ## 2. Estructura de carpetas propuesta
 
+Vive en **`apps/desktop/`** (app Electron del monorepo). Las rutas `src/main/...` de esta guía son relativas a esa app, no a la raíz del repo de documentación.
+
 ```
-src/
-├── main/                    # backend local (proceso Electron Main)
-│   ├── config/
-│   ├── ipc/
-│   ├── encounters/
-│   ├── audio/
-│   ├── transcription/
-│   ├── notes/
-│   ├── storage/
-│   ├── auth/
-│   ├── privacy/
-│   ├── export/
-│   ├── qvac/
-│   ├── logging/
-│   └── utils/
-├── preload/                 # puente cerrado Main ↔ Renderer
-├── renderer/                # React (Antonio)
-├── shared/
-│   ├── schemas/
-│   ├── types/
-│   └── constants/
-└── tests/
+apps/desktop/
+└── src/
+    ├── main/                    # backend local (proceso Electron Main) — Justin
+    │   ├── config/
+    │   ├── ipc/
+    │   ├── encounters/
+    │   ├── audio/
+    │   ├── transcription/
+    │   ├── notes/
+    │   ├── storage/
+    │   ├── auth/
+    │   ├── privacy/
+    │   ├── export/
+    │   ├── qvac/
+    │   ├── logging/
+    │   └── utils/
+    ├── preload/                 # puente cerrado Main ↔ Renderer — Justin
+    ├── renderer/                # React — Antonio (no editar desde backend)
+    ├── shared/
+    │   ├── schemas/
+    │   ├── types/
+    │   └── constants/
+    └── tests/
 ```
 
 **`ASSUMPTION`** Esta estructura es una propuesta de Justin. Difiere del scaffold de `electron-vite`
 únicamente en que subdividimos `src/main/` (el scaffold trae un solo `src/main/index.ts`). Eso es compatible:
 `electron.vite.config.ts` compila `src/main` como un bundle con su entry point, no impone estructura interna.
+No usar `apps/desktop/electron/main.ts`: el entry de Main es `apps/desktop/src/main/index.ts`.
 
 A continuación, para **cada** carpeta: qué va, por qué está separada, responsabilidades, qué NO va, ejemplos
 de archivos.
