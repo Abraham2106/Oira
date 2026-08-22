@@ -14,6 +14,17 @@ Documentación de ingeniería de NotaLocal (desktop local, track QVAC / Tether).
 
 Principio rector del producto: **el agente documenta; el médico decide.**
 
+## Prototipo desktop
+
+Renderer Electron con puente mock (sin QVAC ni website):
+
+```bash
+pnpm install
+pnpm dev:desktop
+```
+
+Flujo: nueva consulta → grabar (simulado) → procesar → revisar borrador → aceptar → copiar.
+
 ## Investigación pendiente
 
 Las tres guías marcan trabajo que **no se resuelve codeando**. Hay prompts listos para un modelo investigador en [`docs/research/`](docs/research/README.md):

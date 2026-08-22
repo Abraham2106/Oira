@@ -1,0 +1,120 @@
+:root {
+  --nl-surface: #f6f4f1;
+  --nl-surface-raised: #fffcf8;
+  --nl-border: #d9d2c8;
+  --nl-text: #1f2430;
+  --nl-text-muted: #5c6573;
+  --nl-accent: #2b5f73;
+  --nl-ok: #2f6f4f;
+  --nl-info: #2b5f73;
+  --nl-warn: #8a5a12;
+  --nl-danger: #8f2d2d;
+  --nl-recording: #b42318;
+  --nl-radius: 8px;
+  font-family:
+    "Segoe UI",
+    system-ui,
+    -apple-system,
+    sans-serif;
+  color: var(--nl-text);
+  background: var(--nl-surface);
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--nl-surface);
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+.nl-button {
+  border: 1px solid var(--nl-border);
+  background: var(--nl-surface-raised);
+  color: var(--nl-text);
+  border-radius: var(--nl-radius);
+  padding: 10px 16px;
+  min-height: 44px;
+  cursor: pointer;
+}
+
+.nl-button:focus-visible {
+  outline: 3px solid var(--nl-accent);
+  outline-offset: 2px;
+}
+
+.nl-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.nl-button-primary {
+  background: var(--nl-accent);
+  border-color: var(--nl-accent);
+  color: #fff;
+}
+
+.nl-button-danger {
+  background: var(--nl-danger);
+  border-color: var(--nl-danger);
+  color: #fff;
+}
+
+.nl-card {
+  background: var(--nl-surface-raised);
+  border: 1px solid var(--nl-border);
+  border-radius: var(--nl-radius);
+  padding: 16px 20px;
+}
+
+.nl-card-title {
+  margin: 0 0 8px;
+  font-size: 1.05rem;
+}
+
+.nl-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 0.875rem;
+  border: 1px solid var(--nl-border);
+  background: var(--nl-surface);
+}
+
+.nl-badge-ok {
+  color: var(--nl-ok);
+  border-color: var(--nl-ok);
+}
+
+.nl-badge-info {
+  color: var(--nl-info);
+  border-color: var(--nl-info);
+}
+
+.nl-badge-warn {
+  color: var(--nl-warn);
+  border-color: var(--nl-warn);
+}
+
+.nl-badge-danger {
+  color: var(--nl-danger);
+  border-color: var(--nl-danger);
+}
+
+.nl-badge-recording {
+  color: #fff;
+  background: var(--nl-recording);
+  border-color: var(--nl-recording);
+}
