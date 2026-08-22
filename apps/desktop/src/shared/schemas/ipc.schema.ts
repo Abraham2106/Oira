@@ -1,6 +1,11 @@
 import { z } from "zod"
 
-export const startEncounterInputSchema = z.object({}).strict()
+export const startEncounterInputSchema = z
+  .object({
+    label: z.string().optional(),
+    visitType: z.string().optional(),
+  })
+  .strict()
 
 export const stopEncounterInputSchema = z
   .object({

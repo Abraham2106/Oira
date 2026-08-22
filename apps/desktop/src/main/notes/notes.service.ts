@@ -1,12 +1,10 @@
+import type { DraftNote } from "../../shared/types/notalocal-api"
 import {
   noteGenerationNotImplementedError,
   noteSaveNotImplementedError,
 } from "../errors/notes"
 
-export type DraftNote = {
-  encounterId: string
-  body: string
-}
+export type { DraftNote }
 
 export type NotesPort = {
   generate: (encounterId: string) => Promise<{ draft: DraftNote }>

@@ -80,15 +80,7 @@ export type Encounter = {
   note: ClinicalNote | null
 }
 
-export type NotaLocalBridge = {
-  startEncounter: (input: {
-    label: string
-    visitType: string
-  }) => Promise<{ encounterId: string; startedAt: string }>
-  stopEncounter: (encounterId: string) => Promise<void>
-  generateNote: (encounterId: string) => Promise<{
-    transcript: TranscriptSegment[]
-    note: ClinicalNote
-  }>
-  saveNote: (encounterId: string, note: ClinicalNote) => Promise<void>
-}
+/**
+ * UI view-model only. The IPC API lives in
+ * `apps/desktop/src/shared/types/notalocal-api.ts` (`NotaLocalAPI`).
+ */
