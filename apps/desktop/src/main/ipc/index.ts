@@ -1,3 +1,4 @@
+import { isAppErrorCode } from "../../shared/constants/app-error-codes"
 import { createAuthStub, type SessionPort } from "../auth"
 import {
   createEncounterService,
@@ -5,6 +6,7 @@ import {
   type EncounterPort,
 } from "../encounters"
 import { createExportStub, type ExportPort } from "../export"
+import type { Logger } from "../logging"
 import { createNotesStub, type NotesPort } from "../notes"
 import { registerAuthIpc } from "./auth.ipc"
 import { registerEncounterIpc } from "./encounters.ipc"
@@ -25,10 +27,18 @@ export function createSilentIpcLogger(): IpcLogger {
   return { call() {} }
 }
 
-export function createJsonIpcLogger(): IpcLogger {
+/** Adapter only: IPC passes scalars, main/logging owns the format (§12). */
+export function createIpcLogger(logger: Logger): IpcLogger {
   return {
     call(entry) {
-      console.info(JSON.stringify({ action: "ipc.handle", ...entry }))
+      logger.log({
+        action: `ipc.${entry.channel}`,
+        status: entry.status,
+        latencyMs: entry.latencyMs,
+        errorCode: isAppErrorCode(entry.errorCode)
+          ? entry.errorCode
+          : undefined,
+      })
     },
   }
 }

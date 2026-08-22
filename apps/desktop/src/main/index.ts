@@ -2,11 +2,12 @@ import { app, BrowserWindow, ipcMain, shell } from "electron"
 import { join } from "node:path"
 import { loadAppConfig } from "./config"
 import {
-  createJsonIpcLogger,
+  createIpcLogger,
   createStubIpcDeps,
   registerIpc,
   type IpcHandle,
 } from "./ipc"
+import { createLogger } from "./logging"
 
 function bindIpcMain(): IpcHandle {
   return (channel, listener) => {
@@ -54,7 +55,10 @@ app.whenReady().then(() => {
     // Prototype still opens if settings/paths fail; Justin owns persistence.
   }
 
-  registerIpc(bindIpcMain(), createStubIpcDeps(createJsonIpcLogger()))
+  registerIpc(
+    bindIpcMain(),
+    createStubIpcDeps(createIpcLogger(createLogger())),
+  )
   createWindow()
 
   app.on("activate", () => {
