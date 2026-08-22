@@ -1,6 +1,9 @@
-import type { NotaLocalBridge } from "@notalocal/types"
-import { createMockBridge } from "./mock"
+import { createMockBridge, type DemoBridge } from "./mock"
 
-export function getBridge(): NotaLocalBridge {
+/**
+ * Prototype UI still uses the in-renderer mock. `window.notalocal` is the
+ * I04 IPC contract (`NotaLocalAPI`) and is not this DemoBridge.
+ */
+export function getBridge(): DemoBridge {
   return createMockBridge()
 }

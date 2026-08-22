@@ -3,9 +3,22 @@ import {
   SECTION_TITLES,
   type ClinicalNote,
   type FieldValue,
-  type NotaLocalBridge,
   type TranscriptSegment,
 } from "@notalocal/types"
+
+/** UI fixture for the renderer prototype — not the Main IPC contract. */
+export type DemoBridge = {
+  startEncounter: (input: {
+    label: string
+    visitType: string
+  }) => Promise<{ encounterId: string; startedAt: string }>
+  stopEncounter: (encounterId: string) => Promise<void>
+  generateNote: (encounterId: string) => Promise<{
+    transcript: TranscriptSegment[]
+    note: ClinicalNote
+  }>
+  saveNote: (encounterId: string, note: ClinicalNote) => Promise<void>
+}
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
@@ -81,7 +94,7 @@ export function formatNoteAsText(note: ClinicalNote): string {
   }).join("\n\n")
 }
 
-export function createMockBridge(): NotaLocalBridge {
+export function createMockBridge(): DemoBridge {
   let activeId: string | null = null
 
   return {
