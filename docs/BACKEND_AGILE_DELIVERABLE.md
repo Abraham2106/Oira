@@ -53,13 +53,16 @@ flowchart TD
 
 ## I01 — Electron Main arranca (sin QVAC)
 
+> Si **no conoces Electron**, lee primero [ELECTRON_GETTING_STARTED.md](ELECTRON_GETTING_STARTED.md)
+> (§0–§3: qué es, analogía, arrancar). El shell **ya existe** en el monorepo; no hace falta scaffoldizar.
+
 **Hecho:** scaffold Electron + TypeScript en `apps/desktop` (Main entry); `contextIsolation: true`, `nodeIntegration: false`; ventana mínima.
 
 **Medible:**
 
-- [ ] `pnpm --filter desktop dev` (o script equivalente) abre la app
-- [ ] Main loguea “ready” sin importar QVAC
-- [ ] `package.json` **no** lista `@qvac/sdk`
+- [ ] `pnpm dev:desktop` (o `pnpm --filter notalocal-desktop dev`) abre la app
+- [ ] Main loguea “ready” (o equivalente visible) sin importar QVAC
+- [ ] `package.json` de desktop **no** lista `@qvac/sdk`
 
 ---
 

@@ -1,2 +1,6 @@
 monorepo-explanation/
 node_modules/
+dist/
+out/
+*.tsbuildinfo
+.DS_Store

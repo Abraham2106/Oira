@@ -1,12 +1,35 @@
 {
   "name": "notalocal-desktop",
   "private": true,
+  "version": "0.0.0",
   "type": "module",
+  "main": "./out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "typecheck": "tsc -p tsconfig.node.json --noEmit && tsc -p tsconfig.web.json --noEmit",
+    "test": "vitest run",
+    "lint": "eslint src/renderer --max-warnings=0"
+  },
   "dependencies": {
+    "@notalocal/types": "workspace:*",
+    "@notalocal/ui": "workspace:*",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@eslint/js": "^9.33.0",
     "@types/node": "^22.17.0",
-    "typescript": "^5.9.2"
+    "@types/react": "^19.1.10",
+    "@types/react-dom": "^19.1.7",
+    "@vitejs/plugin-react": "^5.0.0",
+    "electron": "^37.2.6",
+    "electron-vite": "^4.0.0",
+    "eslint": "^9.33.0",
+    "typescript": "^5.9.2",
+    "typescript-eslint": "^8.39.1",
+    "vite": "^7.1.2",
+    "vitest": "^3.2.4"
   }
 }
