@@ -12,3 +12,9 @@ export {
   toAppError,
 } from "./ipc"
 export { authNotImplementedError } from "./auth"
+export {
+  invalidStructuredOutputError,
+  noteGenerationNotImplementedError,
+  noteSaveNotImplementedError,
+} from "./notes"
+export { exportFailedError, exportNotImplementedError } from "./export"
