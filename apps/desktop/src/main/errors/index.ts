@@ -11,3 +11,4 @@ export {
   notAuthenticatedError,
   toAppError,
 } from "./ipc"
+export { authNotImplementedError } from "./auth"
