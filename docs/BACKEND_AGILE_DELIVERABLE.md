@@ -53,8 +53,8 @@ flowchart TD
 
 ## I01 — Electron Main arranca (sin QVAC)
 
-> Si no sabes cómo arrancar ni gestionar Main/preload/config, lee primero
-> [ELECTRON_GETTING_STARTED.md](ELECTRON_GETTING_STARTED.md). El shell **ya existe** en el monorepo; no hace falta volver a scaffoldizar.
+> Si **no conoces Electron**, lee primero [ELECTRON_GETTING_STARTED.md](ELECTRON_GETTING_STARTED.md)
+> (§0–§3: qué es, analogía, arrancar). El shell **ya existe** en el monorepo; no hace falta scaffoldizar.
 
 **Hecho:** scaffold Electron + TypeScript en `apps/desktop` (Main entry); `contextIsolation: true`, `nodeIntegration: false`; ventana mínima.
 
