@@ -18,3 +18,14 @@ export {
   noteSaveNotImplementedError,
 } from "./notes"
 export { exportFailedError, exportNotImplementedError } from "./export"
+export {
+  encounterAlreadyActiveError,
+  encounterNotFoundError,
+  invalidEncounterTransitionError,
+} from "./encounters"
+export {
+  databaseError,
+  databaseMigrationFailedError,
+  databaseReadFailedError,
+  databaseWriteFailedError,
+} from "./storage"

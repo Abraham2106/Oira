@@ -1,4 +1,7 @@
-import { createAppError } from "../utils/app-error"
+import {
+  encounterAlreadyActiveError,
+  encounterNotFoundError,
+} from "../errors/encounters"
 import { createMemoryEncounterRepository, type EncounterRepository } from "./encounter.repository"
 import { assertTransition } from "./encounter.state"
 import type { EncounterPort, EncounterRecord } from "./encounter.types"
@@ -18,11 +21,7 @@ export type EncounterServiceDeps = {
 }
 
 function notFound(): never {
-  throw createAppError(
-    "INVALID_STATE_TRANSITION",
-    "That encounter does not exist.",
-    { retryable: false },
-  )
+  throw encounterNotFoundError()
 }
 
 export function createEncounterService(
@@ -36,11 +35,7 @@ export function createEncounterService(
     async start() {
       const active = await repository.findActive()
       if (active) {
-        throw createAppError(
-          "INVALID_STATE_TRANSITION",
-          "Only one encounter can be recording or transcribing at a time.",
-          { retryable: false },
-        )
+        throw encounterAlreadyActiveError()
       }
 
       const now = clock.nowIso()
