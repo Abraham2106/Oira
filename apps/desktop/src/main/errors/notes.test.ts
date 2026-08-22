@@ -6,21 +6,22 @@ import {
 import { createNotesStub } from "../notes/notes.service"
 
 describe("errors/notes", () => {
-  it("uses NOT_IMPLEMENTED for unfinished generate/save", () => {
+  it("notes stub still documents unused NOT_IMPLEMENTED constructors", () => {
     expect(noteGenerationNotImplementedError().code).toBe("NOT_IMPLEMENTED")
     expect(noteSaveNotImplementedError().code).toBe("NOT_IMPLEMENTED")
   })
 
-  it("notes stub never returns empty clinical success", async () => {
+  it("notes stub returns seven I4 sections and persists save", async () => {
     const notes = createNotesStub()
-    await expect(notes.generate("00000000-0000-4000-8000-000000000001")).rejects.toMatchObject(
-      { code: "NOT_IMPLEMENTED" },
+    const encounterId = "00000000-0000-4000-8000-000000000001"
+    const generated = await notes.generate(encounterId)
+    expect(Object.keys(generated.note.sections)).toHaveLength(7)
+    const saved = await notes.save({
+      encounterId,
+      note: generated.note,
+    })
+    expect(saved.noteId).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
     )
-    await expect(
-      notes.save({
-        encounterId: "00000000-0000-4000-8000-000000000001",
-        body: "x",
-      }),
-    ).rejects.toMatchObject({ code: "NOT_IMPLEMENTED" })
   })
 })

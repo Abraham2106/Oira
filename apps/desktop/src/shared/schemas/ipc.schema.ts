@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { clinicalNoteSchema } from "./clinical.schema"
 
 export const startEncounterInputSchema = z
   .object({
@@ -22,7 +23,7 @@ export const generateNoteInputSchema = z
 export const saveNoteInputSchema = z
   .object({
     encounterId: z.string().uuid(),
-    body: z.string().min(1),
+    note: clinicalNoteSchema,
   })
   .strict()
 

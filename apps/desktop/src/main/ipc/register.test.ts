@@ -62,19 +62,38 @@ describe("I04 registerIpc", () => {
     })
   })
 
-  it("generateNote is honest NOT_IMPLEMENTED, not an empty draft", async () => {
+  it("generateNote returns a structured draft with seven sections", async () => {
     const ipc = createMemoryIpc()
     registerIpc(ipc.handle, createStubIpcDeps())
-    const started = (await ipc.invoke(IPC_CHANNELS.START_ENCOUNTER, {})) as {
-      data: { encounterId: string }
+    const started = (await ipc.invoke(IPC_CHANNELS.START_ENCOUNTER, {
+      label: "demo",
+    })) as {
+      ok: boolean
+      data: { encounterId: string; startedAt: string }
     }
+
+    expect(started.ok).toBe(true)
+    expect(started.data.startedAt).toEqual(expect.any(String))
 
     const result = (await ipc.invoke(IPC_CHANNELS.GENERATE_NOTE, {
       encounterId: started.data.encounterId,
-    })) as { ok: boolean; error?: { code: string } }
+    })) as {
+      ok: boolean
+      data?: { transcript: unknown[]; note: { sections: Record<string, unknown> } }
+      error?: { code: string }
+    }
 
-    expect(result.ok).toBe(false)
-    expect(result.error?.code).toBe("NOT_IMPLEMENTED")
+    expect(result.ok).toBe(true)
+    expect(result.data?.transcript).toHaveLength(3)
+    expect(Object.keys(result.data?.note.sections ?? {}).sort()).toEqual([
+      "clinical_narrative",
+      "clinician_documented_assessment",
+      "clinician_documented_plan",
+      "follow_up",
+      "relevant_history",
+      "reported_findings",
+      "visit_context",
+    ])
   })
 
   it("preload exposes named methods and no generic invoke", () => {

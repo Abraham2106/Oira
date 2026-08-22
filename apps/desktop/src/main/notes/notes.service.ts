@@ -1,27 +1,47 @@
-import type { DraftNote } from "../../shared/types/notalocal-api"
+import type { ClinicalNote } from "@notalocal/types"
 import {
-  noteGenerationNotImplementedError,
-  noteSaveNotImplementedError,
-} from "../errors/notes"
-
-export type { DraftNote }
+  SYNTHETIC_TRANSCRIPT,
+  syntheticClinicalNote,
+} from "../../shared/fixtures/synthetic-consult"
+import type { GenerateNoteResult } from "../../shared/types/notalocal-api"
+import { encounterNotFoundError } from "../errors/encounters"
+import type { EncounterRepository } from "../encounters/encounter.repository"
 
 export type NotesPort = {
-  generate: (encounterId: string) => Promise<{ draft: DraftNote }>
-  save: (input: { encounterId: string; body: string }) => Promise<{ noteId: string }>
+  generate: (encounterId: string) => Promise<GenerateNoteResult>
+  save: (input: {
+    encounterId: string
+    note: ClinicalNote
+  }) => Promise<{ noteId: string }>
 }
 
-/**
- * Honest stub until I08/I09 mock inference is wired.
- * Never returns ok drafts or invented approved noteIds.
- */
-export function createNotesStub(): NotesPort {
+export type NotesServiceDeps = {
+  encounters?: EncounterRepository
+  createId?: () => string
+}
+
+export function createNotesStub(deps: NotesServiceDeps = {}): NotesPort {
+  const saved = new Map<string, ClinicalNote>()
+  const createId = deps.createId ?? (() => crypto.randomUUID())
+
   return {
-    async generate(_encounterId) {
-      throw noteGenerationNotImplementedError()
+    async generate(encounterId) {
+      if (deps.encounters) {
+        const record = await deps.encounters.getById(encounterId)
+        if (!record) throw encounterNotFoundError()
+      }
+      return {
+        transcript: SYNTHETIC_TRANSCRIPT,
+        note: syntheticClinicalNote(),
+      }
     },
-    async save(_input) {
-      throw noteSaveNotImplementedError()
+    async save(input) {
+      if (deps.encounters) {
+        const record = await deps.encounters.getById(input.encounterId)
+        if (!record) throw encounterNotFoundError()
+      }
+      saved.set(input.encounterId, input.note)
+      return { noteId: createId() }
     },
   }
 }
