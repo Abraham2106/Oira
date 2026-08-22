@@ -26,6 +26,7 @@ type EncounterView = {
   startRecording: () => Promise<void>
   stopRecording: () => Promise<void>
   editNote: (sectionId: keyof ClinicalNote["sections"], text: string) => void
+  toggleReviewed: (sectionId: keyof ClinicalNote["sections"], reviewed: boolean) => void
   acceptNote: () => Promise<void>
   exportNote: () => Promise<void>
   reset: () => void
@@ -112,6 +113,24 @@ export function useEncounter(): EncounterView {
     })
   }, [])
 
+  const toggleReviewed = useCallback(
+    (sectionId: keyof ClinicalNote["sections"], reviewed: boolean) => {
+      setNote((current) => {
+        if (!current) return current
+        return {
+          sections: {
+            ...current.sections,
+            [sectionId]: {
+              ...current.sections[sectionId],
+              reviewed,
+            },
+          },
+        }
+      })
+    },
+    [],
+  )
+
   const acceptNote = useCallback(async () => {
     if (!encounter || !note) return
     try {
@@ -157,6 +176,7 @@ export function useEncounter(): EncounterView {
     startRecording,
     stopRecording,
     editNote,
+    toggleReviewed,
     acceptNote,
     exportNote,
     reset,

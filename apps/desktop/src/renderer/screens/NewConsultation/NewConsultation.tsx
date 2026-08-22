@@ -1,4 +1,5 @@
-import { Button, Card, StatusBadge } from "@notalocal/ui"
+import { Button, Card } from "@notalocal/ui"
+import { ModelStatus } from "../../components/ModelStatus"
 import { PrivacyStatusPanel } from "../../components/PrivacyStatusPanel"
 
 type Props = {
@@ -22,16 +23,29 @@ export function NewConsultationScreen({
 }: Props) {
   return (
     <div className="stack page">
-      <StatusBadge tone="ok" icon="●" label="Inferencia local lista" />
+      <ModelStatus state="LOCAL_INFERENCE_READY" />
       <Card title="Nueva consulta">
-        <p>La grabación no ha comenzado.</p>
+        <ol className="how-steps">
+          <li>Informe al paciente de que va a grabar.</li>
+          <li>Grabe. No hace falta identificador.</li>
+          <li>Revise el borrador. Usted acepta o corrige.</li>
+        </ol>
+        <p className="recording-idle">La grabación no ha comenzado.</p>
         <label className="field">
           Etiqueta opcional
-          <input value={label} onChange={(event) => onLabel(event.target.value)} />
+          <input
+            value={label}
+            onChange={(event) => onLabel(event.target.value)}
+            placeholder="Ej. control de rodilla"
+          />
         </label>
         <label className="field">
           Tipo de consulta (opcional)
-          <input value={visitType} onChange={(event) => onVisitType(event.target.value)} />
+          <input
+            value={visitType}
+            onChange={(event) => onVisitType(event.target.value)}
+            placeholder="Ej. seguimiento"
+          />
         </label>
         <label className="check">
           <input
@@ -44,7 +58,7 @@ export function NewConsultationScreen({
         <Button variant="primary" onClick={onStart} disabled={!informed}>
           Comenzar grabación
         </Button>
-        <p className="muted">Puedes empezar sin etiqueta ni identificador de paciente.</p>
+        <p className="muted">El botón se habilita al marcar el aviso al paciente.</p>
       </Card>
       <Card title="Privacidad (estado actual)">
         <PrivacyStatusPanel

@@ -32,6 +32,11 @@ describe("encounterMachine", () => {
     expect(() => reduceMachine(createMachine("IDLE"), "ACCEPT")).toThrow()
   })
 
+  it("permite descartar una grabación y volver a IDLE", () => {
+    const recording = reduceMachine(createMachine(), "START")
+    expect(reduceMachine(recording, "RESET").state).toBe("IDLE")
+  })
+
   it("enciende el indicador de grabación solo en RECORDING", () => {
     expect(isRecordingIndicatorOn("RECORDING")).toBe(true)
     expect(isRecordingIndicatorOn("IDLE")).toBe(false)

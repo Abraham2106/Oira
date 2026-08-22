@@ -2,9 +2,10 @@ import type { TranscriptSegment } from "@notalocal/types"
 
 type Props = {
   segment: TranscriptSegment
+  highlighted?: boolean
 }
 
-export function TranscriptSegmentView({ segment }: Props) {
+export function TranscriptSegmentView({ segment, highlighted = false }: Props) {
   const minutes = Math.floor(segment.startMs / 60000)
     .toString()
     .padStart(2, "0")
@@ -13,7 +14,10 @@ export function TranscriptSegmentView({ segment }: Props) {
     .padStart(2, "0")
 
   return (
-    <li className="segment">
+    <li
+      id={`segment-${segment.id}`}
+      className={highlighted ? "segment segment-highlighted" : "segment"}
+    >
       <span className="muted">
         {minutes}:{seconds} · {segment.speaker}
       </span>

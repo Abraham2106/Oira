@@ -118,3 +118,22 @@ select {
   background: var(--nl-recording);
   border-color: var(--nl-recording);
 }
+
+.nl-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgb(31 36 48 / 0.45);
+}
+
+.nl-dialog {
+  width: min(520px, 100%);
+  background: var(--nl-surface-raised);
+  border: 1px solid var(--nl-border);
+  border-radius: 12px;
+  padding: 20px 24px;
+  box-shadow: 0 16px 48px rgb(31 36 48 / 0.18);
+}
