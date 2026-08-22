@@ -1,3 +1,5 @@
+> **Long-form pack (IA/QVAC Q1–Q19 + D1–D4).** For a shorter paste, use [`ai-qvac.md`](ai-qvac.md). Always start with [`SYSTEM.md`](SYSTEM.md).
+
 # NotaLocal — Researcher prompts (QVAC §24)
 
 Ready-to-paste briefs for a researcher model. Product: **NotaLocal** — local clinical transcription + structured draft note via QVAC (Tether). Spanish medical ambulatory consults. STT ≠ LLM. Output is a **draft note** for doctor review.

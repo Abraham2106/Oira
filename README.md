@@ -11,3 +11,11 @@ Documentación de ingeniería de NotaLocal (desktop local, track QVAC / Tether).
 | [IA / QVAC transcripción](docs/AI_QVAC_TRANSCRIPTION_GUIDE.md) | IA | STT, estructuración, prompts y evaluación de modelos |
 
 Principio rector del producto: **el agente documenta; el médico decide.**
+
+## Investigación pendiente
+
+Las tres guías marcan trabajo que **no se resuelve codeando**. Hay prompts listos para un modelo investigador en [`docs/research/`](docs/research/README.md):
+
+1. Pega [`docs/research/prompts/SYSTEM.md`](docs/research/prompts/SYSTEM.md)
+2. Pega **un** prompt de [`frontend`](docs/research/prompts/frontend.md), [`backend`](docs/research/prompts/backend.md) o [`ai-qvac`](docs/research/prompts/ai-qvac.md)
+3. El entregable va a `docs/research/<ID>-….md` con fuentes y una decisión
