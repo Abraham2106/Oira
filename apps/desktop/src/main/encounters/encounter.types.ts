@@ -18,6 +18,7 @@ export type EncounterRecord = {
 
 export type EncounterPort = {
   start: () => Promise<{ encounterId: string }>
+  appendChunk: (encounterId: string, chunk: Uint8Array) => Promise<void>
   stop: (encounterId: string) => Promise<{ status: EncounterStatus }>
 }
 

@@ -1,7 +1,11 @@
+import { tmpdir } from "node:os"
+import { join } from "node:path"
+import { createAudioService } from "../audio"
 import { createAuthStub, type SessionPort } from "../auth"
 import { createEncounterService, type EncounterPort } from "../encounters"
 import { createExportStub, type ExportPort } from "../export"
 import { createNotesStub, type NotesPort } from "../notes"
+import { createTranscriptionService } from "../transcription"
 import { registerAuthIpc } from "./auth.ipc"
 import { registerEncounterIpc } from "./encounters.ipc"
 import { registerExportIpc } from "./export.ipc"
@@ -30,8 +34,10 @@ export function createJsonIpcLogger(): IpcLogger {
 }
 
 export function createStubIpcDeps(logger: IpcLogger = createSilentIpcLogger()): IpcDeps {
+  const audio = createAudioService(join(tmpdir(), "notalocal-desktop-audio"))
+  const transcription = createTranscriptionService()
   return {
-    encounters: createEncounterService(),
+    encounters: createEncounterService({ audio, transcription }),
     notes: createNotesStub(),
     exportNote: createExportStub(),
     session: createAuthStub(),

@@ -36,6 +36,13 @@ export const unlockInputSchema = z
 
 export const lockInputSchema = z.object({}).strict()
 
+export const pushAudioChunkInputSchema = z
+  .object({
+    encounterId: z.string().uuid(),
+    chunk: z.custom<Uint8Array>((value) => value instanceof Uint8Array),
+  })
+  .strict()
+
 export type StartEncounterInput = z.infer<typeof startEncounterInputSchema>
 export type StopEncounterInput = z.infer<typeof stopEncounterInputSchema>
 export type GenerateNoteInput = z.infer<typeof generateNoteInputSchema>
@@ -43,3 +50,4 @@ export type SaveNoteInput = z.infer<typeof saveNoteInputSchema>
 export type ExportNoteInput = z.infer<typeof exportNoteInputSchema>
 export type UnlockInput = z.infer<typeof unlockInputSchema>
 export type LockInput = z.infer<typeof lockInputSchema>
+export type PushAudioChunkInput = z.infer<typeof pushAudioChunkInputSchema>

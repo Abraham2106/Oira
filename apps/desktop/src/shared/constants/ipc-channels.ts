@@ -6,6 +6,7 @@ export const IPC_CHANNELS = {
   EXPORT_NOTE: "notalocal:export:note",
   AUTH_UNLOCK: "notalocal:auth:unlock",
   AUTH_LOCK: "notalocal:auth:lock",
+  PUSH_AUDIO_CHUNK: "notalocal:audio:pushChunk",
 } as const
 
 export type IpcChannel = (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS]

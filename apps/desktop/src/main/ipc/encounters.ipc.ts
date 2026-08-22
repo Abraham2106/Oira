@@ -1,5 +1,6 @@
 import { IPC_CHANNELS } from "./channels"
 import {
+  pushAudioChunkInputSchema,
   startEncounterInputSchema,
   stopEncounterInputSchema,
 } from "../../shared/schemas/ipc.schema"
@@ -29,6 +30,17 @@ export function registerEncounterIpc(
       session: deps.session,
       logger: deps.logger,
       run: (input) => deps.encounters.stop(input.encounterId),
+    })(raw),
+  )
+
+  handle(IPC_CHANNELS.PUSH_AUDIO_CHUNK, (_event, raw) =>
+    withValidation({
+      channel: IPC_CHANNELS.PUSH_AUDIO_CHUNK,
+      schema: pushAudioChunkInputSchema,
+      session: deps.session,
+      logger: deps.logger,
+      run: (input) =>
+        deps.encounters.appendChunk(input.encounterId, input.chunk),
     })(raw),
   )
 }
