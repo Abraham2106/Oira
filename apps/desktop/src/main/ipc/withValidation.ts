@@ -1,10 +1,11 @@
 import type { ZodType } from "zod"
 import type { Result } from "../../shared/types/result"
 import {
-  createAppError,
-  isAppError,
-  toSerializableError,
-} from "../utils/app-error"
+  invalidInputError,
+  notAuthenticatedError,
+  toAppError,
+} from "../errors/ipc"
+import { toSerializableError } from "../errors/core"
 import type { SessionPort } from "../auth"
 
 export type IpcLogger = {
@@ -16,17 +17,9 @@ export type IpcLogger = {
   }) => void
 }
 
-const invalidInputError = createAppError(
-  "INVALID_INPUT",
-  "The request was not valid.",
-)
-
-const unauthenticatedError = createAppError(
-  "NOT_AUTHENTICATED",
-  "Unlock the app to continue.",
-)
-
-function failedResult(error: ReturnType<typeof createAppError>): Result<never> {
+function failedResult(
+  error: ReturnType<typeof toAppError>,
+): Result<never> {
   return { ok: false, error: toSerializableError(error) }
 }
 
@@ -44,23 +37,25 @@ export function withValidation<TIn, TOut>(options: {
     const started = Date.now()
     const parsed = schema.safeParse(raw ?? {})
     if (!parsed.success) {
+      const error = invalidInputError()
       logger.call({
         channel,
         status: "error",
         latencyMs: Date.now() - started,
-        errorCode: "INVALID_INPUT",
+        errorCode: error.code,
       })
-      return failedResult(invalidInputError)
+      return failedResult(error)
     }
 
     if (requiresSession && !session.isAuthenticated()) {
+      const error = notAuthenticatedError()
       logger.call({
         channel,
         status: "error",
         latencyMs: Date.now() - started,
-        errorCode: "NOT_AUTHENTICATED",
+        errorCode: error.code,
       })
-      return failedResult(unauthenticatedError)
+      return failedResult(error)
     }
 
     try {
@@ -72,12 +67,7 @@ export function withValidation<TIn, TOut>(options: {
       })
       return { ok: true, data }
     } catch (error) {
-      const appError = isAppError(error)
-        ? error
-        : createAppError("DATABASE_ERROR", "The operation failed.", {
-            retryable: true,
-            cause: error,
-          })
+      const appError = toAppError(error)
       logger.call({
         channel,
         status: "error",
