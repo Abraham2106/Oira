@@ -1,11 +1,11 @@
 import { z } from "zod"
 
-export const startEncounterInputSchema = z
-  .object({
-    label: z.string().optional(),
-    visitType: z.string().optional(),
-  })
-  .strict()
+/**
+ * No fields yet: the encounters table (guide §8.2) has no label/visit_type,
+ * so accepting them would drop them silently. Add them here and to the record
+ * in the same change once persistence exists.
+ */
+export const startEncounterInputSchema = z.object({}).strict()
 
 export const stopEncounterInputSchema = z
   .object({
