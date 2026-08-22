@@ -1,4 +1,8 @@
-export { APP_ERROR_CODES, type AppErrorCode } from "./app-error-codes"
+export {
+  APP_ERROR_CODES,
+  isAppErrorCode,
+  type AppErrorCode,
+} from "./app-error-codes"
 export { IPC_CHANNELS, type IpcChannel } from "./ipc-channels"
 export {
   ACTIVE_ENCOUNTER_STATUSES,
