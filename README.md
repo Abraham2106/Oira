@@ -72,14 +72,14 @@ The renderer talks to the rest of the system only through `src/renderer/bridge/`
 | Area | Owner | Boundary |
 | --- | --- | --- |
 | Website (later), renderer, design system, UX | Antonio | Does not edit `src/main/` or `src/preload/` |
-| Electron Main, IPC, SQLite, QVAC adapter | Justin | Exposes `window.notalocal` and real pipeline state — start with [Electron getting started](docs/ELECTRON_GETTING_STARTED.md) |
+| Electron Main, IPC, SQLite, QVAC adapter | Justin | Exposes `window.notalocal` — if new to Electron, read [Electron from zero](docs/ELECTRON_GETTING_STARTED.md) first |
 | STT, structuring, prompts, evaluation | IA | Defines transcript and note shape |
 
 ## Documentation
 
 | Document | Contents |
 | --- | --- |
-| [Electron getting started](docs/ELECTRON_GETTING_STARTED.md) | How Justin configures and runs Main / preload / config (start here if new to Electron) |
+| [Electron from zero](docs/ELECTRON_GETTING_STARTED.md) | What Electron is, Main/Preload/Renderer, how Justin runs and owns config (no prior Electron knowledge) |
 | [Frontend / UI-UX](docs/FRONTEND_UIUX_GUIDE.md) | Screens, copy, states, and frontend definition of done |
 | [Frontend delivery plan](docs/FRONTEND_AGILE_DELIVERABLE.md) | Twelve measurable frontend iterations |
 | [Backend architecture](docs/BACKEND_DESKTOP_ARCHITECTURE_GUIDE.md) | Main process, IPC, storage, QVAC adapter |
