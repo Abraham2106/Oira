@@ -13,6 +13,3 @@ const notalocal: NotaLocalAPI = {
 }
 
 contextBridge.exposeInMainWorld("notalocal", notalocal)
-contextBridge.exposeInMainWorld("notalocalPrototype", {
-  usesMockBridge: true,
-})
