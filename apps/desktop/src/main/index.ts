@@ -1,6 +1,18 @@
-import { app, BrowserWindow, shell } from "electron"
+import { app, BrowserWindow, ipcMain, shell } from "electron"
 import { join } from "node:path"
 import { loadAppConfig } from "./config"
+import {
+  createJsonIpcLogger,
+  createStubIpcDeps,
+  registerIpc,
+  type IpcHandle,
+} from "./ipc"
+
+function bindIpcMain(): IpcHandle {
+  return (channel, listener) => {
+    ipcMain.handle(channel, listener)
+  }
+}
 
 function createWindow(): void {
   const window = new BrowserWindow({
@@ -42,6 +54,7 @@ app.whenReady().then(() => {
     // Prototype still opens if settings/paths fail; Justin owns persistence.
   }
 
+  registerIpc(bindIpcMain(), createStubIpcDeps(createJsonIpcLogger()))
   createWindow()
 
   app.on("activate", () => {
