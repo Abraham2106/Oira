@@ -16,3 +16,9 @@ export type {
   StopEncounterInput,
   UnlockInput,
 } from "./ipc.schema"
+export {
+  defaultSettings,
+  parseSettings,
+  settingsSchema,
+} from "./settings.schema"
+export type { AppSettings } from "./settings.schema"
