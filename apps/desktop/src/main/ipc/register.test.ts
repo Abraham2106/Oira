@@ -1,6 +1,3 @@
-import { readFileSync } from "node:fs"
-import { dirname, join } from "node:path"
-import { fileURLToPath } from "node:url"
 import { describe, expect, it } from "vitest"
 import { IPC_CHANNELS } from "../../shared/constants/ipc-channels"
 import { createStubIpcDeps, registerIpc, type IpcHandle } from "./index"
@@ -96,16 +93,4 @@ describe("I04 registerIpc", () => {
     ])
   })
 
-  it("preload exposes named methods and no generic invoke", () => {
-    const preloadPath = join(
-      dirname(fileURLToPath(import.meta.url)),
-      "../../preload/index.ts",
-    )
-    const source = readFileSync(preloadPath, "utf8")
-    expect(source).toContain("startEncounter")
-    expect(source).toContain("stopEncounter")
-    expect(source).toContain("generateNote")
-    expect(source).toContain("saveNote")
-    expect(source).not.toMatch(/invoke\(\s*channel/)
-  })
 })

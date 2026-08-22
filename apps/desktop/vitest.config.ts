@@ -3,6 +3,10 @@ import { defineConfig } from "vitest/config"
 export default defineConfig({
   test: {
     environment: "node",
-    include: ["src/renderer/**/*.test.ts", "src/main/**/*.test.ts"],
+    include: [
+      "src/renderer/**/*.test.ts",
+      "src/main/**/*.test.ts",
+      "src/preload/**/*.test.ts",
+    ],
   },
 })
