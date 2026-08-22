@@ -1,0 +1,50 @@
+import { createAuthStub, type SessionPort } from "../auth"
+import { createEncounterService, type EncounterPort } from "../encounters"
+import { createExportStub, type ExportPort } from "../export"
+import { createNotesStub, type NotesPort } from "../notes"
+import { registerAuthIpc } from "./auth.ipc"
+import { registerEncounterIpc } from "./encounters.ipc"
+import { registerExportIpc } from "./export.ipc"
+import { registerNotesIpc } from "./notes.ipc"
+import type { IpcHandle } from "./types"
+import type { IpcLogger } from "./withValidation"
+
+export type IpcDeps = {
+  encounters: EncounterPort
+  notes: NotesPort
+  exportNote: ExportPort
+  session: SessionPort
+  logger: IpcLogger
+}
+
+export function createSilentIpcLogger(): IpcLogger {
+  return { call() {} }
+}
+
+export function createJsonIpcLogger(): IpcLogger {
+  return {
+    call(entry) {
+      console.info(JSON.stringify({ action: "ipc.handle", ...entry }))
+    },
+  }
+}
+
+export function createStubIpcDeps(logger: IpcLogger = createSilentIpcLogger()): IpcDeps {
+  return {
+    encounters: createEncounterService(),
+    notes: createNotesStub(),
+    exportNote: createExportStub(),
+    session: createAuthStub(),
+    logger,
+  }
+}
+
+export function registerIpc(handle: IpcHandle, deps: IpcDeps): void {
+  registerEncounterIpc(handle, deps)
+  registerNotesIpc(handle, deps)
+  registerExportIpc(handle, { exportNote: deps.exportNote, session: deps.session, logger: deps.logger })
+  registerAuthIpc(handle, deps)
+}
+
+export { IPC_CHANNELS } from "./channels"
+export type { IpcHandle } from "./types"

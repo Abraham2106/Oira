@@ -1,0 +1,6 @@
+export { createEncounterService, systemClock } from "./encounter.service"
+export { createMemoryEncounterRepository } from "./encounter.repository"
+export { assertTransition, canTransition } from "./encounter.state"
+export type { EncounterPort, EncounterRecord, EncounterStatus } from "./encounter.types"
+export type { EncounterRepository } from "./encounter.repository"
+export type { Clock, EncounterServiceDeps } from "./encounter.service"
