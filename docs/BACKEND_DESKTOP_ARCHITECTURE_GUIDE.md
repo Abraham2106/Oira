@@ -1,7 +1,9 @@
 # NotaLocal — Guía de arquitectura backend desktop local
 
 > Guía interna de ingeniería para el **responsable de backend (Justin)**.
-> No es un tutorial de Electron. Asume que ya sabes qué es Electron y para qué sirve un proceso Main.
+> No es un tutorial de Electron: asume el modelo mental Main / Preload / Renderer.
+> **Si aún no sabes cómo arrancar la app, configurar rutas/settings o por dónde empezar el Main,**
+> lee primero [ELECTRON_GETTING_STARTED.md](ELECTRON_GETTING_STARTED.md) y luego vuelve aquí.
 >
 > **Principio rector del producto: "El agente documenta. El médico decide."**
 
