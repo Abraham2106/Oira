@@ -7,7 +7,11 @@ import { transcriptionFailedError } from "../errors/inference"
 import type { StructuringPort } from "../inference/port"
 import { QWEN_GENERATION_PARAMS } from "./generation"
 import { CLINICAL_NOTE_JSON_SCHEMA } from "./note-json-schema"
-import { P0_LLM_MODEL_ID } from "./model-ids"
+import {
+  OPTIONAL_LLM_MODEL_ID,
+  resolveLlmModelId,
+  type LlmModelId,
+} from "./model-ids"
 import { buildExtractionPrompt, QWEN_SYSTEM_PROMPT } from "./prompts"
 import { sanitizeQwenNote } from "./sanitize-note"
 import { rejectOnTimeout } from "./watchdog"
@@ -65,25 +69,36 @@ async function drainCompletion(
   return (final.contentText ?? "").trim()
 }
 
-/** On-device Qwen 1.7B: load → json_schema completion → unload → close. */
+function catalogLlm(sdk: typeof import("./sdk"), id: LlmModelId) {
+  const modelSrc =
+    id === OPTIONAL_LLM_MODEL_ID ? sdk.QWEN3_4B_INST_Q4_K_M : sdk.QWEN3_1_7B_INST_Q4
+  if (modelSrc.name !== id) {
+    throw transcriptionFailedError("SMOKE_MODEL_MISMATCH")
+  }
+  return modelSrc
+}
+
+/** On-device Qwen: load → json_schema completion → unload → close. */
 export function createQvacStructuring(): StructuringPort {
   return {
     async structure(input) {
-      const {
-        close,
-        completion,
-        loadModel,
-        unloadModel,
-        QWEN3_1_7B_INST_Q4,
-      } = await import("./sdk")
-      if (QWEN3_1_7B_INST_Q4.name !== P0_LLM_MODEL_ID) {
-        throw transcriptionFailedError("SMOKE_MODEL_MISMATCH")
+      const sdk = await import("./sdk")
+      const { close, completion, loadModel, unloadModel } = sdk
+      let llmId: LlmModelId
+      try {
+        llmId = resolveLlmModelId()
+      } catch (error) {
+        if (error instanceof Error && error.message === "UNKNOWN_LLM") {
+          throw transcriptionFailedError("UNKNOWN_LLM")
+        }
+        throw error
       }
+      const modelSrc = catalogLlm(sdk, llmId)
       assertMemory()
       let modelId: string | undefined
       try {
         modelId = await Promise.race([
-          loadModel({ modelSrc: QWEN3_1_7B_INST_Q4 }),
+          loadModel({ modelSrc }),
           rejectOnTimeout(LOAD_WATCHDOG_MS, () => transcriptionFailedError("LOAD_WATCHDOG")),
         ])
         const run = completion({

@@ -72,6 +72,13 @@ function assertResources() {
   }
 }
 
+function pickQwen(sdk) {
+  const requested = process.env.NOTALOCAL_LLM?.trim()
+  if (!requested || requested === "QWEN3_1_7B_INST_Q4") return sdk.QWEN3_1_7B_INST_Q4
+  if (requested === "QWEN3_4B_INST_Q4_K_M") return sdk.QWEN3_4B_INST_Q4_K_M
+  throw new Error("UNKNOWN_LLM")
+}
+
 function synthesizeWav(wavPath) {
   const scriptPath = `${wavPath}.ps1`
   const escapedWav = wavPath.replaceAll("'", "''")
@@ -367,14 +374,15 @@ if (!process.versions.electron) {
       completion,
       loadModel: loadQwen,
       unloadModel: unloadQwen,
-      QWEN3_1_7B_INST_Q4,
     } = qwenSdk
+    const qwenSrc = pickQwen(qwenSdk)
+    process.stdout.write(`qvac.pipeline llm=${qwenSrc.name}\n`)
     assertResources()
     let qwenModelId
     try {
       qwenModelId = await Promise.race([
         loadQwen({
-          modelSrc: QWEN3_1_7B_INST_Q4,
+          modelSrc: qwenSrc,
           onProgress: (progress) => {
             const percentage = Number(progress.percentage)
             if (Number.isFinite(percentage)) {
@@ -415,6 +423,9 @@ if (!process.versions.electron) {
         rejectOnTimeout(COMPLETION_WATCHDOG_MS, () => new Error("COMPLETION_WATCHDOG")),
       ])
       process.stderr.write("\n")
+      process.stderr.write(
+        `qvac.pipeline tokensPerSecond=${raw.stats?.tokensPerSecond ?? "n/a"} backendDevice=${raw.stats?.backendDevice ?? "n/a"}\n`,
+      )
       const parsed = sanitizeDump(JSON.parse(raw.contentText), spokenLines, whisperSegments)
       process.stdout.write(`qvac.pipeline note=${JSON.stringify(parsed, null, 2)}\n`)
     } finally {

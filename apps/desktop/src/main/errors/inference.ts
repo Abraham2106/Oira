@@ -5,7 +5,7 @@ export function modelNotReadyError(): AppError {
     "MODEL_NOT_READY",
     "Local inference is not available in this build.",
     {
-      hint: "Set NOTALOCAL_INFERENCE=mock for fixtures. qvac runs Whisper small then Qwen 1.7B.",
+      hint: "Set NOTALOCAL_INFERENCE=mock for fixtures. qvac runs Whisper small then Qwen 1.7B (4B instruct via NOTALOCAL_LLM).",
       retryable: false,
     },
   )

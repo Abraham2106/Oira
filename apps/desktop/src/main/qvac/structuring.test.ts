@@ -1,5 +1,5 @@
 import { SECTION_IDS } from "@notalocal/types"
-import { describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 import { createQvacStructuring } from "./structuring"
 
 function emptyField() {
@@ -37,9 +37,14 @@ vi.mock("./sdk", () => ({
   unloadModel: vi.fn(async () => undefined),
   close: vi.fn(async () => undefined),
   QWEN3_1_7B_INST_Q4: { name: "QWEN3_1_7B_INST_Q4" },
+  QWEN3_4B_INST_Q4_K_M: { name: "QWEN3_4B_INST_Q4_K_M" },
 }))
 
 describe("createQvacStructuring", () => {
+  beforeEach(() => {
+    delete process.env.NOTALOCAL_LLM
+  })
+
   it("loadModel → completion json_schema → unloadModel → close", async () => {
     const sdk = await import("./sdk")
     const port = createQvacStructuring()
@@ -53,6 +58,11 @@ describe("createQvacStructuring", () => {
     expect(note.sections.visit_context.presence).toBe("STATED")
     expect(Object.keys(note.sections)).toHaveLength(SECTION_IDS.length)
     expect(sdk.loadModel).toHaveBeenCalledOnce()
+    expect(sdk.loadModel).toHaveBeenCalledWith(
+      expect.objectContaining({
+        modelSrc: expect.objectContaining({ name: "QWEN3_1_7B_INST_Q4" }),
+      }),
+    )
     expect(sdk.completion).toHaveBeenCalledWith(
       expect.objectContaining({
         modelId: "llm-1",
@@ -159,5 +169,26 @@ describe("createQvacStructuring", () => {
         transcript: [{ id: "seg-1", speaker: null, startMs: 0, text: "Hola." }],
       }),
     ).rejects.toMatchObject({ code: "INVALID_STRUCTURED_OUTPUT" })
+  })
+
+  it("loads 4B instruct when NOTALOCAL_LLM selects it", async () => {
+    const previous = process.env.NOTALOCAL_LLM
+    process.env.NOTALOCAL_LLM = "QWEN3_4B_INST_Q4_K_M"
+    try {
+      const sdk = await import("./sdk")
+      vi.mocked(sdk.loadModel).mockClear()
+      const port = createQvacStructuring()
+      await port.structure({
+        transcript: [{ id: "seg-1", speaker: null, startMs: 0, text: "Dolor de rodilla." }],
+      })
+      expect(sdk.loadModel).toHaveBeenCalledWith(
+        expect.objectContaining({
+          modelSrc: expect.objectContaining({ name: "QWEN3_4B_INST_Q4_K_M" }),
+        }),
+      )
+    } finally {
+      if (previous == null) delete process.env.NOTALOCAL_LLM
+      else process.env.NOTALOCAL_LLM = previous
+    }
   })
 })
