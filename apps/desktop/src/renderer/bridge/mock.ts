@@ -11,6 +11,7 @@ import {
   defaultSettings,
   type AppSettings,
 } from "../../shared/schemas/settings.schema"
+import { DEMO_AUTH_PROFILE, type AuthProfile, type AuthSessionState } from "../../shared/types/auth-profile"
 
 /** UI fixture for the renderer prototype — not the Main IPC contract. */
 export type DemoBridge = {
@@ -31,6 +32,9 @@ export type DemoBridge = {
   saveNote: (encounterId: string, note: ClinicalNote) => Promise<void>
   getSettings: () => Promise<AppSettings>
   saveSettings: (input: { uiLocale: AppSettings["uiLocale"] }) => Promise<AppSettings>
+  googleSignIn: () => Promise<AuthProfile>
+  signOut: () => Promise<{ signedOut: true }>
+  getAuthSession: () => Promise<AuthSessionState>
   onInferenceProgress: (listener: (event: InferenceProgress) => void) => () => void
 }
 
@@ -111,6 +115,7 @@ export function formatNoteAsText(note: ClinicalNote): string {
 export function createMockBridge(): DemoBridge {
   let activeId: string | null = null
   let settings: AppSettings = { ...defaultSettings }
+  let signedIn = false
 
   return {
     async startEncounter() {
@@ -144,6 +149,21 @@ export function createMockBridge(): DemoBridge {
     async saveSettings(next) {
       settings = { ...settings, ...next }
       return { ...settings }
+    },
+    async googleSignIn() {
+      await wait(600)
+      signedIn = true
+      return { ...DEMO_AUTH_PROFILE }
+    },
+    async signOut() {
+      signedIn = false
+      return { signedOut: true }
+    },
+    async getAuthSession() {
+      return {
+        authenticated: signedIn,
+        profile: signedIn ? { ...DEMO_AUTH_PROFILE } : null,
+      }
     },
   }
 }

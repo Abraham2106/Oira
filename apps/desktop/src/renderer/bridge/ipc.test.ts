@@ -46,6 +46,20 @@ describe("adaptOiraApi", () => {
           uiLocale: "es",
         },
       }),
+      googleSignIn: async () => ({
+        ok: true,
+        data: {
+          subject: "s1",
+          email: "d@example.com",
+          displayName: "Demo Physician",
+          pictureUrl: null,
+        },
+      }),
+      signOut: async () => ({ ok: true, data: { signedOut: true } }),
+      getAuthSession: async () => ({
+        ok: true,
+        data: { authenticated: true, profile: null },
+      }),
       onInferenceProgress: () => () => {},
     }
 
@@ -59,6 +73,10 @@ describe("adaptOiraApi", () => {
     await bridge.appendAudio({ encounterId, sequence: 0, pcm: [0, 0] })
     expect((await bridge.getSettings()).uiLocale).toBe("en")
     expect((await bridge.saveSettings({ uiLocale: "es" })).uiLocale).toBe("es")
+    const profile = await bridge.googleSignIn()
+    expect(profile.email).toBe("d@example.com")
+    await bridge.signOut()
+    expect((await bridge.getAuthSession()).authenticated).toBe(true)
     const stop = bridge.onInferenceProgress(() => {})
     stop()
   })
@@ -94,6 +112,18 @@ describe("adaptOiraApi", () => {
         error: { code: "INVALID_INPUT", message: "x", retryable: false },
       }),
       saveSettings: async () => ({
+        ok: false,
+        error: { code: "INVALID_INPUT", message: "x", retryable: false },
+      }),
+      googleSignIn: async () => ({
+        ok: false,
+        error: { code: "INVALID_INPUT", message: "x", retryable: false },
+      }),
+      signOut: async () => ({
+        ok: false,
+        error: { code: "INVALID_INPUT", message: "x", retryable: false },
+      }),
+      getAuthSession: async () => ({
         ok: false,
         error: { code: "INVALID_INPUT", message: "x", retryable: false },
       }),

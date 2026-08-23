@@ -41,6 +41,15 @@ export function adaptOiraApi(api: OiraApi): DemoBridge {
     async saveSettings(settings) {
       return unwrap(api.saveSettings(settings))
     },
+    async googleSignIn() {
+      return unwrap(api.googleSignIn())
+    },
+    async signOut() {
+      return unwrap(api.signOut())
+    },
+    async getAuthSession() {
+      return unwrap(api.getAuthSession())
+    },
     onInferenceProgress(listener: (event: InferenceProgress) => void) {
       return api.onInferenceProgress(listener)
     },

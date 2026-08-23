@@ -18,6 +18,11 @@ const oira: OiraApi = {
   getSettings: () => ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_GET, {}),
   saveSettings: (input) =>
     ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_SAVE, input),
+  googleSignIn: () =>
+    ipcRenderer.invoke(IPC_CHANNELS.AUTH_GOOGLE_START, {}),
+  signOut: () => ipcRenderer.invoke(IPC_CHANNELS.AUTH_SIGN_OUT, {}),
+  getAuthSession: () =>
+    ipcRenderer.invoke(IPC_CHANNELS.AUTH_SESSION_GET, {}),
   onInferenceProgress: (listener) => {
     const wrapped = (_event: unknown, payload: InferenceProgress) => {
       listener(payload)

@@ -42,3 +42,9 @@ export const saveSettingsInputSchema = z
     uiLocale: languageSchema,
   })
   .strict()
+
+export const googleSignInInputSchema = z.object({}).strict()
+
+export const signOutInputSchema = z.object({}).strict()
+
+export const getAuthSessionInputSchema = z.object({}).strict()

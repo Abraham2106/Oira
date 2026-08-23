@@ -1,8 +1,22 @@
-import { Card } from "@oira/ui"
+import { Button, Card } from "@oira/ui"
+import type { AuthProfile } from "../../../shared/types/auth-profile"
+import { getBridge } from "../../bridge/oira"
 import { useI18n } from "../../i18n/I18nProvider"
 
-export function TeamScreen() {
+type Props = {
+  profile: AuthProfile | null
+  onSignedOut: () => void
+}
+
+export function TeamScreen({ profile, onSignedOut }: Props) {
+  const bridge = getBridge()
   const { t } = useI18n()
+
+  async function handleSignOut() {
+    await bridge.signOut().catch(() => undefined)
+    onSignedOut()
+  }
+
   return (
     <div className="page config-page">
       <header className="config-header">
@@ -14,6 +28,11 @@ export function TeamScreen() {
       </header>
 
       <Card title={t("team.currentSession")}>
+        {profile ? (
+          <p className="muted">
+            {t("team.signedInAs")}: {profile.displayName} ({profile.email})
+          </p>
+        ) : null}
         <dl className="privacy">
           <div className="privacy-row">
             <dt>{t("team.professionalDt")}</dt>
@@ -28,6 +47,7 @@ export function TeamScreen() {
             <dd>{t("team.authorizationDd")}</dd>
           </div>
         </dl>
+        <Button onClick={() => void handleSignOut()}>{t("team.signOut")}</Button>
       </Card>
 
       <Card title={t("team.whoDoesWhat")}>

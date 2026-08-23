@@ -7,6 +7,9 @@ export const IPC_CHANNELS = {
   EXPORT_NOTE: "notalocal:export:note",
   AUTH_UNLOCK: "notalocal:auth:unlock",
   AUTH_LOCK: "notalocal:auth:lock",
+  AUTH_GOOGLE_START: "notalocal:auth:google:start",
+  AUTH_SIGN_OUT: "notalocal:auth:sign-out",
+  AUTH_SESSION_GET: "notalocal:auth:session:get",
 
   SETTINGS_GET: "notalocal:settings:get",
   SETTINGS_SAVE: "notalocal:settings:save",

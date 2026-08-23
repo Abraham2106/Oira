@@ -7,7 +7,7 @@ import {
   defaultAudioTempDir,
   type AudioTempStore,
 } from "../audio"
-import { createAuthStub, type SessionPort } from "../auth"
+import { createAuthStub, createDemoGoogleAuthPort, type GoogleAuthPort, type SessionPort } from "../auth"
 import {
   createEncounterService,
   createMemoryEncounterRepository,
@@ -39,6 +39,7 @@ export type IpcDeps = {
   notes: NotesPort
   exportNote: ExportPort
   session: SessionPort
+  googleAuth?: GoogleAuthPort
   logger: IpcLogger
   audio: AudioTempStore
   settings: SettingsPort
@@ -112,6 +113,7 @@ export function createStubIpcDeps(
     }),
     exportNote: createExportStub(),
     session: createAuthStub(),
+    googleAuth: createDemoGoogleAuthPort(),
     logger,
     audio,
     settings:
@@ -130,7 +132,11 @@ export function registerIpc(handle: IpcHandle, deps: IpcDeps): void {
     session: deps.session,
     logger: deps.logger,
   })
-  registerAuthIpc(handle, deps)
+  registerAuthIpc(handle, {
+    session: deps.session,
+    googleAuth: deps.googleAuth,
+    logger: deps.logger,
+  })
   registerSettingsIpc(handle, deps)
 }
 

@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { Button } from "@oira/ui"
 import type { SectionId } from "@oira/types"
+import type { AuthSessionState } from "../shared/types/auth-profile"
 import { formatNoteAsText } from "./bridge/mock"
+import { getBridge } from "./bridge/oira"
 import { FlowStepper } from "./components/FlowStepper"
 import { Icon, type IconName } from "./components/icons"
 import { flowStepFromState } from "./lib/consultFlow"
@@ -10,6 +12,7 @@ import { useI18n } from "./i18n/I18nProvider"
 import { DashboardScreen } from "./screens/Dashboard/Dashboard"
 import { ExportScreen } from "./screens/Export/Export"
 import { DeviceReadyScreen } from "./screens/DeviceReady/DeviceReady"
+import { LoginScreen } from "./screens/Login/Login"
 import { NewConsultationScreen } from "./screens/NewConsultation/NewConsultation"
 import { NotesListScreen } from "./screens/NotesList/NotesList"
 import { PatientsScreen } from "./screens/Patients/Patients"
@@ -47,7 +50,24 @@ export function App() {
   const [activeSectionId, setActiveSectionId] = useState<SectionId | null>(null)
   const [highlightedIds, setHighlightedIds] = useState<string[]>([])
   const [history, setHistory] = useState<PatientHistoryEntry[]>(() => sampleHistory())
+  const [auth, setAuth] = useState<AuthSessionState>({
+    authenticated: false,
+    profile: null,
+  })
   const recordedExportRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    getBridge()
+      .getAuthSession()
+      .then((session) => {
+        if (!cancelled) setAuth(session)
+      })
+      .catch(() => undefined)
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const busy = BUSY_STATES.has(encounter.productState)
   const inReview = REVIEW_STATES.has(encounter.productState)
@@ -153,6 +173,14 @@ export function App() {
   }
 
   const showFlow = ready && view === "consult"
+
+  if (!auth.authenticated) {
+    return (
+      <LoginScreen
+        onSignedIn={(profile) => setAuth({ authenticated: true, profile })}
+      />
+    )
+  }
 
   return (
     <div className="shell">
@@ -341,7 +369,12 @@ export function App() {
           <PatientsScreen entries={history} onStartNew={startNewConsult} />
         ) : null}
 
-        {ready && !settingsOpen && view === "team" ? <TeamScreen /> : null}
+        {ready && !settingsOpen && view === "team" ? (
+          <TeamScreen
+            profile={auth.profile}
+            onSignedOut={() => setAuth({ authenticated: false, profile: null })}
+          />
+        ) : null}
       </div>
     </div>
   )

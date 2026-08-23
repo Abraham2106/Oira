@@ -10,6 +10,10 @@ import type {
 import type { InferenceProgress } from "./inference-progress"
 import type { Result } from "./result"
 import type { AppSettings } from "../schemas/settings.schema"
+import type {
+  AuthProfile,
+  AuthSessionState,
+} from "./auth-profile"
 
 export type StartEncounterResult = {
   encounterId: string
@@ -57,6 +61,9 @@ export type OiraApi = {
   saveSettings: (input: {
     uiLocale: AppSettings["uiLocale"]
   }) => Promise<Result<AppSettings>>
+  googleSignIn: () => Promise<Result<AuthProfile>>
+  signOut: () => Promise<Result<{ signedOut: true }>>
+  getAuthSession: () => Promise<Result<AuthSessionState>>
   onInferenceProgress: (
     listener: (event: InferenceProgress) => void,
   ) => () => void

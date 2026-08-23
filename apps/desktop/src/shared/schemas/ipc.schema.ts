@@ -1,11 +1,20 @@
 import { z } from "zod"
 import { clinicalNoteSchema } from "./clinical.schema"
 import {
+  getAuthSessionInputSchema,
   getSettingsInputSchema,
+  googleSignInInputSchema,
   saveSettingsInputSchema,
+  signOutInputSchema,
 } from "./settings.schema"
 
-export { getSettingsInputSchema, saveSettingsInputSchema }
+export {
+  getAuthSessionInputSchema,
+  getSettingsInputSchema,
+  googleSignInInputSchema,
+  saveSettingsInputSchema,
+  signOutInputSchema,
+}
 
 export const startEncounterInputSchema = z
   .object({
