@@ -2,23 +2,10 @@ import { readFile } from "node:fs/promises"
 import type { TranscriptSegment } from "../../shared/types/transcript"
 import { createAppError } from "../utils/app-error"
 import { assertWavFile, wavDataDurationMs } from "../audio/audio.format"
+import { asSttJob, type SttPort } from "../qvac/stt.port"
 
-export type SttResult = {
-  requestId: string
-  segments: TranscriptSegment[]
-  audioDurationMs: number
-}
-
-export type SttJob = Promise<SttResult> & { requestId: string }
-
-export type SttPort = {
-  transcribeFile: (wavPath: string) => SttJob
-  cancel: (requestId: string) => Promise<void>
-}
-
-export function asSttJob(requestId: string, work: Promise<SttResult>): SttJob {
-  return Object.assign(work, { requestId })
-}
+export type { SttJob, SttPort, SttResult } from "../qvac/stt.port"
+export { asSttJob } from "../qvac/stt.port"
 
 /** Deterministic stand-in. Does not import @qvac/sdk. Fails if the WAV is missing or invalid. */
 export function createMockSttPort(): SttPort {

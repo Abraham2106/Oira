@@ -31,6 +31,7 @@ import { registerExportIpc } from "./export.ipc"
 import { registerNotesIpc } from "./notes.ipc"
 import { registerPrivacyIpc } from "./privacy.ipc"
 import type { IpcHandle } from "./types"
+import { createIpcLogger, createLogger } from "../logging"
 import type { IpcLogger } from "./withValidation"
 
 export type IpcDeps = {
@@ -47,11 +48,7 @@ export function createSilentIpcLogger(): IpcLogger {
 }
 
 export function createJsonIpcLogger(): IpcLogger {
-  return {
-    call(entry) {
-      console.info(JSON.stringify({ action: "ipc.handle", ...entry }))
-    },
-  }
+  return createIpcLogger(createLogger())
 }
 
 export function createStubIpcDeps(logger: IpcLogger = createSilentIpcLogger()): IpcDeps {

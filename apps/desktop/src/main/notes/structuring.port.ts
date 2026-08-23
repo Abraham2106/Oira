@@ -1,6 +1,6 @@
-export type StructuringPort = {
-  complete: (input: { prompt: string; transcriptText: string }) => Promise<string>
-}
+import type { StructuringPort } from "../qvac/structuring.port"
+
+export type { StructuringPort }
 
 /** Empty facts: the mock must not invent clinical content. */
 export function createMockStructuringPort(): StructuringPort {

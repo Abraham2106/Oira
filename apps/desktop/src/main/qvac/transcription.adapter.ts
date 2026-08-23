@@ -1,4 +1,4 @@
-import { asSttJob, type SttJob, type SttPort } from "../transcription/stt.port"
+import { asSttJob, type SttJob, type SttPort } from "./stt.port"
 import type { QvacClient } from "./qvac.client"
 import { createAppError } from "../utils/app-error"
 

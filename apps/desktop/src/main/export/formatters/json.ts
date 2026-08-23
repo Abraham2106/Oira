@@ -1,23 +1,9 @@
-import { z } from "zod"
-import { structuredClinicalFactsSchema } from "../../../shared/schemas/clinical.schema"
-import { approvedNoteSchema } from "../../../shared/schemas/notes.schema"
+import { exportJsonPayloadSchema } from "../../../shared/schemas/export.schema"
 import type { ApprovedNote } from "../../../shared/types/notes"
 import type { StructuredClinicalFacts } from "../../../shared/schemas/clinical.schema"
 
-export const exportJsonPayloadSchema = z
-  .object({
-    note: approvedNoteSchema,
-    facts: structuredClinicalFactsSchema.nullable(),
-    model: z
-      .object({
-        name: z.string().nullable(),
-        promptVersion: z.string().nullable(),
-      })
-      .strict(),
-  })
-  .strict()
-
-export type ExportJsonPayload = z.infer<typeof exportJsonPayloadSchema>
+export { exportJsonPayloadSchema } from "../../../shared/schemas/export.schema"
+export type { ExportJsonPayload } from "../../../shared/schemas/export.schema"
 
 export function formatNoteJson(input: {
   note: ApprovedNote

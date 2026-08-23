@@ -2,6 +2,7 @@ import { z } from "zod"
 import { ENCOUNTER_STATUSES } from "../constants/encounter-status"
 import { draftNoteSchema } from "./notes.schema"
 
+/** MVP: only one encounter may be recording or transcribing. startEncounter composes create()+start() and fails with ENCOUNTER_ACTIVE if another is active. */
 export const startEncounterInputSchema = z.object({}).strict()
 
 export const stopEncounterInputSchema = z

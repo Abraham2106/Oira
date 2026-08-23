@@ -1,17 +1,14 @@
 import { createAppError, isAppError } from "../utils/app-error"
+import { systemClock, type Clock } from "../utils/clock"
+import { createId as newId } from "../utils/id"
 import type { AudioPort } from "../audio"
 import type { TranscriptionPort } from "../transcription"
 import { createMemoryEncounterRepository, type EncounterRepository } from "./encounter.repository"
 import { assertTransition } from "./encounter.state"
 import type { EncounterPort, EncounterRecord, EncounterStatus } from "./encounter.types"
 
-export type Clock = {
-  nowIso: () => string
-}
-
-export const systemClock: Clock = {
-  nowIso: () => new Date().toISOString(),
-}
+export type { Clock }
+export { systemClock }
 
 export type EncounterServiceDeps = {
   repository?: EncounterRepository
@@ -30,12 +27,20 @@ function notFound(): never {
   )
 }
 
+function encounterActive(): never {
+  throw createAppError(
+    "ENCOUNTER_ACTIVE",
+    "Only one encounter can be recording or transcribing at a time.",
+    { retryable: false },
+  )
+}
+
 export function createEncounterService(
   deps: EncounterServiceDeps = {},
 ): EncounterPort {
   const repository = deps.repository ?? createMemoryEncounterRepository()
   const clock = deps.clock ?? systemClock
-  const createId = deps.createId ?? (() => crypto.randomUUID())
+  const createId = deps.createId ?? newId
   const audio = deps.audio
   const transcription = deps.transcription
 
@@ -61,16 +66,20 @@ export function createEncounterService(
     })
   }
 
+  const fail = async (current: EncounterRecord) => {
+    assertTransition(current.status, "failed")
+    const now = clock.nowIso()
+    return persist({
+      ...current,
+      status: "failed",
+      endedAt: current.endedAt ?? now,
+      updatedAt: now,
+    })
+  }
+
   return {
-    async start() {
-      const active = await repository.findActive()
-      if (active) {
-        throw createAppError(
-          "INVALID_STATE_TRANSITION",
-          "Only one encounter can be recording or transcribing at a time.",
-          { retryable: false },
-        )
-      }
+    async create() {
+      if (await repository.findActive()) encounterActive()
 
       const now = clock.nowIso()
       const created: EncounterRecord = {
@@ -84,16 +93,36 @@ export function createEncounterService(
         transcriptId: null,
       }
       await repository.insert(created)
+      return created
+    },
 
-      assertTransition(created.status, "recording")
+    async start(encounterId) {
+      const active = await repository.findActive()
+      if (active && active.id !== encounterId) encounterActive()
+
+      const current = await requireRecord(encounterId)
+      assertTransition(current.status, "recording")
+      const now = clock.nowIso()
       const recording: EncounterRecord = {
-        ...created,
+        ...current,
         status: "recording",
         startedAt: now,
         updatedAt: now,
       }
       await persist(recording)
-      if (audio) await audio.prepare(recording.id)
+
+      try {
+        if (audio) await audio.prepare(recording.id)
+      } catch (error) {
+        await fail(recording)
+        throw isAppError(error)
+          ? error
+          : createAppError("AUDIO_CAPTURE_FAILED", "Audio capture could not start.", {
+              retryable: true,
+              cause: error,
+            })
+      }
+
       return { encounterId: recording.id }
     },
 
@@ -113,7 +142,17 @@ export function createEncounterService(
           { retryable: false },
         )
       }
-      await audio.appendChunk(encounterId, chunk)
+      try {
+        await audio.appendChunk(encounterId, chunk)
+      } catch (error) {
+        await fail(current)
+        throw isAppError(error)
+          ? error
+          : createAppError("AUDIO_CAPTURE_FAILED", "The recording could not be saved.", {
+              retryable: true,
+              cause: error,
+            })
+      }
     },
 
     async get(encounterId) {
@@ -147,7 +186,7 @@ export function createEncounterService(
     },
 
     async markFailed(encounterId) {
-      return move(await requireRecord(encounterId), "failed")
+      return fail(await requireRecord(encounterId))
     },
 
     async stop(encounterId) {
@@ -159,14 +198,7 @@ export function createEncounterService(
           const finalized = await audio.finalize(encounterId)
           wavPath = finalized.wavPath
         } catch (error) {
-          assertTransition(current.status, "failed")
-          const now = clock.nowIso()
-          await persist({
-            ...current,
-            status: "failed",
-            endedAt: now,
-            updatedAt: now,
-          })
+          await fail(current)
           throw isAppError(error)
             ? error
             : createAppError("AUDIO_CAPTURE_FAILED", "The recording could not be saved.", {
@@ -204,13 +236,7 @@ export function createEncounterService(
           .catch(async () => {
             const latest = await repository.getById(encounterId)
             if (!latest || latest.status !== "transcribing") return
-            assertTransition(latest.status, "failed")
-            const failedAt = clock.nowIso()
-            await persist({
-              ...latest,
-              status: "failed",
-              updatedAt: failedAt,
-            })
+            await fail(latest)
           })
       }
 

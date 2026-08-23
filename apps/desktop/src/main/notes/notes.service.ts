@@ -2,6 +2,7 @@ import type { DraftNote, ExportableNote } from "../../shared/types/notes"
 import type { TranscriptRepository } from "../transcription/transcript.repository"
 import type { EncounterPort } from "../encounters"
 import { createAppError, isAppError } from "../utils/app-error"
+import { createId as newId } from "../utils/id"
 import { renderDraftBody } from "./draft"
 import {
   createApprovedVersion,
@@ -35,7 +36,7 @@ export function createNotesService(deps: NotesServiceDeps): NotesPort {
   const notes = deps.notes ?? createMemoryNotesRepository()
   const structuring =
     deps.structuring ?? createStructuringService({ model: deps.model })
-  const createId = deps.createId ?? (() => crypto.randomUUID())
+  const createId = deps.createId ?? newId
   const nowIso = deps.nowIso ?? (() => new Date().toISOString())
 
   return {

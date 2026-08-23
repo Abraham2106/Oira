@@ -1,14 +1,8 @@
 import { isActiveEncounterStatus } from "../../shared/constants/encounter-status"
-import type { EncounterRecord } from "./encounter.types"
+import type { EncounterRecord } from "../../shared/types/encounter"
+import type { EncounterRepository } from "../../shared/types/repositories"
 
-export type EncounterRepository = {
-  insert: (record: EncounterRecord) => Promise<void>
-  getById: (id: string) => Promise<EncounterRecord | undefined>
-  update: (record: EncounterRecord) => Promise<void>
-  findActive: () => Promise<EncounterRecord | undefined>
-  list: () => Promise<EncounterRecord[]>
-  delete: (id: string) => Promise<void>
-}
+export type { EncounterRepository }
 
 export function createMemoryEncounterRepository(): EncounterRepository {
   const byId = new Map<string, EncounterRecord>()

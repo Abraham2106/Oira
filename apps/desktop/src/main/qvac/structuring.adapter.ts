@@ -1,4 +1,4 @@
-import type { StructuringPort } from "../notes/structuring.port"
+import type { StructuringPort } from "./structuring.port"
 import type { QvacClient } from "./qvac.client"
 
 /**

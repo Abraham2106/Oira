@@ -5,7 +5,8 @@ import { createAuthService } from "./auth"
 import { loadAppConfig } from "./config"
 import { createEncounterService } from "./encounters"
 import { createExportService } from "./export"
-import { createJsonIpcLogger, registerIpc } from "./ipc"
+import { registerIpc } from "./ipc"
+import { createIpcLogger, createLogger } from "./logging"
 import { createNotesService } from "./notes"
 import {
   createPurgeService,
@@ -134,7 +135,7 @@ app.whenReady().then(() => {
       }),
       session,
       privacy,
-      logger: createJsonIpcLogger(),
+      logger: createIpcLogger(createLogger({ logsDir: config.paths.logsDir })),
     })
   } catch (error) {
     console.error(

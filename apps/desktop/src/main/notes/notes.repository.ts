@@ -1,15 +1,7 @@
-import type { NoteRecord, NoteVersionRecord } from "./note.versioning"
+import type { NoteRecord, NoteVersionRecord } from "../../shared/types/repositories"
+import type { NotesRepository } from "../../shared/types/repositories"
 
-export type NotesRepository = {
-  getByEncounterId: (
-    encounterId: string,
-  ) => Promise<{ note: NoteRecord; versions: NoteVersionRecord[] } | undefined>
-  insertNote: (note: NoteRecord) => Promise<void>
-  insertVersion: (version: NoteVersionRecord) => Promise<void>
-  updateNote: (note: NoteRecord) => Promise<void>
-  deleteByEncounterId: (encounterId: string) => Promise<void>
-  listEncounterIds: () => Promise<string[]>
-}
+export type { NotesRepository }
 
 export function createMemoryNotesRepository(): NotesRepository {
   const notes = new Map<string, NoteRecord>()

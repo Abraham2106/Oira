@@ -27,7 +27,10 @@ export function registerEncounterIpc(
       requiresSession: true,
       session: deps.session,
       logger: deps.logger,
-      run: () => deps.encounters.start(),
+      run: async () => {
+        const created = await deps.encounters.create()
+        return deps.encounters.start(created.id)
+      },
     })(raw),
   )
 

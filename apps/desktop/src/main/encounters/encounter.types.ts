@@ -2,22 +2,14 @@ import {
   isActiveEncounterStatus,
   type EncounterStatus,
 } from "../../shared/constants/encounter-status"
+import type { EncounterRecord } from "../../shared/types/encounter"
 
 export type { EncounterStatus }
-
-export type EncounterRecord = {
-  id: string
-  status: EncounterStatus
-  createdAt: string
-  startedAt: string | null
-  endedAt: string | null
-  updatedAt: string
-  completedAt: string | null
-  transcriptId: string | null
-}
+export type { EncounterRecord }
 
 export type EncounterPort = {
-  start: () => Promise<{ encounterId: string }>
+  create: () => Promise<EncounterRecord>
+  start: (encounterId: string) => Promise<{ encounterId: string }>
   appendChunk: (encounterId: string, chunk: Uint8Array) => Promise<void>
   stop: (encounterId: string) => Promise<{ status: EncounterStatus }>
   get: (encounterId: string) => Promise<EncounterRecord>
@@ -27,5 +19,4 @@ export type EncounterPort = {
   markCompleted: (encounterId: string) => Promise<EncounterRecord>
   markFailed: (encounterId: string) => Promise<EncounterRecord>
 }
-
 export { isActiveEncounterStatus }

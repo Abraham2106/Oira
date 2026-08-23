@@ -1,27 +1,7 @@
 import type { StructuredClinicalFacts } from "../../shared/schemas/clinical.schema"
+import type { NoteVersionRecord } from "../../shared/types/repositories"
 
-export type NoteVersionKind = "draft" | "approved"
-
-export type NoteRecord = {
-  id: string
-  encounterId: string
-  currentVersionId: string | null
-  approvedVersionId: string | null
-  createdAt: string
-  updatedAt: string
-}
-
-export type NoteVersionRecord = {
-  id: string
-  noteId: string
-  encounterId: string
-  kind: NoteVersionKind
-  body: string
-  facts: StructuredClinicalFacts | null
-  modelName: string | null
-  promptVersion: string | null
-  createdAt: string
-}
+export type { NoteRecord, NoteVersionKind, NoteVersionRecord } from "../../shared/types/repositories"
 
 export function createDraftVersion(input: {
   id: string

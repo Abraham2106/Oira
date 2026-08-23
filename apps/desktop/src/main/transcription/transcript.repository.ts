@@ -1,11 +1,7 @@
 import type { TranscriptRecord } from "../../shared/types/transcript"
+import type { TranscriptRepository } from "../../shared/types/repositories"
 
-export type TranscriptRepository = {
-  insert: (record: TranscriptRecord) => Promise<void>
-  getByEncounterId: (encounterId: string) => Promise<TranscriptRecord | undefined>
-  deleteByEncounterId: (encounterId: string) => Promise<void>
-  listEncounterIds: () => Promise<string[]>
-}
+export type { TranscriptRepository }
 
 export function createMemoryTranscriptRepository(): TranscriptRepository {
   const byEncounter = new Map<string, TranscriptRecord>()

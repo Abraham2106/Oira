@@ -4,8 +4,8 @@ import {
   isActiveEncounterStatus,
   type EncounterStatus,
 } from "../../../shared/constants/encounter-status"
-import type { EncounterRecord } from "../../encounters/encounter.types"
-import type { EncounterRepository } from "../../encounters/encounter.repository"
+import type { EncounterRecord } from "../../../shared/types/encounter"
+import type { EncounterRepository } from "../../../shared/types/repositories"
 import type { SqliteDb } from "../db"
 
 type EncounterRow = {

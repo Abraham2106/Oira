@@ -12,6 +12,7 @@ export const IPC_CHANNELS = {
   AUTH_STATUS: "notalocal:auth:status",
   PUSH_AUDIO_CHUNK: "notalocal:audio:pushChunk",
   STORAGE_INVENTORY: "notalocal:privacy:inventory",
+  EVENT: "notalocal:event",
 } as const
 
 export type IpcChannel = (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS]
