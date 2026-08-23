@@ -2,7 +2,7 @@
 
 <div align="center">
   <a href="https://github.com/Abraham2106/Notas-Medicas-name-pending">
-    <img src="docs/logo.svg" alt="Logo de Oira" width="128">
+    <img src="docs/logo.png" alt="Logo de Oira" width="128">
   </a>
 
   <h1>Oira</h1>
