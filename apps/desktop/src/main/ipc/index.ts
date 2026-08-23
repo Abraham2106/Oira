@@ -30,6 +30,7 @@ import { registerEncounterIpc } from "./encounters.ipc"
 import { registerExportIpc } from "./export.ipc"
 import { registerNotesIpc } from "./notes.ipc"
 import { registerPrivacyIpc } from "./privacy.ipc"
+import { registerTranscriptionIpc } from "./transcription.ipc"
 import type { IpcHandle } from "./types"
 import { createIpcLogger, createLogger } from "../logging"
 import type { IpcLogger } from "./withValidation"
@@ -106,6 +107,7 @@ export function createStubIpcDeps(logger: IpcLogger = createSilentIpcLogger()): 
 
 export function registerIpc(handle: IpcHandle, deps: IpcDeps): void {
   registerEncounterIpc(handle, deps)
+  registerTranscriptionIpc(handle, deps)
   registerNotesIpc(handle, deps)
   registerExportIpc(handle, { exportNote: deps.exportNote, session: deps.session, logger: deps.logger })
   registerAuthIpc(handle, deps)

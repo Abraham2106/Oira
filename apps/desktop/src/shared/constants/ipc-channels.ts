@@ -3,6 +3,7 @@ export const IPC_CHANNELS = {
   STOP_ENCOUNTER: "notalocal:encounters:stop",
   GET_ENCOUNTER: "notalocal:encounters:get",
   DISCARD_ENCOUNTER: "notalocal:encounters:discard",
+  CANCEL_TRANSCRIPTION: "notalocal:transcription:cancel",
   GENERATE_NOTE: "notalocal:notes:generate",
   SAVE_NOTE: "notalocal:notes:save",
   EXPORT_NOTE: "notalocal:export:note",

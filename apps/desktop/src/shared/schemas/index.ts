@@ -1,6 +1,7 @@
 export {
   authStatusInputSchema,
   authStatusOutputSchema,
+  cancelTranscriptionInputSchema,
   discardEncounterInputSchema,
   encounterStatusOutputSchema,
   exportNoteInputSchema,
@@ -25,6 +26,7 @@ export {
 } from "./ipc.schema"
 export type {
   AuthStatusInput,
+  CancelTranscriptionInput,
   DiscardEncounterInput,
   ExportNoteInput,
   GenerateNoteInput,
@@ -51,3 +53,17 @@ export {
 export type { AppSettings } from "./settings.schema"
 export { exportJsonPayloadSchema } from "./export.schema"
 export type { ExportJsonPayload } from "./export.schema"
+export {
+  appErrorEventSchema,
+  encounterStatusEventSchema,
+  modelDownloadProgressEventSchema,
+  rendererEventSchema,
+  transcriptionProgressEventSchema,
+} from "./event.schema"
+export type {
+  AppErrorEvent,
+  EncounterStatusEvent,
+  ModelDownloadProgressEvent,
+  RendererEvent,
+  TranscriptionProgressEvent,
+} from "./event.schema"

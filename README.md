@@ -84,7 +84,7 @@ The renderer talks to the rest of the system only through `src/renderer/bridge/`
 | [Frontend delivery plan](docs/FRONTEND_AGILE_DELIVERABLE.md) | Twelve measurable frontend iterations |
 | [Backend architecture](docs/BACKEND_DESKTOP_ARCHITECTURE_GUIDE.md) | Main process, IPC, storage, QVAC adapter |
 | [Backend delivery plan](docs/BACKEND_AGILE_DELIVERABLE.md) | Twelve measurable backend iterations without `@qvac/sdk` |
-| [Backend skeleton review](docs/BACKEND_SKELETON_REVIEW.md) | What to cut vs keep in the current `config` + `ipc` skeleton |
+| [Revisión: proyecto entero](docs/REVISION_PROYECTO_ENTERO.md) | Why Main and the UI are still two products (was the backend skeleton review) |
 | [AI / QVAC transcription](docs/AI_QVAC_TRANSCRIPTION_GUIDE.md) | Speech-to-text, structuring, prompts, evaluation |
 
 Open research items and researcher prompts live under [`docs/research/`](docs/research/README.md). Each investigation is a single ID, written up with sources and an explicit product decision. Items marked as requiring research must not appear as product claims until that write-up exists.

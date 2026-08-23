@@ -1,12 +1,17 @@
-import { appendFile, readdir, readFile, stat, writeFile } from "node:fs/promises"
+import { createReadStream, createWriteStream } from "node:fs"
+import { appendFile, readdir, stat, writeFile } from "node:fs/promises"
+import { pipeline } from "node:stream/promises"
 import { createAppError, isAppError } from "../utils/app-error"
 import { cleanupEncounterAudio } from "./audio.cleanup"
 import {
   MAX_AUDIO_BYTES,
-  assertWavFile,
-  wrapPcmAsWav,
+  MAX_AUDIO_DURATION_MS,
+  assertPcmWithinLimits,
+  assertWavFileOnDisk,
+  wavHeaderForPcmSize,
 } from "./audio.format"
 import {
+  encounterAudioDir,
   encounterPcmPath,
   encounterWavPath,
   ensureEncounterAudioDir,
@@ -18,6 +23,12 @@ export type AudioPort = {
   finalize: (encounterId: string) => Promise<{ wavPath: string }>
   cleanup: (encounterId: string) => Promise<void>
   listEncounterIds: () => Promise<string[]>
+  encounterDir: (encounterId: string) => string
+}
+
+export type AudioServiceOptions = {
+  maxBytes?: number
+  maxDurationMs?: number
 }
 
 function mapFsError(error: unknown): never {
@@ -37,7 +48,13 @@ function mapFsError(error: unknown): never {
   })
 }
 
-export function createAudioService(audioTempDir: string): AudioPort {
+export function createAudioService(
+  audioTempDir: string,
+  options: AudioServiceOptions = {},
+): AudioPort {
+  const maxBytes = options.maxBytes ?? MAX_AUDIO_BYTES
+  const maxDurationMs = options.maxDurationMs ?? MAX_AUDIO_DURATION_MS
+
   return {
     async prepare(encounterId) {
       await cleanupEncounterAudio(audioTempDir, encounterId)
@@ -50,13 +67,7 @@ export function createAudioService(audioTempDir: string): AudioPort {
       try {
         const current = await stat(pcmPath).catch(() => null)
         const nextSize = (current?.size ?? 0) + chunk.byteLength
-        if (nextSize > MAX_AUDIO_BYTES) {
-          throw createAppError(
-            "AUDIO_CAPTURE_FAILED",
-            "The recording exceeded the size limit.",
-            { retryable: false },
-          )
-        }
+        assertPcmWithinLimits(nextSize, maxBytes, maxDurationMs)
         await appendFile(pcmPath, Buffer.from(chunk))
       } catch (error) {
         if (isAppError(error)) throw error
@@ -68,17 +79,18 @@ export function createAudioService(audioTempDir: string): AudioPort {
       const pcmPath = encounterPcmPath(audioTempDir, encounterId)
       const wavPath = encounterWavPath(audioTempDir, encounterId)
       try {
-        const pcm = await readFile(pcmPath)
-        if (pcm.length === 0) {
+        const pcmInfo = await stat(pcmPath).catch(() => null)
+        if (!pcmInfo || pcmInfo.size === 0) {
           throw createAppError(
             "AUDIO_CAPTURE_FAILED",
             "The recording has no audio data.",
             { retryable: true },
           )
         }
-        const wav = wrapPcmAsWav(pcm)
-        assertWavFile(wav)
-        await writeFile(wavPath, wav)
+        assertPcmWithinLimits(pcmInfo.size, maxBytes, maxDurationMs)
+        await writeFile(wavPath, wavHeaderForPcmSize(pcmInfo.size))
+        await pipeline(createReadStream(pcmPath), createWriteStream(wavPath, { flags: "a" }))
+        await assertWavFileOnDisk(wavPath)
         return { wavPath }
       } catch (error) {
         if (isAppError(error)) throw error
@@ -95,6 +107,10 @@ export function createAudioService(audioTempDir: string): AudioPort {
         () => [],
       )
       return entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name)
+    },
+
+    encounterDir(encounterId) {
+      return encounterAudioDir(audioTempDir, encounterId)
     },
   }
 }

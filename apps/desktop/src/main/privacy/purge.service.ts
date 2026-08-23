@@ -1,6 +1,8 @@
-import type { EncounterRepository } from "../encounters/encounter.repository"
-import type { NotesRepository } from "../notes/notes.repository"
-import type { TranscriptRepository } from "../transcription/transcript.repository"
+import type {
+  EncounterRepository,
+  NotesRepository,
+  TranscriptRepository,
+} from "../../shared/types/repositories"
 
 export type PrivacyAudioPort = {
   cleanup: (encounterId: string) => Promise<void>
@@ -31,6 +33,9 @@ export function createPurgeService(deps: {
   return {
     async purgeAudio(encounterId) {
       await deps.audio.cleanup(encounterId)
+      await deps.encounters.setAudioMeta(encounterId, {
+        audioDeletedAt: new Date().toISOString(),
+      })
     },
 
     async purgeTranscript(encounterId) {

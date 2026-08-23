@@ -47,6 +47,7 @@ async function setupNotes(options?: {
         endMs: 1000,
       },
     ],
+    sttModel: "whisper",
   })
   const notesRepo = createMemoryNotesRepository()
   let nextId = 0
@@ -91,7 +92,7 @@ describe("createNotesService", () => {
   })
 
   it("fails closed when model output does not match the schema", async () => {
-    const { notes, encounters } = await setupNotes({
+    const { notes, notesRepo, encounters } = await setupNotes({
       complete: async () => "not-json",
     })
     await expect(notes.generate(ENCOUNTER_ID)).rejects.toSatisfy(
@@ -99,6 +100,27 @@ describe("createNotesService", () => {
         isAppError(error) && error.code === "INVALID_STRUCTURED_OUTPUT",
     )
     expect((await encounters.get(ENCOUNTER_ID)).status).toBe("failed")
+    expect(await notesRepo.getByEncounterId(ENCOUNTER_ID)).toBeUndefined()
+  })
+
+  it("does not enter drafting when there is no transcript", async () => {
+    const encounterRepo = createMemoryEncounterRepository()
+    await encounterRepo.insert({
+      ...transcribedEncounter(),
+      transcriptId: null,
+    })
+    const encounters = createEncounterService({ repository: encounterRepo })
+    const notes = createNotesService({
+      encounters,
+      transcripts: createMemoryTranscriptRepository(),
+      notes: createMemoryNotesRepository(),
+      model: { complete: async () => "{}" },
+    })
+    await expect(notes.generate(ENCOUNTER_ID)).rejects.toSatisfy(
+      (error: unknown) =>
+        isAppError(error) && error.code === "INVALID_STATE_TRANSITION",
+    )
+    expect((await encounters.get(ENCOUNTER_ID)).status).toBe("transcribed")
   })
 
   it("does not invent facts when the model omits them", async () => {

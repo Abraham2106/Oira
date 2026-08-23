@@ -10,4 +10,6 @@ export type TranscriptRecord = {
   encounterId: string
   text: string
   segments: TranscriptSegment[]
+  /** Logical STT role from model.config, never an SDK catalog constant. */
+  sttModel: string | null
 }

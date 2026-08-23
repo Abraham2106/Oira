@@ -112,7 +112,13 @@ export function createEncounterService(
       await persist(recording)
 
       try {
-        if (audio) await audio.prepare(recording.id)
+        if (audio) {
+          await audio.prepare(recording.id)
+          await repository.setAudioMeta(recording.id, {
+            audioDir: audio.encounterDir(recording.id),
+            audioDeletedAt: null,
+          })
+        }
       } catch (error) {
         await fail(recording)
         throw isAppError(error)
@@ -160,6 +166,7 @@ export function createEncounterService(
     },
 
     async discard(encounterId) {
+      if (transcription) await transcription.cancel(encounterId)
       const current = await requireRecord(encounterId)
       assertTransition(current.status, "discarded")
       const now = clock.nowIso()
@@ -171,6 +178,16 @@ export function createEncounterService(
       if (deps.onDiscarded) await deps.onDiscarded(encounterId)
       else if (audio) await audio.cleanup(encounterId)
       return { status: next.status }
+    },
+
+    async cancelTranscription(encounterId) {
+      if (transcription) await transcription.cancel(encounterId)
+      const latest = await requireRecord(encounterId)
+      if (latest.status === "transcribing") {
+        const failed = await fail(latest)
+        return { status: failed.status }
+      }
+      return { status: latest.status }
     },
 
     async beginDrafting(encounterId) {
@@ -217,6 +234,12 @@ export function createEncounterService(
         updatedAt: now,
       }
       await persist(next)
+      if (current.startedAt) {
+        const durationMs = Date.parse(now) - Date.parse(current.startedAt)
+        if (Number.isFinite(durationMs) && durationMs >= 0) {
+          await repository.setAudioMeta(encounterId, { durationMs })
+        }
+      }
 
       if (transcription && wavPath) {
         void transcription

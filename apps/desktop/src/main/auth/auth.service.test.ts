@@ -10,6 +10,10 @@ describe("pin.hash", () => {
     expect(verifyPin("1234", stored)).toBe(true)
     expect(verifyPin("1235", stored)).toBe(false)
     expect(stored.includes("1234")).toBe(false)
+    expect(verifyPin("1234", "not-json")).toBe(false)
+    expect(verifyPin("1234", JSON.stringify({ alg: "sha256", hash: "x" }))).toBe(
+      false,
+    )
   })
 })
 

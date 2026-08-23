@@ -43,7 +43,8 @@ export async function ensureEncounterAudioDir(
   encounterId: string,
 ): Promise<string> {
   const dir = encounterAudioDir(audioTempDir, encounterId)
-  await mkdir(dir, { recursive: true })
+  // POSIX 0700. Windows ignores mode; do not invent ACL equivalence (R-6).
+  await mkdir(dir, { recursive: true, mode: 0o700 })
   return dir
 }
 

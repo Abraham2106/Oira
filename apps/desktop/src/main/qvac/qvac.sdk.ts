@@ -22,9 +22,15 @@ export type QvacTranscribeResult = {
 }
 
 export type QvacRuntime = {
+  /**
+   * Maps to documented `loadModel({ modelSrc, modelType, onProgress })`.
+   * TODO: VERIFY FROM OFFICIAL QVAC DOCUMENTATION — reload of an already-loaded
+   * modelId and any concurrent-model limit.
+   */
   loadModel: (input: {
     role: ModelRole
     modelSrc: string
+    modelType: "whisper" | "parakeet" | "llm"
   }) => Promise<string>
   unloadModel: (modelId: string) => Promise<void>
   transcribe: (input: {

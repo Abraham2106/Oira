@@ -39,6 +39,7 @@ describe("createPurgeService", () => {
       encounterId: ID,
       text: "secret transcript",
       segments: [],
+      sttModel: "whisper",
     })
     const notes = createMemoryNotesRepository()
     await notes.insertNote({

@@ -75,4 +75,65 @@ describe("createTranscriptionService", () => {
     )
     expect(calls).toBe(1)
   })
+
+  it("does not retry MODEL_NOT_READY even if marked retryable", async () => {
+    let calls = 0
+    const stt: SttPort = {
+      transcribeFile() {
+        calls += 1
+        return asSttJob(
+          "req-model",
+          Promise.reject(
+            createAppError("MODEL_NOT_READY", "stt missing", { retryable: true }),
+          ),
+        )
+      },
+      async cancel() {},
+    }
+    const dir = await mkdtemp(join(tmpdir(), "notalocal-stt-"))
+    const wavPath = join(dir, "capture.wav")
+    await writeFile(wavPath, wrapPcmAsWav(Buffer.alloc(320)))
+    const transcription = createTranscriptionService({ stt })
+    await expect(
+      transcription.transcribe({
+        encounterId: "11111111-1111-4111-8111-111111111111",
+        wavPath,
+      }),
+    ).rejects.toSatisfy(
+      (error: unknown) => isAppError(error) && error.code === "MODEL_NOT_READY",
+    )
+    expect(calls).toBe(1)
+  })
+
+  it("emits progress and cancels an in-flight job without persisting a transcript", async () => {
+    const seen: string[] = []
+    let entered!: () => void
+    const started = new Promise<void>((resolve) => {
+      entered = resolve
+    })
+    const stt: SttPort = {
+      transcribeFile() {
+        entered()
+        return asSttJob("req-cancel", new Promise<SttResult>(() => {}))
+      },
+      async cancel() {},
+    }
+    const dir = await mkdtemp(join(tmpdir(), "notalocal-stt-"))
+    const wavPath = join(dir, "capture.wav")
+    await writeFile(wavPath, wrapPcmAsWav(Buffer.alloc(320)))
+    const transcription = createTranscriptionService({
+      stt,
+      onProgress: (event) => {
+        seen.push(event.status)
+      },
+    })
+    const encounterId = "11111111-1111-4111-8111-111111111111"
+    const pending = transcription.transcribe({ encounterId, wavPath })
+    await started
+    await transcription.cancel(encounterId)
+    await expect(pending).rejects.toSatisfy(
+      (error: unknown) => isAppError(error) && error.code === "OPERATION_CANCELLED",
+    )
+    expect(seen).toEqual(["loading-model", "transcribing", "cancelled"])
+  })
 })

@@ -8,6 +8,8 @@ const api: NotaLocalAPI = {
   getEncounter: (input) => ipcRenderer.invoke(IPC_CHANNELS.GET_ENCOUNTER, input),
   discardEncounter: (input) =>
     ipcRenderer.invoke(IPC_CHANNELS.DISCARD_ENCOUNTER, input),
+  cancelTranscription: (input) =>
+    ipcRenderer.invoke(IPC_CHANNELS.CANCEL_TRANSCRIPTION, input),
   pushAudioChunk: (input) =>
     ipcRenderer.invoke(IPC_CHANNELS.PUSH_AUDIO_CHUNK, input),
   generateNote: (input) => ipcRenderer.invoke(IPC_CHANNELS.GENERATE_NOTE, input),

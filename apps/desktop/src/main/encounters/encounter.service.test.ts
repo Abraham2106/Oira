@@ -31,6 +31,7 @@ function mockAudio(overrides: Partial<AudioPort> = {}): AudioPort {
     finalize: async () => ({ wavPath: "/tmp/encounter.wav" }),
     cleanup: async () => undefined,
     listEncounterIds: async () => [],
+    encounterDir: (id) => `/tmp-audio/${id}`,
     ...overrides,
   }
 }

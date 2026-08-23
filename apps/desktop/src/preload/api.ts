@@ -22,6 +22,9 @@ export type NotaLocalAPI = {
   discardEncounter: (input: {
     encounterId: string
   }) => Promise<Result<{ status: EncounterStatus }>>
+  cancelTranscription: (input: {
+    encounterId: string
+  }) => Promise<Result<{ status: EncounterStatus }>>
   pushAudioChunk: (input: {
     encounterId: string
     chunk: Uint8Array

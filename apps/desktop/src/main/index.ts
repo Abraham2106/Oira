@@ -6,6 +6,7 @@ import { loadAppConfig } from "./config"
 import { createEncounterService } from "./encounters"
 import { createExportService } from "./export"
 import { registerIpc } from "./ipc"
+import { emitToRenderer } from "./ipc/events"
 import { createIpcLogger, createLogger } from "./logging"
 import { createNotesService } from "./notes"
 import {
@@ -67,6 +68,7 @@ app.whenReady().then(() => {
     storage = openAppStorage(config.paths.databaseFile)
     const session = createAuthService({
       pinStore: createSettingsPinStore(storage.settings),
+      idleMs: config.settings.idleLockMs,
     })
     disposeAuth = () => session.dispose()
     const audio = createAudioService(config.paths.audioTempDir)
@@ -80,6 +82,13 @@ app.whenReady().then(() => {
     const transcription = createTranscriptionService({
       transcripts: storage.transcripts,
       stt: createTranscriptionAdapter(qvac),
+      onProgress: (event) => {
+        emitToRenderer({
+          type: "transcription.progress",
+          encounterId: event.encounterId,
+          status: event.status,
+        })
+      },
     })
     const privacy = createPurgeService({
       audio,

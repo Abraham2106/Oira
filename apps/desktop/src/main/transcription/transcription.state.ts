@@ -1,11 +1,6 @@
-export type TranscriptionJobStatus =
-  | "idle"
-  | "loading-model"
-  | "transcribing"
-  | "retrying"
-  | "done"
-  | "cancelled"
-  | "failed"
+import type { TranscriptionJobStatus } from "../../shared/constants/transcription-status"
+
+export type { TranscriptionJobStatus }
 
 export function canMoveTranscription(
   from: TranscriptionJobStatus,

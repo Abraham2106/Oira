@@ -30,5 +30,6 @@ export function createMemoryEncounterRepository(): EncounterRepository {
     async delete(id) {
       byId.delete(id)
     },
+    async setAudioMeta() {},
   }
 }

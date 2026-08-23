@@ -2,6 +2,7 @@ export type { Result, SerializableError } from "./result"
 export type { TranscriptRecord, TranscriptSegment } from "./transcript"
 export type { EncounterRecord } from "./encounter"
 export type {
+  EncounterAudioMeta,
   EncounterRepository,
   NoteRecord,
   NotesRepository,

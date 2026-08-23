@@ -1,7 +1,10 @@
 import type { StructuredClinicalFacts } from "../../../shared/schemas/clinical.schema"
 import { structuredClinicalFactsSchema } from "../../../shared/schemas/clinical.schema"
-import type { NotesRepository } from "../../notes/notes.repository"
-import type { NoteRecord, NoteVersionRecord } from "../../notes/note.versioning"
+import type {
+  NoteRecord,
+  NotesRepository,
+  NoteVersionRecord,
+} from "../../../shared/types/repositories"
 import type { SqliteDb } from "../db"
 
 type NoteRow = {
@@ -132,6 +135,73 @@ export function createSqliteNotesRepository(db: SqliteDb): NotesRepository {
           note.id,
         ],
       )
+    },
+
+    async writeDraft({ note, version, createNote }) {
+      db.transaction(() => {
+        if (createNote) {
+          db.run(
+            `INSERT INTO clinical_notes (
+               id, encounter_id, current_version_id, approved_version_id, created_at, updated_at
+             ) VALUES (?, ?, ?, ?, ?, ?)`,
+            [
+              note.id,
+              note.encounterId,
+              note.currentVersionId,
+              note.approvedVersionId,
+              note.createdAt,
+              note.updatedAt,
+            ],
+          )
+        }
+        db.run(
+          `INSERT INTO note_versions (
+             id, note_id, kind, body, facts_json, model_name, prompt_version, created_at
+           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            version.id,
+            version.noteId,
+            version.kind,
+            version.body,
+            version.facts ? JSON.stringify(version.facts) : null,
+            version.modelName,
+            version.promptVersion,
+            version.createdAt,
+          ],
+        )
+        db.run(
+          `UPDATE clinical_notes SET
+             current_version_id = ?, updated_at = ?
+           WHERE id = ?`,
+          [version.id, version.createdAt, note.id],
+        )
+      })
+    },
+
+    async writeApproved({ note, version }) {
+      db.transaction(() => {
+        db.run(
+          `INSERT INTO note_versions (
+             id, note_id, kind, body, facts_json, model_name, prompt_version, created_at
+           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            version.id,
+            version.noteId,
+            version.kind,
+            version.body,
+            version.facts ? JSON.stringify(version.facts) : null,
+            version.modelName,
+            version.promptVersion,
+            version.createdAt,
+          ],
+        )
+        db.run(
+          `UPDATE clinical_notes SET
+             approved_version_id = ?, updated_at = ?
+           WHERE id = ?`,
+          [version.id, version.createdAt, note.id],
+        )
+      })
     },
 
     async deleteByEncounterId(encounterId) {

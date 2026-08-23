@@ -28,6 +28,27 @@ export function createMemoryNotesRepository(): NotesRepository {
     async updateNote(note) {
       notes.set(note.id, { ...note })
     },
+    async writeDraft({ note, version, createNote }) {
+      if (createNote) notes.set(note.id, { ...note })
+      const list = versions.get(version.noteId) ?? []
+      list.push({ ...version })
+      versions.set(version.noteId, list)
+      notes.set(note.id, {
+        ...note,
+        currentVersionId: version.id,
+        updatedAt: version.createdAt,
+      })
+    },
+    async writeApproved({ note, version }) {
+      const list = versions.get(version.noteId) ?? []
+      list.push({ ...version })
+      versions.set(version.noteId, list)
+      notes.set(note.id, {
+        ...note,
+        approvedVersionId: version.id,
+        updatedAt: version.createdAt,
+      })
+    },
     async deleteByEncounterId(encounterId) {
       for (const [id, note] of notes) {
         if (note.encounterId !== encounterId) continue

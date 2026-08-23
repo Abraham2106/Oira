@@ -58,7 +58,11 @@ export function createQvacClient(deps: QvacClientDeps = {}): QvacClient {
             loaded.delete(other)
           }
         }
-        const modelId = await runtime.loadModel({ role, modelSrc })
+        const modelId = await runtime.loadModel({
+          role,
+          modelSrc,
+          modelType: DEFAULT_MODEL_CONFIG[role].modelType,
+        })
         loaded.set(role, modelId)
         return modelId
       })()

@@ -42,17 +42,16 @@ export function createNotesService(deps: NotesServiceDeps): NotesPort {
   return {
     async generate(encounterId) {
       const encounter = await deps.encounters.get(encounterId)
+      const transcript = await deps.transcripts.getByEncounterId(encounterId)
+      if (!transcript || encounter.transcriptId !== transcript.id) {
+        throw createAppError(
+          "INVALID_STATE_TRANSITION",
+          "There is no transcript for this encounter.",
+          { retryable: false },
+        )
+      }
       await deps.encounters.beginDrafting(encounterId)
       try {
-        const transcript = await deps.transcripts.getByEncounterId(encounterId)
-        if (!transcript || encounter.transcriptId !== transcript.id) {
-          throw createAppError(
-            "INVALID_STATE_TRANSITION",
-            "There is no transcript for this encounter.",
-            { retryable: false },
-          )
-        }
-
         const structured = await structuring.structure(transcript.text)
         const body = renderDraftBody(structured.facts)
         const existing = await notes.getByEncounterId(encounterId)
@@ -67,8 +66,6 @@ export function createNotesService(deps: NotesServiceDeps): NotesPort {
             createdAt,
             updatedAt: createdAt,
           }
-        if (!existing) await notes.insertNote(note)
-
         const version = createDraftVersion({
           id: createId(),
           noteId: note.id,
@@ -79,11 +76,10 @@ export function createNotesService(deps: NotesServiceDeps): NotesPort {
           promptVersion: structured.promptVersion,
           createdAt,
         })
-        await notes.insertVersion(version)
-        await notes.updateNote({
-          ...note,
-          currentVersionId: version.id,
-          updatedAt: createdAt,
+        await notes.writeDraft({
+          note,
+          version,
+          createNote: !existing,
         })
         await deps.encounters.markDrafted(encounterId)
 
@@ -147,11 +143,9 @@ export function createNotesService(deps: NotesServiceDeps): NotesPort {
         body: input.body,
         createdAt,
       })
-      await notes.insertVersion(version)
-      await notes.updateNote({
-        ...existing.note,
-        approvedVersionId: version.id,
-        updatedAt: createdAt,
+      await notes.writeApproved({
+        note: existing.note,
+        version,
       })
       await deps.encounters.markCompleted(input.encounterId)
       if (deps.onApproved) await deps.onApproved(input.encounterId)

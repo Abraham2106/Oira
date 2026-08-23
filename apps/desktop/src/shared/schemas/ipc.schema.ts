@@ -15,6 +15,8 @@ export const getEncounterInputSchema = stopEncounterInputSchema
 
 export const discardEncounterInputSchema = stopEncounterInputSchema
 
+export const cancelTranscriptionInputSchema = stopEncounterInputSchema
+
 export const generateNoteInputSchema = z
   .object({
     encounterId: z.string().uuid(),
@@ -127,6 +129,7 @@ export type StartEncounterInput = z.infer<typeof startEncounterInputSchema>
 export type StopEncounterInput = z.infer<typeof stopEncounterInputSchema>
 export type GetEncounterInput = z.infer<typeof getEncounterInputSchema>
 export type DiscardEncounterInput = z.infer<typeof discardEncounterInputSchema>
+export type CancelTranscriptionInput = z.infer<typeof cancelTranscriptionInputSchema>
 export type GenerateNoteInput = z.infer<typeof generateNoteInputSchema>
 export type SaveNoteInput = z.infer<typeof saveNoteInputSchema>
 export type ExportNoteInput = z.infer<typeof exportNoteInputSchema>

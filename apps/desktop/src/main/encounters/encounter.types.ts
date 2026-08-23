@@ -14,6 +14,7 @@ export type EncounterPort = {
   stop: (encounterId: string) => Promise<{ status: EncounterStatus }>
   get: (encounterId: string) => Promise<EncounterRecord>
   discard: (encounterId: string) => Promise<{ status: EncounterStatus }>
+  cancelTranscription: (encounterId: string) => Promise<{ status: EncounterStatus }>
   beginDrafting: (encounterId: string) => Promise<EncounterRecord>
   markDrafted: (encounterId: string) => Promise<EncounterRecord>
   markCompleted: (encounterId: string) => Promise<EncounterRecord>

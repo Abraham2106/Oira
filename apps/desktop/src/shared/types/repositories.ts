@@ -2,6 +2,12 @@ import type { EncounterRecord } from "./encounter"
 import type { TranscriptRecord } from "./transcript"
 import type { StructuredClinicalFacts } from "../schemas/clinical.schema"
 
+export type EncounterAudioMeta = {
+  audioDir?: string | null
+  audioDeletedAt?: string | null
+  durationMs?: number | null
+}
+
 export type EncounterRepository = {
   insert: (record: EncounterRecord) => Promise<void>
   getById: (id: string) => Promise<EncounterRecord | undefined>
@@ -9,6 +15,7 @@ export type EncounterRepository = {
   findActive: () => Promise<EncounterRecord | undefined>
   list: () => Promise<EncounterRecord[]>
   delete: (id: string) => Promise<void>
+  setAudioMeta: (id: string, meta: EncounterAudioMeta) => Promise<void>
 }
 
 export type TranscriptRepository = {
@@ -48,6 +55,15 @@ export type NotesRepository = {
   insertNote: (note: NoteRecord) => Promise<void>
   insertVersion: (version: NoteVersionRecord) => Promise<void>
   updateNote: (note: NoteRecord) => Promise<void>
+  writeDraft: (input: {
+    note: NoteRecord
+    version: NoteVersionRecord
+    createNote: boolean
+  }) => Promise<void>
+  writeApproved: (input: {
+    note: NoteRecord
+    version: NoteVersionRecord
+  }) => Promise<void>
   deleteByEncounterId: (encounterId: string) => Promise<void>
   listEncounterIds: () => Promise<string[]>
 }

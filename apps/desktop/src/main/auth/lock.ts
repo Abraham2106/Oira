@@ -1,4 +1,6 @@
-export const IDLE_LOCK_MS = 15 * 60 * 1000
+import { DEFAULT_IDLE_LOCK_MS } from "../../shared/constants/auth"
+
+export const IDLE_LOCK_MS = DEFAULT_IDLE_LOCK_MS
 
 export type IdleLock = {
   touch: () => void

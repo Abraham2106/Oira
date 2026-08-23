@@ -113,5 +113,21 @@ export function createSqliteEncounterRepository(db: SqliteDb): EncounterReposito
     async delete(id) {
       db.run("DELETE FROM encounters WHERE id = ?", [id])
     },
+
+    async setAudioMeta(id, meta) {
+      const current = db.get<EncounterRow>(`${SELECT} WHERE e.id = ?`, [id])
+      if (!current) return
+      db.run(
+        `UPDATE encounters SET
+           audio_dir = ?, audio_deleted_at = ?, duration_ms = ?
+         WHERE id = ?`,
+        [
+          meta.audioDir !== undefined ? meta.audioDir : current.audio_dir,
+          meta.audioDeletedAt !== undefined ? meta.audioDeletedAt : current.audio_deleted_at,
+          meta.durationMs !== undefined ? meta.durationMs : current.duration_ms,
+          id,
+        ],
+      )
+    },
   }
 }

@@ -51,7 +51,15 @@ export function createExportService(deps: ExportServiceDeps): ExportPort {
           { retryable: false },
         )
       }
-      const note = approvedNoteSchema.parse(payload.note)
+      const noteParsed = approvedNoteSchema.safeParse(payload.note)
+      if (!noteParsed.success) {
+        throw createAppError(
+          "EXPORT_FAILED",
+          "The approved note failed validation.",
+          { retryable: false },
+        )
+      }
+      const note = noteParsed.data
       if (input.format === "clipboard") {
         deps.clipboard.writeText(formatNoteTxt(note))
         return { exported: true as const }
