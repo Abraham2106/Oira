@@ -6,6 +6,8 @@ export type EncounterRepository = {
   getById: (id: string) => Promise<EncounterRecord | undefined>
   update: (record: EncounterRecord) => Promise<void>
   findActive: () => Promise<EncounterRecord | undefined>
+  list: () => Promise<EncounterRecord[]>
+  delete: (id: string) => Promise<void>
 }
 
 export function createMemoryEncounterRepository(): EncounterRepository {
@@ -27,6 +29,12 @@ export function createMemoryEncounterRepository(): EncounterRepository {
         if (isActiveEncounterStatus(record.status)) return { ...record }
       }
       return undefined
+    },
+    async list() {
+      return [...byId.values()].map((record) => ({ ...record }))
+    },
+    async delete(id) {
+      byId.delete(id)
     },
   }
 }

@@ -1,4 +1,4 @@
-import { appendFile, readFile, stat, writeFile } from "node:fs/promises"
+import { appendFile, readdir, readFile, stat, writeFile } from "node:fs/promises"
 import { createAppError, isAppError } from "../utils/app-error"
 import { cleanupEncounterAudio } from "./audio.cleanup"
 import {
@@ -17,6 +17,7 @@ export type AudioPort = {
   appendChunk: (encounterId: string, chunk: Uint8Array) => Promise<void>
   finalize: (encounterId: string) => Promise<{ wavPath: string }>
   cleanup: (encounterId: string) => Promise<void>
+  listEncounterIds: () => Promise<string[]>
 }
 
 function mapFsError(error: unknown): never {
@@ -87,6 +88,13 @@ export function createAudioService(audioTempDir: string): AudioPort {
 
     async cleanup(encounterId) {
       await cleanupEncounterAudio(audioTempDir, encounterId)
+    },
+
+    async listEncounterIds() {
+      const entries = await readdir(audioTempDir, { withFileTypes: true }).catch(
+        () => [],
+      )
+      return entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name)
     },
   }
 }

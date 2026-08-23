@@ -1,7 +1,9 @@
 import { IPC_CHANNELS } from "./channels"
 import {
   generateNoteInputSchema,
+  generateNoteOutputSchema,
   saveNoteInputSchema,
+  saveNoteOutputSchema,
 } from "../../shared/schemas/ipc.schema"
 import type { NotesPort } from "../notes"
 import type { SessionPort } from "../auth"
@@ -16,6 +18,8 @@ export function registerNotesIpc(
     withValidation({
       channel: IPC_CHANNELS.GENERATE_NOTE,
       schema: generateNoteInputSchema,
+      outputSchema: generateNoteOutputSchema,
+      requiresSession: true,
       session: deps.session,
       logger: deps.logger,
       run: (input) => deps.notes.generate(input.encounterId),
@@ -26,6 +30,8 @@ export function registerNotesIpc(
     withValidation({
       channel: IPC_CHANNELS.SAVE_NOTE,
       schema: saveNoteInputSchema,
+      outputSchema: saveNoteOutputSchema,
+      requiresSession: true,
       session: deps.session,
       logger: deps.logger,
       run: (input) => deps.notes.save(input),

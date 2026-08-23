@@ -3,7 +3,7 @@ import type { AudioPort } from "../audio"
 import type { TranscriptionPort } from "../transcription"
 import { createMemoryEncounterRepository, type EncounterRepository } from "./encounter.repository"
 import { assertTransition } from "./encounter.state"
-import type { EncounterPort, EncounterRecord } from "./encounter.types"
+import type { EncounterPort, EncounterRecord, EncounterStatus } from "./encounter.types"
 
 export type Clock = {
   nowIso: () => string
@@ -19,6 +19,7 @@ export type EncounterServiceDeps = {
   createId?: () => string
   audio?: AudioPort
   transcription?: TranscriptionPort
+  onDiscarded?: (encounterId: string) => Promise<void>
 }
 
 function notFound(): never {
@@ -41,6 +42,23 @@ export function createEncounterService(
   const persist = async (record: EncounterRecord) => {
     await repository.update(record)
     return record
+  }
+
+  const requireRecord = async (encounterId: string) => {
+    const current = await repository.getById(encounterId)
+    if (!current) notFound()
+    return current
+  }
+
+  const move = async (current: EncounterRecord, to: EncounterStatus) => {
+    assertTransition(current.status, to)
+    const now = clock.nowIso()
+    return persist({
+      ...current,
+      status: to,
+      updatedAt: now,
+      completedAt: to === "completed" ? now : current.completedAt,
+    })
   }
 
   return {
@@ -80,8 +98,7 @@ export function createEncounterService(
     },
 
     async appendChunk(encounterId, chunk) {
-      const current = await repository.getById(encounterId)
-      if (!current) notFound()
+      const current = await requireRecord(encounterId)
       if (current.status !== "recording") {
         throw createAppError(
           "INVALID_STATE_TRANSITION",
@@ -99,9 +116,42 @@ export function createEncounterService(
       await audio.appendChunk(encounterId, chunk)
     },
 
+    async get(encounterId) {
+      return requireRecord(encounterId)
+    },
+
+    async discard(encounterId) {
+      const current = await requireRecord(encounterId)
+      assertTransition(current.status, "discarded")
+      const now = clock.nowIso()
+      const next = await persist({
+        ...current,
+        status: "discarded",
+        updatedAt: now,
+      })
+      if (deps.onDiscarded) await deps.onDiscarded(encounterId)
+      else if (audio) await audio.cleanup(encounterId)
+      return { status: next.status }
+    },
+
+    async beginDrafting(encounterId) {
+      return move(await requireRecord(encounterId), "drafting")
+    },
+
+    async markDrafted(encounterId) {
+      return move(await requireRecord(encounterId), "drafted")
+    },
+
+    async markCompleted(encounterId) {
+      return move(await requireRecord(encounterId), "completed")
+    },
+
+    async markFailed(encounterId) {
+      return move(await requireRecord(encounterId), "failed")
+    },
+
     async stop(encounterId) {
-      const current = await repository.getById(encounterId)
-      if (!current) notFound()
+      const current = await requireRecord(encounterId)
 
       let wavPath: string | undefined
       if (audio) {

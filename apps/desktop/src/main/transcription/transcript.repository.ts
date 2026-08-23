@@ -3,6 +3,8 @@ import type { TranscriptRecord } from "../../shared/types/transcript"
 export type TranscriptRepository = {
   insert: (record: TranscriptRecord) => Promise<void>
   getByEncounterId: (encounterId: string) => Promise<TranscriptRecord | undefined>
+  deleteByEncounterId: (encounterId: string) => Promise<void>
+  listEncounterIds: () => Promise<string[]>
 }
 
 export function createMemoryTranscriptRepository(): TranscriptRepository {
@@ -16,6 +18,12 @@ export function createMemoryTranscriptRepository(): TranscriptRepository {
       return found
         ? { ...found, segments: [...found.segments] }
         : undefined
+    },
+    async deleteByEncounterId(encounterId) {
+      byEncounter.delete(encounterId)
+    },
+    async listEncounterIds() {
+      return [...byEncounter.keys()]
     },
   }
 }

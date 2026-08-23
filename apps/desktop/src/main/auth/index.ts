@@ -1,2 +1,5 @@
-export { createAuthStub } from "./auth.service"
-export type { SessionPort } from "./auth.service"
+export { createAuthService, IDLE_LOCK_MS } from "./auth.service"
+export { createMemoryPinStore } from "./pin-store"
+export { hashPin, verifyPin } from "./pin.hash"
+export type { SessionPort, AuthStatus, AuthServiceDeps } from "./auth.service"
+export type { PinHashStore } from "./pin-store"

@@ -32,10 +32,12 @@ export function createTranscriptionService(deps?: {
   stt?: SttPort
   transcripts?: TranscriptRepository
   onProgress?: (event: TranscriptionProgress) => void
+  timeoutMs?: (audioDurationMs: number) => number
 }): TranscriptionPort {
   const stt = deps?.stt ?? createMockSttPort()
   const transcripts = deps?.transcripts ?? createMemoryTranscriptRepository()
   const onProgress = deps?.onProgress
+  const resolveTimeout = deps?.timeoutMs ?? transcriptionTimeoutMs
 
   const emit = (encounterId: string, status: TranscriptionJobStatus) => {
     onProgress?.({ encounterId, status })
@@ -64,7 +66,7 @@ export function createTranscriptionService(deps?: {
         )
       })
       assertWavFile(wav)
-      const timeoutMs = transcriptionTimeoutMs(wavDataDurationMs(wav))
+      const timeoutMs = resolveTimeout(wavDataDurationMs(wav))
 
       move("loading-model")
       move("transcribing")
@@ -76,9 +78,11 @@ export function createTranscriptionService(deps?: {
           move("transcribing")
         }
         let timeoutId: ReturnType<typeof setTimeout> | undefined
+        const job = stt.transcribeFile(wavPath)
         try {
           const timeout = new Promise<never>((_, reject) => {
             timeoutId = setTimeout(() => {
+              void stt.cancel(job.requestId)
               reject(
                 createAppError("TRANSCRIPTION_FAILED", "Transcription timed out.", {
                   retryable: true,
@@ -86,7 +90,7 @@ export function createTranscriptionService(deps?: {
               )
             }, timeoutMs)
           })
-          const result = await Promise.race([stt.transcribeFile(wavPath), timeout])
+          const result = await Promise.race([job, timeout])
           const text = result.segments.map((segment) => segment.text).join(" ").trim()
           const record: TranscriptRecord = {
             id: crypto.randomUUID(),
