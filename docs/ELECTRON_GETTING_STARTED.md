@@ -84,7 +84,7 @@ El monorepo **ya tiene** Electron + React + TypeScript en `apps/desktop/`.
 
 ### Requisitos
 
-- Node `>= 20` (más adelante, para QVAC: `>= 22.17` y npm `>= 10.9`)
+- Node `>= 22.17` y npm `>= 10.9`
 - pnpm 10 (ver `packageManager` en el `package.json` raíz)
 
 ### Comandos
@@ -266,7 +266,7 @@ Fuente: <https://docs.qvac.tether.io/tutorials/electron/>
 | --- | --- |
 | Main + preload + IPC | Sí |
 | Aislamiento del renderer | Sí (ya está) |
-| Instalar `@qvac/sdk` y cargar modelos | **No** en el primer entregable (solo mock) |
+| Instalar `@qvac/sdk` y cargar modelos | Pin 0.17.1; Whisper small en `generateNote` (`language: es`) |
 | UI chat del tutorial | **No** (renderer de Antonio) |
 | Empaquetar con Forge + plugin QVAC | **Después** |
 

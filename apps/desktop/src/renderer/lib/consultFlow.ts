@@ -37,7 +37,7 @@ export function filterTranscript(
   return segments.filter((segment) => {
     return (
       segment.text.toLowerCase().includes(needle) ||
-      segment.speaker.toLowerCase().includes(needle)
+      (segment.speaker?.toLowerCase().includes(needle) ?? false)
     )
   })
 }

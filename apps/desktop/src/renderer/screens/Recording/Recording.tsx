@@ -21,7 +21,7 @@ export function RecordingScreen({ startedAtMs, onStop, onDiscard }: Props) {
       <p>Hable con el paciente. Esta pista es de prototipo: no se envía audio a un servidor.</p>
       <PrivacyStatusPanel
         rows={[
-          { label: "Grabación", value: "Activa en este equipo (simulada)" },
+          { label: "Grabación", value: "Activa en este equipo" },
           { label: "Procesamiento", value: "Aún no" },
           { label: "Proveedor de IA remoto", value: "DESCONOCIDO" },
           { label: "Almacenamiento", value: "DESCONOCIDO" },
@@ -40,7 +40,7 @@ export function RecordingScreen({ startedAtMs, onStop, onDiscard }: Props) {
         title="¿Descartar esta grabación?"
         onClose={() => setConfirmDiscard(false)}
       >
-        <p>No se generará nota. En este prototipo no hay audio persistido que borrar.</p>
+        <p>No se generará nota. El audio temporal de esta consulta se descarta.</p>
         <div className="actions">
           <Button
             variant="danger"

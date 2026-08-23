@@ -13,7 +13,7 @@ export const fieldValueSchema = z
 export const transcriptSegmentSchema = z
   .object({
     id: z.string().min(1),
-    speaker: z.enum(["Médico", "Paciente"]),
+    speaker: z.enum(["Médico", "Paciente"]).nullable(),
     startMs: z.number().int().nonnegative(),
     text: z.string(),
   })

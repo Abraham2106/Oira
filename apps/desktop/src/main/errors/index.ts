@@ -17,6 +17,13 @@ export {
   noteGenerationNotImplementedError,
   noteSaveNotImplementedError,
 } from "./notes"
+export { modelNotReadyError, transcriptionFailedError } from "./inference"
+export {
+  audioCaptureFailedError,
+  audioFormatUnsupportedError,
+  audioTooLargeError,
+  pathTraversalBlockedError,
+} from "./audio"
 export { exportFailedError, exportNotImplementedError } from "./export"
 export {
   encounterAlreadyActiveError,

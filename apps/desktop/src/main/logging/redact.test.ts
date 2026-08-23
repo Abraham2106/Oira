@@ -8,10 +8,18 @@ describe("logging/redact", () => {
         segments: 12,
         retryable: true,
         format: "txt",
+        nodeMajor: 22,
+        qvacNodeOk: true,
         diagnosis: "angina inestable",
         segmentsText: "dolor torácico",
       }),
-    ).toEqual({ segments: 12, retryable: true, format: "txt" })
+    ).toEqual({
+      segments: 12,
+      retryable: true,
+      format: "txt",
+      nodeMajor: 22,
+      qvacNodeOk: true,
+    })
   })
 
   it("allows string values only from the declared closed set", () => {

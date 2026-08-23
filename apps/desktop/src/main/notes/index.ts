@@ -1,2 +1,6 @@
-export { createNotesStub } from "./notes.service"
-export type { NotesPort, NotesServiceDeps } from "./notes.service"
+export { createNotesService, createNotesStub } from "./notes.service"
+export type {
+  NotesPipelineDeps,
+  NotesPort,
+  NotesServiceDeps,
+} from "./notes.service"

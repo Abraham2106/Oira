@@ -9,9 +9,16 @@
   },
   "packageManager": "pnpm@10.33.3",
   "engines": {
-    "node": ">=20"
+    "node": ">=22.17"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["electron", "esbuild"]
+    "onlyBuiltDependencies": ["electron", "esbuild", "@qvac/sdk"],
+    "packageExtensions": {
+      "bare-runtime-win32-x64": {
+        "dependencies": {
+          "require-asset": "^1.0.2"
+        }
+      }
+    }
   }
 }

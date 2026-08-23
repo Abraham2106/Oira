@@ -7,6 +7,7 @@ export default defineConfig({
       "src/renderer/**/*.test.ts",
       "src/main/**/*.test.ts",
       "src/preload/**/*.test.ts",
+      "src/shared/**/*.test.ts",
     ],
   },
 })

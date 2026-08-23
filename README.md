@@ -21,7 +21,7 @@ Do not publish legal, compliance, or performance claims from this prototype. Pri
 
 ## Requirements
 
-- Node.js 20 or later
+- Node.js 22.17 or later (host and Electron-embedded runtime)
 - [pnpm](https://pnpm.io/) 10 (see `packageManager` in the root `package.json`)
 
 ## Setup

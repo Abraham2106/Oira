@@ -30,6 +30,17 @@ describe("consultFlow", () => {
     expect(hits).toHaveLength(1)
     expect(hits[0]?.text).toContain("<script>")
     expect(filterTranscript(poisoned, "rodilla")).toHaveLength(1)
+    const unattributed = filterTranscript(
+      [{ ...poisoned[0]!, speaker: null, text: "segmento sin rol" }],
+      "médico",
+    )
+    expect(unattributed).toHaveLength(0)
+    expect(
+      filterTranscript(
+        [{ id: "n", speaker: null, startMs: 0, text: "fiebre" }],
+        "fiebre",
+      ),
+    ).toHaveLength(1)
   })
 
   it("cuenta secciones sin revisar y cita origen literal", () => {

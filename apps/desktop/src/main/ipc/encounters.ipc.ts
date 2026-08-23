@@ -3,6 +3,7 @@ import {
   startEncounterInputSchema,
   stopEncounterInputSchema,
 } from "../../shared/schemas/ipc.schema"
+import type { AudioTempStore } from "../audio"
 import type { EncounterPort } from "../encounters"
 import type { SessionPort } from "../auth"
 import { withValidation, type IpcLogger } from "./withValidation"
@@ -10,7 +11,12 @@ import type { IpcHandle } from "./types"
 
 export function registerEncounterIpc(
   handle: IpcHandle,
-  deps: { encounters: EncounterPort; session: SessionPort; logger: IpcLogger },
+  deps: {
+    encounters: EncounterPort
+    session: SessionPort
+    logger: IpcLogger
+    audio?: AudioTempStore
+  },
 ): void {
   handle(IPC_CHANNELS.START_ENCOUNTER, (_event, raw) =>
     withValidation({
@@ -18,7 +24,11 @@ export function registerEncounterIpc(
       schema: startEncounterInputSchema,
       session: deps.session,
       logger: deps.logger,
-      run: (input) => deps.encounters.start(input),
+      run: async (input) => {
+        const started = await deps.encounters.start(input)
+        deps.audio?.prepare(started.encounterId)
+        return started
+      },
     })(raw),
   )
 
@@ -28,7 +38,11 @@ export function registerEncounterIpc(
       schema: stopEncounterInputSchema,
       session: deps.session,
       logger: deps.logger,
-      run: (input) => deps.encounters.stop(input.encounterId),
+      run: async (input) => {
+        const stopped = await deps.encounters.stop(input.encounterId)
+        deps.audio?.finalize(input.encounterId)
+        return stopped
+      },
     })(raw),
   )
 }

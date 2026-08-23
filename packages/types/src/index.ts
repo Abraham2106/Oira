@@ -60,9 +60,14 @@ export type FieldValue = {
   reviewed: boolean
 }
 
+export const SPEAKER_ROLES = ["Médico", "Paciente"] as const
+
+export type SpeakerRole = (typeof SPEAKER_ROLES)[number]
+
 export type TranscriptSegment = {
   id: string
-  speaker: "Médico" | "Paciente"
+  /** P0 Whisper has no diarization — null until a human binds a role. */
+  speaker: SpeakerRole | null
   startMs: number
   text: string
 }
