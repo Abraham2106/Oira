@@ -7,6 +7,10 @@ import {
 } from "@oira/types"
 
 import type { InferenceProgress } from "../../shared/types/inference-progress"
+import {
+  defaultSettings,
+  type AppSettings,
+} from "../../shared/schemas/settings.schema"
 
 /** UI fixture for the renderer prototype — not the Main IPC contract. */
 export type DemoBridge = {
@@ -25,6 +29,8 @@ export type DemoBridge = {
     note: ClinicalNote
   }>
   saveNote: (encounterId: string, note: ClinicalNote) => Promise<void>
+  getSettings: () => Promise<AppSettings>
+  saveSettings: (input: { uiLocale: AppSettings["uiLocale"] }) => Promise<AppSettings>
   onInferenceProgress: (listener: (event: InferenceProgress) => void) => () => void
 }
 
@@ -104,6 +110,7 @@ export function formatNoteAsText(note: ClinicalNote): string {
 
 export function createMockBridge(): DemoBridge {
   let activeId: string | null = null
+  let settings: AppSettings = { ...defaultSettings }
 
   return {
     async startEncounter() {
@@ -130,6 +137,13 @@ export function createMockBridge(): DemoBridge {
     },
     async saveNote() {
       await wait(150)
+    },
+    async getSettings() {
+      return { ...settings }
+    },
+    async saveSettings(next) {
+      settings = { ...settings, ...next }
+      return { ...settings }
     },
   }
 }

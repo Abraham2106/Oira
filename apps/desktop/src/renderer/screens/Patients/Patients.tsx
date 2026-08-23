@@ -1,17 +1,39 @@
 import { useMemo, useState } from "react"
 import { Button, Card, StatusBadge } from "@oira/ui"
 import {
-  formatRelativeTime,
+  relativeTime,
   tagInitials,
   type PatientHistoryEntry,
+  type RelativeTime,
 } from "../../lib/patientTags"
+import { useI18n } from "../../i18n/I18nProvider"
 
 type Props = {
   entries: PatientHistoryEntry[]
   onStartNew: () => void
 }
 
+function formatRelative(seg: RelativeTime, t: (key: string) => string): string {
+  switch (seg.kind) {
+    case "justNow":
+      return t("time.justNow")
+    case "minutes":
+      return t("time.minutes").replace("{n}", String(seg.count))
+    case "hours":
+      return t("time.hours").replace("{n}", String(seg.count))
+    case "yesterday":
+      return t("time.yesterday")
+    case "days":
+      return t("time.days").replace("{n}", String(seg.count))
+    case "oneMonth":
+      return t("time.oneMonth")
+    case "months":
+      return t("time.months").replace("{n}", String(seg.count))
+  }
+}
+
 export function PatientsScreen({ entries, onStartNew }: Props) {
+  const { t } = useI18n()
   const [query, setQuery] = useState("")
 
   const sorted = useMemo(
@@ -40,26 +62,23 @@ export function PatientsScreen({ entries, onStartNew }: Props) {
     <div className="page config-page">
       <header className="config-header">
         <div className="config-meta">
-          <span className="kicker-chip">Pacientes</span>
+          <span className="kicker-chip">{t("patients.kicker")}</span>
         </div>
-        <h1 className="page-title">Historial de pacientes</h1>
-        <p className="muted config-lede">
-          Cada consulta queda registrada bajo un seudónimo. Nunca se registran nombres reales ni
-          datos identificables.
-        </p>
+        <h1 className="page-title">{t("patients.pageTitle")}</h1>
+        <p className="muted config-lede">{t("patients.lede")}</p>
       </header>
 
       <div className="dash-tiles">
         <div className="dash-tile">
-          <h4>Consultas registradas</h4>
+          <h4>{t("patients.totalTile")}</h4>
           <p>{stats.total}</p>
         </div>
         <div className="dash-tile">
-          <h4>Seudónimos distintos</h4>
+          <h4>{t("patients.distinctTile")}</h4>
           <p>{stats.distinct}</p>
         </div>
         <div className="dash-tile">
-          <h4>Últimos 7 días</h4>
+          <h4>{t("patients.weekTile")}</h4>
           <p>{stats.thisWeek}</p>
         </div>
       </div>
@@ -71,19 +90,19 @@ export function PatientsScreen({ entries, onStartNew }: Props) {
               type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Buscar por seudónimo, etiqueta o tipo de consulta"
-              aria-label="Buscar en el historial"
+              placeholder={t("patients.searchPlaceholder")}
+              aria-label={t("patients.searchAria")}
             />
           </label>
           <Button variant="primary" onClick={onStartNew}>
-            Nueva consulta
+            {t("action.newConsult")}
           </Button>
         </div>
 
         {filtered.length === 0 ? (
           <div className="empty-state empty-state-compact">
-            <h3>Sin resultados</h3>
-            <p>Ninguna consulta coincide con «{query}».</p>
+            <h3>{t("patients.noResults")}</h3>
+            <p>{t("patients.noResultsBody").replace("{query}", query)}</p>
           </div>
         ) : (
           <ul className="patient-list">
@@ -95,13 +114,17 @@ export function PatientsScreen({ entries, onStartNew }: Props) {
                 <span className="patient-row-body">
                   <strong>{entry.tag}</strong>
                   <small>
-                    {[entry.label || "Consulta sin etiqueta", entry.visitType, formatRelativeTime(entry.updatedAtMs)]
+                    {[
+                      entry.label || t("consult.unnamedLabel"),
+                      entry.visitType,
+                      formatRelative(relativeTime(entry.updatedAtMs), t),
+                    ]
                       .filter(Boolean)
                       .join(" · ")}
                   </small>
                 </span>
                 {entry.exported ? (
-                  <StatusBadge tone="ok" icon="✓" label="Exportada" />
+                  <StatusBadge tone="ok" icon="✓" label={t("patients.exportedBadge")} />
                 ) : null}
               </li>
             ))}
@@ -109,11 +132,11 @@ export function PatientsScreen({ entries, onStartNew }: Props) {
         )}
       </section>
 
-      <Card title="Seudónimos, no nombres">
+      <Card title={t("patients.pseudonymsCardTitle")}>
         <ol className="how-steps">
-          <li>Cada consulta recibe automáticamente un seudónimo de una lista fija.</li>
-          <li>El nombre real del paciente nunca entra al sistema ni a la nota.</li>
-          <li>Si desea referirse a esta nota más adelante, use el seudónimo como referencia.</li>
+          <li>{t("patients.pseudonymStep1")}</li>
+          <li>{t("patients.pseudonymStep2")}</li>
+          <li>{t("patients.pseudonymStep3")}</li>
         </ol>
       </Card>
     </div>

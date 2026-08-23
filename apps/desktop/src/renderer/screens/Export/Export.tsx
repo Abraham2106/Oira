@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react"
 import { Button, Card, StatusBadge } from "@oira/ui"
 import { SECTION_TITLES } from "@oira/types"
+import { useI18n } from "../../i18n/I18nProvider"
 
 const TITLE_LINES: ReadonlySet<string> = new Set(Object.values(SECTION_TITLES))
 
@@ -24,16 +25,17 @@ type Props = {
 }
 
 export function ExportScreen({ preview, copied, onCopy, onReset }: Props) {
+  const { t } = useI18n()
   const [format, setFormat] = useState<ExportFormat>("sections")
   const plain = useMemo(() => toPlainText(preview), [preview])
   const shown = format === "sections" ? preview : plain
 
   return (
     <div className="stack page">
-      <StatusBadge tone="ok" icon="✓" label="Nota aceptada por el médico" />
-      <Card title="Exportar">
-        <p>Elige el formato. La vista previa es exactamente lo que se copia.</p>
-        <div className="format-options" role="radiogroup" aria-label="Formato de exportación">
+      <StatusBadge tone="ok" icon="✓" label={t("export.acceptedBadge")} />
+      <Card title={t("export.cardTitle")}>
+        <p>{t("export.formatIntro")}</p>
+        <div className="format-options" role="radiogroup" aria-label={t("export.formatAria")}>
           <label className="format-option">
             <input
               type="radio"
@@ -43,8 +45,8 @@ export function ExportScreen({ preview, copied, onCopy, onReset }: Props) {
               onChange={() => setFormat("sections")}
             />
             <span className="format-option-text">
-              Con títulos de sección
-              <span className="format-option-hint">Las 7 secciones con su encabezado.</span>
+              {t("export.formatSections")}
+              <span className="format-option-hint">{t("export.formatSectionsHint")}</span>
             </span>
           </label>
           <label className="format-option">
@@ -56,27 +58,24 @@ export function ExportScreen({ preview, copied, onCopy, onReset }: Props) {
               onChange={() => setFormat("plain")}
             />
             <span className="format-option-text">
-              Texto corrido
-              <span className="format-option-hint">
-                Mismo contenido sin las líneas de título; párrafos separados por una línea en
-                blanco.
-              </span>
+              {t("export.formatPlain")}
+              <span className="format-option-hint">{t("export.formatPlainHint")}</span>
             </span>
           </label>
         </div>
         <pre className="preview">{shown}</pre>
         <div className="actions">
           <Button variant="primary" onClick={() => void onCopy(shown)}>
-            Copiar al portapapeles
+            {t("export.copyButton")}
           </Button>
-          <Button onClick={onReset}>Nueva consulta</Button>
+          <Button onClick={onReset}>{t("action.newConsult")}</Button>
         </div>
         {copied ? (
           <p role="status" className="copied">
-            Copiado. Lo que pegues en otro sistema queda fuera de Oira.
+            {t("export.copiedNotice")}
           </p>
         ) : (
-          <p className="muted">La exportación directa a PDF llegará próximamente.</p>
+          <p className="muted">{t("export.pdfComingSoon")}</p>
         )}
       </Card>
     </div>

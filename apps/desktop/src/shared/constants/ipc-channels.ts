@@ -7,6 +7,9 @@ export const IPC_CHANNELS = {
   EXPORT_NOTE: "notalocal:export:note",
   AUTH_UNLOCK: "notalocal:auth:unlock",
   AUTH_LOCK: "notalocal:auth:lock",
+
+  SETTINGS_GET: "notalocal:settings:get",
+  SETTINGS_SAVE: "notalocal:settings:save",
 } as const
 
 export const IPC_EVENTS = {

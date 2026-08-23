@@ -1,5 +1,6 @@
 import { Button } from "@oira/ui"
 import { Icon } from "../../components/icons"
+import { useI18n } from "../../i18n/I18nProvider"
 
 type Props = {
   hasSessionNote: boolean
@@ -16,45 +17,40 @@ export function NotesListScreen({
   onView,
   onStartNew,
 }: Props) {
+  const { t } = useI18n()
   return (
     <div className="page config-page">
       <header className="config-header">
         <div className="config-meta">
-          <span className="kicker-chip">Notas</span>
+          <span className="kicker-chip">{t("notes.kicker")}</span>
         </div>
-        <h1 className="page-title">Notas clínicas</h1>
-        <p className="muted config-lede">
-          Cada nota queda disponible después de que usted la acepta y exporta.
-        </p>
+        <h1 className="page-title">{t("notes.pageTitle")}</h1>
+        <p className="muted config-lede">{t("notes.lede")}</p>
       </header>
 
       {hasSessionNote ? (
         <section className="nl-card list-row">
           <span className="list-row-dot" aria-hidden="true" />
           <span className="list-row-body">
-            <strong>{noteLabel.trim() ? noteLabel : "Consulta sin etiqueta"}</strong>
-            <small>
-              Sesión actual · {sessionStateLabel}
-            </small>
+            <strong>{noteLabel.trim() ? noteLabel : t("consult.unnamedLabel")}</strong>
+            <small>{t("notesList.sessionRow").replace("{state}", sessionStateLabel)}</small>
           </span>
-          <Button onClick={onView}>Abrir</Button>
+          <Button onClick={onView}>{t("notes.open")}</Button>
         </section>
       ) : (
         <div className="empty-state">
           <span className="icon-wrap">
             <Icon name="note" size={26} />
           </span>
-          <h3>Aún no hay notas</h3>
-          <p>Cuando acepte su primera nota, aparecerá aquí para volver a consultarla o copiarla.</p>
+          <h3>{t("notes.emptyTitle")}</h3>
+          <p>{t("notes.emptyBody")}</p>
           <Button variant="primary" onClick={onStartNew}>
-            Iniciar una consulta
+            {t("notes.startFirst")}
           </Button>
         </div>
       )}
 
-      <p className="muted notes-footnote">
-        El histórico de notas estará disponible en cuanto el almacenamiento local esté conectado.
-      </p>
+      <p className="muted notes-footnote">{t("notes.footnote")}</p>
     </div>
   )
 }

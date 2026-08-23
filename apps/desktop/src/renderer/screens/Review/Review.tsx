@@ -4,6 +4,7 @@ import { SECTION_IDS, type ClinicalNote, type ProductState, type TranscriptSegme
 import { ClinicalNoteSection } from "../../components/ClinicalNoteSection"
 import { ReviewActions } from "../../components/ReviewActions"
 import { TranscriptViewer } from "../../components/TranscriptViewer"
+import { useI18n } from "../../i18n/I18nProvider"
 import { unreviewedSectionCount } from "../../lib/consultFlow"
 
 type Props = {
@@ -37,6 +38,7 @@ export function ReviewScreen({
   onAccept,
   onExport,
 }: Props) {
+  const { t } = useI18n()
   const accepted = state === "ACCEPTED" || state === "EXPORTED"
   const canAccept = (state === "READY_FOR_REVIEW" || state === "EDITING") && confirmed
   const remaining = unreviewedSectionCount(note)
@@ -51,17 +53,14 @@ export function ReviewScreen({
     <div className="review-page">
       <div className="review-banner">
         {accepted ? (
-          <StatusBadge tone="ok" icon="✓" label="Revisada por el médico" />
+          <StatusBadge tone="ok" icon="✓" label={t("review.badgeReviewed")} />
         ) : (
-          <StatusBadge tone="warn" icon="!" label="Borrador — requiere revisión médica" />
+          <StatusBadge tone="warn" icon="!" label={t("review.badgeDraft")} />
         )}
-        <p className="muted review-hint">
-          A la izquierda el borrador; a la derecha la transcripción. Pulse un origen para resaltar
-          el fragmento literal.
-        </p>
+        <p className="muted review-hint">{t("review.hint")}</p>
       </div>
       <div className="review-split">
-        <Card title="Borrador de nota">
+        <Card title={t("review.draftCardTitle")}>
           <div className="review-pane">
             {SECTION_IDS.map((id) => (
               <ClinicalNoteSection
@@ -79,7 +78,7 @@ export function ReviewScreen({
             ))}
           </div>
         </Card>
-        <Card title="Transcripción de la consulta">
+        <Card title={t("review.transcriptCardTitle")}>
           <div className="review-pane">
             <TranscriptViewer segments={transcript} highlightedIds={highlightedIds} />
           </div>
@@ -88,7 +87,7 @@ export function ReviewScreen({
       {accepted ? (
         <div className="review-dock">
           <Button variant="primary" onClick={onExport}>
-            Copiar nota
+            {t("review.copyNote")}
           </Button>
         </div>
       ) : (

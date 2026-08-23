@@ -1,49 +1,46 @@
 import { Card } from "@oira/ui"
+import { useI18n } from "../../i18n/I18nProvider"
 
 export function TeamScreen() {
+  const { t } = useI18n()
   return (
     <div className="page config-page">
       <header className="config-header">
         <div className="config-meta">
-          <span className="kicker-chip">Equipo</span>
+          <span className="kicker-chip">{t("team.kicker")}</span>
         </div>
-        <h1 className="page-title">Equipo y responsabilidades</h1>
-        <p className="muted config-lede">
-          La IA redacta; el médico decide. Cada nota lleva revisión humana antes de salir de Oira.
-        </p>
+        <h1 className="page-title">{t("team.pageTitle")}</h1>
+        <p className="muted config-lede">{t("team.lede")}</p>
       </header>
 
-      <Card title="Sesión actual">
+      <Card title={t("team.currentSession")}>
         <dl className="privacy">
           <div className="privacy-row">
-            <dt>Profesional</dt>
-            <dd>Uso local en este equipo, sin cuenta en línea</dd>
+            <dt>{t("team.professionalDt")}</dt>
+            <dd>{t("team.professionalDd")}</dd>
           </div>
           <div className="privacy-row">
-            <dt>Rol</dt>
-            <dd>Documentación asistida de consultas</dd>
+            <dt>{t("team.roleDt")}</dt>
+            <dd>{t("team.roleDd")}</dd>
           </div>
           <div className="privacy-row">
-            <dt>Autorización</dt>
-            <dd>La confirmación de revisión es individual y no transferible</dd>
+            <dt>{t("team.authorizationDt")}</dt>
+            <dd>{t("team.authorizationDd")}</dd>
           </div>
         </dl>
       </Card>
 
-      <Card title="Quién hace qué">
+      <Card title={t("team.whoDoesWhat")}>
         <ol className="how-steps">
-          <li>La IA transcribe la consulta y redacta un borrador estructurado.</li>
-          <li>El profesional que atendió revisa cada sección contra su propio criterio.</li>
-          <li>Solo el médico acepta y exporta: nada sale de Oira sin esa confirmación explícita.</li>
+          <li>{t("team.stepAiDraft")}</li>
+          <li>{t("team.stepPhysicianReviews")}</li>
+          <li>{t("team.stepOnlyPhysicianExports")}</li>
         </ol>
       </Card>
 
       <aside className="tip-card">
-        <h4>Principio del producto</h4>
-        <p>
-          «IA que documenta · tú decides.» El borrador es una propuesta; la nota válida es la que
-          usted acepta.
-        </p>
+        <h4>{t("team.principleTitle")}</h4>
+        <p>{t("team.principleBody")}</p>
       </aside>
     </div>
   )

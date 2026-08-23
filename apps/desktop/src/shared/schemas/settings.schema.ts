@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { LANGUAGE_VALUES } from "../constants/language"
 
 /**
  * User settings contract (guide §2.16 / §8).
@@ -14,7 +15,8 @@ export const settingsSchema = z.object({
   noteRetention: z.literal("forever"),
   /** Q2 has not chosen a default STT constant; null means unset. */
   sttModelId: z.string().min(1).nullable(),
-  uiLocale: z.literal("es"),
+  /** English-first product; persisted so the choice survives restarts. */
+  uiLocale: z.enum(LANGUAGE_VALUES),
 })
 
 export type AppSettings = z.infer<typeof settingsSchema>
@@ -24,9 +26,19 @@ export const defaultSettings: AppSettings = {
   transcriptRetention: { unit: "days", value: 30 },
   noteRetention: "forever",
   sttModelId: null,
-  uiLocale: "es",
+  uiLocale: "en",
 }
 
 export function parseSettings(input: unknown): AppSettings {
   return settingsSchema.parse(input)
 }
+
+export const languageSchema = z.enum(LANGUAGE_VALUES)
+
+export const getSettingsInputSchema = z.object({}).strict()
+
+export const saveSettingsInputSchema = z
+  .object({
+    uiLocale: languageSchema,
+  })
+  .strict()

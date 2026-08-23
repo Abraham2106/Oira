@@ -2,6 +2,7 @@ import { useState } from "react"
 import { Button, Dialog, StatusBadge } from "@oira/ui"
 import { PrivacyStatusPanel } from "../../components/PrivacyStatusPanel"
 import { RecordingTimer } from "../../components/RecordingTimer"
+import { useI18n } from "../../i18n/I18nProvider"
 
 type Props = {
   startedAtMs: number
@@ -10,37 +11,38 @@ type Props = {
 }
 
 export function RecordingScreen({ startedAtMs, onStop, onDiscard }: Props) {
+  const { t } = useI18n()
   const [confirmDiscard, setConfirmDiscard] = useState(false)
 
   return (
     <div className="recording-screen page">
       <div className="recording-banner" role="status">
-        <StatusBadge tone="recording" icon="●" label="Grabando — micrófono activo" live />
+        <StatusBadge tone="recording" icon="●" label={t("recording.badge")} live />
         <RecordingTimer startedAtMs={startedAtMs} />
       </div>
-      <p>Hable con naturalidad. El audio se procesa en este equipo.</p>
+      <p>{t("recording.speakNaturally")}</p>
       <PrivacyStatusPanel
         rows={[
-          { label: "Grabación", value: "Activa en este equipo" },
-          { label: "Procesamiento", value: "Al detener la grabación" },
-          { label: "Proveedor de IA remoto", value: "DESCONOCIDO" },
-          { label: "Almacenamiento", value: "DESCONOCIDO" },
-          { label: "Red", value: "DESCONOCIDO" },
+          { label: t("privacy.recording"), value: t("recording.activeHere") },
+          { label: t("privacy.processing"), value: t("privacy.whenRecordingStops") },
+          { label: t("privacy.aiRemote"), value: t("privacy.unknown") },
+          { label: t("privacy.storage"), value: t("privacy.unknown") },
+          { label: t("privacy.network"), value: t("privacy.unknown") },
         ]}
       />
-      <p className="muted">Atajo: Ctrl+Enter detiene y pasa a transcribir.</p>
+      <p className="muted">{t("recording.shortcutHint")}</p>
       <div className="actions">
         <Button variant="danger" onClick={onStop}>
-          Detener grabación
+          {t("recording.stopButton")}
         </Button>
-        <Button onClick={() => setConfirmDiscard(true)}>Descartar consulta</Button>
+        <Button onClick={() => setConfirmDiscard(true)}>{t("recording.discard")}</Button>
       </div>
       <Dialog
         open={confirmDiscard}
-        title="¿Descartar esta grabación?"
+        title={t("recording.discardTitle")}
         onClose={() => setConfirmDiscard(false)}
       >
-        <p>Se descartará el audio y la transcripción de esta consulta. No se generará nota y no queda copia.</p>
+        <p>{t("recording.discardBody")}</p>
         <div className="actions">
           <Button
             variant="danger"
@@ -49,9 +51,9 @@ export function RecordingScreen({ startedAtMs, onStop, onDiscard }: Props) {
               onDiscard()
             }}
           >
-            Descartar
+            {t("recording.discardConfirm")}
           </Button>
-          <Button onClick={() => setConfirmDiscard(false)}>Seguir grabando</Button>
+          <Button onClick={() => setConfirmDiscard(false)}>{t("recording.keepRecording")}</Button>
         </div>
       </Dialog>
     </div>

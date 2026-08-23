@@ -1,5 +1,7 @@
 import { isAppErrorCode } from "../../shared/constants/app-error-codes"
 import type { InferenceProgress } from "../../shared/types/inference-progress"
+import { join } from "node:path"
+import { tmpdir } from "node:os"
 import {
   createAudioTempStore,
   defaultAudioTempDir,
@@ -14,14 +16,21 @@ import {
 import { createExportStub, type ExportPort } from "../export"
 import type { InferenceAdapterName } from "../config/env"
 import { resolveAppEnv } from "../config/env"
+import {
+  loadSettings,
+  saveSettings as writeSettingsFile,
+} from "../config/settings.service"
 import { createInferencePorts } from "../inference"
 import type { Logger } from "../logging"
 import { createNotesService, type NotesPort } from "../notes"
+import type { AppSettings } from "../../shared/schemas/settings.schema"
+import type { Language } from "../../shared/constants/language"
 import { registerAudioIpc } from "./audio.ipc"
 import { registerAuthIpc } from "./auth.ipc"
 import { registerEncounterIpc } from "./encounters.ipc"
 import { registerExportIpc } from "./export.ipc"
 import { registerNotesIpc } from "./notes.ipc"
+import { registerSettingsIpc } from "./settings.ipc"
 import type { IpcHandle } from "./types"
 import type { IpcLogger } from "./withValidation"
 
@@ -32,12 +41,30 @@ export type IpcDeps = {
   session: SessionPort
   logger: IpcLogger
   audio: AudioTempStore
+  settings: SettingsPort
+}
+
+export type SettingsPort = {
+  get: () => Promise<AppSettings>
+  save: (input: { uiLocale: Language }) => Promise<AppSettings>
+}
+
+function createFileSettingsPort(settingsFile: string): SettingsPort {
+  return {
+    get: async () => loadSettings(settingsFile),
+    save: async (input) =>
+      writeSettingsFile(settingsFile, {
+        ...loadSettings(settingsFile),
+        ...input,
+      }),
+  }
 }
 
 export type StubIpcOptions = {
   audio?: AudioTempStore
   onProgress?: (event: InferenceProgress) => void
   inferenceAdapter?: InferenceAdapterName
+  settingsFile?: string
 }
 
 export function createSilentIpcLogger(): IpcLogger {
@@ -87,6 +114,10 @@ export function createStubIpcDeps(
     session: createAuthStub(),
     logger,
     audio,
+    settings:
+      options.settingsFile === undefined
+        ? createFileSettingsPort(join(tmpdir(), "oira-dev-settings.json"))
+        : createFileSettingsPort(options.settingsFile),
   }
 }
 
@@ -100,6 +131,7 @@ export function registerIpc(handle: IpcHandle, deps: IpcDeps): void {
     logger: deps.logger,
   })
   registerAuthIpc(handle, deps)
+  registerSettingsIpc(handle, deps)
 }
 
 export { IPC_CHANNELS } from "./channels"

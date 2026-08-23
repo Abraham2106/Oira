@@ -6,7 +6,7 @@ import { FlowStepper } from "./components/FlowStepper"
 import { Icon, type IconName } from "./components/icons"
 import { flowStepFromState } from "./lib/consultFlow"
 import { pickTag, sampleHistory, type PatientHistoryEntry } from "./lib/patientTags"
-import { stateLabel } from "./lib/stateLabels"
+import { useI18n } from "./i18n/I18nProvider"
 import { DashboardScreen } from "./screens/Dashboard/Dashboard"
 import { ExportScreen } from "./screens/Export/Export"
 import { DeviceReadyScreen } from "./screens/DeviceReady/DeviceReady"
@@ -22,11 +22,11 @@ import { useEncounter } from "./state/useEncounter"
 
 type View = "dashboard" | "consult" | "notes" | "patients" | "team"
 
-const NAV_ITEMS: ReadonlyArray<{ id: View; label: string; icon: IconName }> = [
-  { id: "dashboard", label: "Panel", icon: "dashboard" },
-  { id: "notes", label: "Notas", icon: "note" },
-  { id: "patients", label: "Pacientes", icon: "patient" },
-  { id: "team", label: "Equipo", icon: "team" },
+const NAV_ITEMS: ReadonlyArray<{ id: View; icon: IconName }> = [
+  { id: "dashboard", icon: "dashboard" },
+  { id: "notes", icon: "note" },
+  { id: "patients", icon: "patient" },
+  { id: "team", icon: "team" },
 ]
 
 const BUSY_STATES: ReadonlySet<string> = new Set(["RECORDING", "TRANSCRIBING", "STRUCTURING"])
@@ -38,6 +38,7 @@ function typingTarget(target: EventTarget | null): boolean {
 }
 
 export function App() {
+  const { t } = useI18n()
   const encounter = useEncounter()
   const [ready, setReady] = useState(false)
   const [view, setView] = useState<View>("dashboard")
@@ -75,9 +76,7 @@ export function App() {
 
   const startNewConsult = useCallback(() => {
     if (REVIEW_STATES.has(encounter.productState) && encounter.note) {
-      const discard = window.confirm(
-        "Hay una nota en revisión sin exportar. ¿Descartarla y comenzar una consulta nueva?",
-      )
+      const discard = window.confirm(t("dialog.discardDraftBody"))
       if (!discard) return
     }
     resetReviewChrome()
@@ -85,7 +84,7 @@ export function App() {
     encounter.reset()
     setView("consult")
     setReady(true)
-  }, [encounter, resetReviewChrome])
+  }, [encounter, resetReviewChrome, t])
 
   useEffect(() => {
     const current = encounter.encounter
@@ -96,8 +95,8 @@ export function App() {
       {
         id: current.id,
         tag: pickTag(rows.map((row) => row.tag)),
-        label: encounter.label.trim() ? encounter.label : "Consulta sin etiqueta",
-        visitType: encounter.visitType.trim() ? encounter.visitType : "consulta general",
+        label: encounter.label.trim() ? encounter.label : "",
+        visitType: encounter.visitType.trim() ? encounter.visitType : t("consult.defaultVisitType"),
         updatedAtMs: Date.now(),
         exported: true,
       },
@@ -162,15 +161,15 @@ export function App() {
           <strong className="wordmark">
             oira<span aria-hidden="true">.</span>
           </strong>
-          <span className="tagline">IA que documenta · tú decides</span>
+          <span className="tagline">{t("app.tagline")}</span>
         </div>
         <div className="sidenav-cta">
           <Button variant="primary" disabled={busy} onClick={startNewConsult}>
             <Icon name="plus" size={18} />
-            Nueva consulta
+            {t("action.newConsult")}
           </Button>
         </div>
-        <nav className="sidenav-nav" aria-label="Navegación principal">
+        <nav className="sidenav-nav" aria-label={t("nav.aria")}>
           {NAV_ITEMS.map((item) => {
             const active = ready && !settingsOpen && view === item.id
             return (
@@ -182,7 +181,7 @@ export function App() {
                 onClick={() => openSection(item.id)}
               >
                 <Icon name={item.icon} />
-                {item.label}
+                {t(`nav.${item.id}`)}
               </button>
             )
           })}
@@ -192,12 +191,12 @@ export function App() {
             onClick={() => openSection("settings")}
           >
             <Icon name="settings" />
-            Ajustes
+            {t("nav.settings")}
           </button>
         </nav>
         <footer className="sidenav-footer">
           <span>v0.1</span>
-          <span>Uso local</span>
+          <span>{t("app.localUse")}</span>
         </footer>
       </aside>
 
@@ -207,10 +206,10 @@ export function App() {
             <strong className="wordmark">
               oira<span aria-hidden="true">.</span>
             </strong>
-            <span className="tagline">IA que documenta · tú decides</span>
+            <span className="tagline">{t("app.tagline")}</span>
           </div>
           <Button onClick={() => openSection("settings")}>
-            {settingsOpen ? "Cerrar" : "Ajustes"}
+            {settingsOpen ? t("nav.closeSettings") : t("nav.settings")}
           </Button>
         </header>
 
@@ -220,9 +219,9 @@ export function App() {
           </div>
         ) : inReview ? (
           <div className="resume-bar">
-            <span>Tiene una nota en revisión sin exportar.</span>
+            <span>{t("app.resumeHint")}</span>
             <button type="button" className="linkish" onClick={() => setView("consult")}>
-              Volver a la revisión
+              {t("app.backToReview")}
             </button>
           </div>
         ) : null}
@@ -238,7 +237,7 @@ export function App() {
                 encounter.reset()
               }}
             >
-              Volver al inicio
+              {t("app.backToStart")}
             </button>
           </div>
         ) : null}
@@ -331,7 +330,7 @@ export function App() {
         {ready && !settingsOpen && view === "notes" ? (
           <NotesListScreen
             hasSessionNote={Boolean(encounter.note)}
-            sessionStateLabel={stateLabel(encounter.productState)}
+            sessionStateLabel={t(`state.${encounter.productState}`)}
             noteLabel={encounter.label}
             onView={() => setView("consult")}
             onStartNew={startNewConsult}

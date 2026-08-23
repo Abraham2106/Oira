@@ -15,6 +15,9 @@ const oira: OiraApi = {
   generateNote: (input) =>
     ipcRenderer.invoke(IPC_CHANNELS.GENERATE_NOTE, input),
   saveNote: (input) => ipcRenderer.invoke(IPC_CHANNELS.SAVE_NOTE, input),
+  getSettings: () => ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_GET, {}),
+  saveSettings: (input) =>
+    ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_SAVE, input),
   onInferenceProgress: (listener) => {
     const wrapped = (_event: unknown, payload: InferenceProgress) => {
       listener(payload)

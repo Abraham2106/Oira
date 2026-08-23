@@ -9,6 +9,7 @@ import type {
 } from "../schemas/ipc.schema"
 import type { InferenceProgress } from "./inference-progress"
 import type { Result } from "./result"
+import type { AppSettings } from "../schemas/settings.schema"
 
 export type StartEncounterResult = {
   encounterId: string
@@ -32,6 +33,10 @@ export type AppendAudioResult = {
   accepted: true
 }
 
+export type GetSettingsResult = AppSettings
+
+export type SaveSettingsResult = AppSettings
+
 /**
  * IPC contract (guide §10.2). Renderer consumes this via `window.oira`.
  * Draft notes are structured (I4 sections + transcript), not a free-text body.
@@ -48,6 +53,10 @@ export type OiraApi = {
     input: GenerateNoteInput,
   ) => Promise<Result<GenerateNoteResult>>
   saveNote: (input: SaveNoteInput) => Promise<Result<SaveNoteResult>>
+  getSettings: () => Promise<Result<AppSettings>>
+  saveSettings: (input: {
+    uiLocale: AppSettings["uiLocale"]
+  }) => Promise<Result<AppSettings>>
   onInferenceProgress: (
     listener: (event: InferenceProgress) => void,
   ) => () => void

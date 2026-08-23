@@ -1,3 +1,5 @@
+import { useI18n } from "../i18n/I18nProvider"
+
 type Reason = "not_stated" | "unknown"
 
 type Props = {
@@ -5,9 +7,10 @@ type Props = {
 }
 
 export function NotStatedBadge({ reason }: Props) {
+  const { t } = useI18n()
   return (
     <span className="nl-badge">
-      {reason === "not_stated" ? "No consta en la consulta." : "Sin determinar."}
+      {reason === "not_stated" ? t("notStated.notDocumented") : t("notStated.undetermined")}
     </span>
   )
 }

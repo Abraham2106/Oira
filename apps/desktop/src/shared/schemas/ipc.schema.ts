@@ -1,5 +1,11 @@
 import { z } from "zod"
 import { clinicalNoteSchema } from "./clinical.schema"
+import {
+  getSettingsInputSchema,
+  saveSettingsInputSchema,
+} from "./settings.schema"
+
+export { getSettingsInputSchema, saveSettingsInputSchema }
 
 export const startEncounterInputSchema = z
   .object({

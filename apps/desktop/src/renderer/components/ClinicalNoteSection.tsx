@@ -1,7 +1,7 @@
 import type { FieldValue, SectionId, TranscriptSegment } from "@oira/types"
-import { SECTION_TITLES } from "@oira/types"
 import { NotStatedBadge } from "./NotStatedBadge"
 import { SourceEvidencePopover } from "./SourceEvidencePopover"
+import { useI18n } from "../i18n/I18nProvider"
 
 type Props = {
   id: SectionId
@@ -26,10 +26,11 @@ export function ClinicalNoteSection({
   onJumpToSource,
   onToggleReviewed,
 }: Props) {
+  const { t } = useI18n()
   return (
     <article className={active ? "section section-active" : "section"}>
       <header className="section-head">
-        <h3>{SECTION_TITLES[id]}</h3>
+        <h3>{t(`sections.${id}`)}</h3>
         {value.presence === "NOT_STATED" ? <NotStatedBadge reason="not_stated" /> : null}
         {value.presence === "UNKNOWN" ? <NotStatedBadge reason="unknown" /> : null}
       </header>
@@ -40,7 +41,7 @@ export function ClinicalNoteSection({
         onChange={(event) => onChange(event.target.value)}
         onFocus={onFocusSection}
         rows={4}
-        aria-label={SECTION_TITLES[id]}
+        aria-label={t(`sections.${id}`)}
       />
       <SourceEvidencePopover
         sourceSegmentIds={value.sourceSegmentIds}
@@ -54,7 +55,7 @@ export function ClinicalNoteSection({
             checked={value.reviewed}
             onChange={(event) => onToggleReviewed(event.target.checked)}
           />
-          Sección revisada
+          {t("section.reviewedLabel")}
         </label>
       ) : null}
     </article>

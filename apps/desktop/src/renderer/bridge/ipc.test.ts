@@ -26,6 +26,26 @@ describe("adaptOiraApi", () => {
         data: { noteId: "00000000-0000-4000-8000-000000000002" },
       }),
       appendAudio: async () => ({ ok: true, data: { accepted: true } }),
+      getSettings: async () => ({
+        ok: true,
+        data: {
+          audioRetention: "until-note-approved",
+          transcriptRetention: { unit: "days", value: 30 },
+          noteRetention: "forever",
+          sttModelId: null,
+          uiLocale: "en",
+        },
+      }),
+      saveSettings: async () => ({
+        ok: true,
+        data: {
+          audioRetention: "until-note-approved",
+          transcriptRetention: { unit: "days", value: 30 },
+          noteRetention: "forever",
+          sttModelId: null,
+          uiLocale: "es",
+        },
+      }),
       onInferenceProgress: () => () => {},
     }
 
@@ -37,6 +57,8 @@ describe("adaptOiraApi", () => {
     expect(Object.keys(generated.note.sections).sort()).toEqual([...SECTION_IDS].sort())
     await bridge.saveNote(encounterId, generated.note)
     await bridge.appendAudio({ encounterId, sequence: 0, pcm: [0, 0] })
+    expect((await bridge.getSettings()).uiLocale).toBe("en")
+    expect((await bridge.saveSettings({ uiLocale: "es" })).uiLocale).toBe("es")
     const stop = bridge.onInferenceProgress(() => {})
     stop()
   })
@@ -64,6 +86,14 @@ describe("adaptOiraApi", () => {
         error: { code: "INVALID_INPUT", message: "x", retryable: false },
       }),
       appendAudio: async () => ({
+        ok: false,
+        error: { code: "INVALID_INPUT", message: "x", retryable: false },
+      }),
+      getSettings: async () => ({
+        ok: false,
+        error: { code: "INVALID_INPUT", message: "x", retryable: false },
+      }),
+      saveSettings: async () => ({
         ok: false,
         error: { code: "INVALID_INPUT", message: "x", retryable: false },
       }),

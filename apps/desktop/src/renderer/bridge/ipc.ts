@@ -35,6 +35,12 @@ export function adaptOiraApi(api: OiraApi): DemoBridge {
     async appendAudio(input) {
       await unwrap(api.appendAudio(input))
     },
+    async getSettings() {
+      return unwrap(api.getSettings())
+    },
+    async saveSettings(settings) {
+      return unwrap(api.saveSettings(settings))
+    },
     onInferenceProgress(listener: (event: InferenceProgress) => void) {
       return api.onInferenceProgress(listener)
     },

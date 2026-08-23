@@ -1,4 +1,5 @@
 import { Button } from "@oira/ui"
+import { useI18n } from "../i18n/I18nProvider"
 
 type Props = {
   canAccept: boolean
@@ -15,12 +16,15 @@ export function ReviewActions({
   onConfirmChange,
   onAccept,
 }: Props) {
+  const { t } = useI18n()
   return (
     <div className="review-dock-inner">
       <p className="muted">
         {remaining === 0
-          ? "Marcó todas las secciones. Aún debe confirmar la nota completa."
-          : `${remaining} sección${remaining === 1 ? "" : "es"} sin marcar como revisada${remaining === 1 ? "" : "s"}. Puede aceptar igual: es su decisión.`}
+          ? t("reviewActions.allSectionsMarked")
+          : remaining === 1
+            ? t("reviewActions.oneSectionRemaining")
+            : t("reviewActions.sectionsRemaining").replace("{n}", String(remaining))}
       </p>
       <label className="check">
         <input
@@ -28,10 +32,10 @@ export function ReviewActions({
           checked={confirmed}
           onChange={(event) => onConfirmChange(event.target.checked)}
         />
-        Al aceptar, confirmas que revisaste esta nota.
+        {t("reviewActions.confirmLabel")}
       </label>
       <Button variant="primary" disabled={!canAccept} onClick={onAccept}>
-        Aceptar borrador
+        {t("reviewActions.acceptDraft")}
       </Button>
     </div>
   )

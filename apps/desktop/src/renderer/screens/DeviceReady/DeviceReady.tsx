@@ -3,6 +3,7 @@ import { Button } from "@oira/ui"
 import { BrowserAudioCapture } from "../../audio/audioCapture"
 import { listAudioInputDevices, type AudioDeviceInfo } from "../../audio/audioDevice"
 import { ModelStatus } from "../../components/ModelStatus"
+import { useI18n } from "../../i18n/I18nProvider"
 
 type Props = {
   onContinue: () => void
@@ -10,6 +11,7 @@ type Props = {
 }
 
 export function DeviceReadyScreen({ onContinue, onOpenSettings }: Props) {
+  const { t } = useI18n()
   const [devices, setDevices] = useState<AudioDeviceInfo[] | null>(null)
   const [selectedId, setSelectedId] = useState<string>("")
   const [testing, setTesting] = useState(false)
@@ -59,9 +61,9 @@ export function DeviceReadyScreen({ onContinue, onOpenSettings }: Props) {
     try {
       await capture.stop()
     } catch {
-      setTestError("No se pudo detener la prueba de micrófono.")
+      setTestError(t("deviceReady.testErrorStop"))
     }
-  }, [])
+  }, [t])
 
   const startTest = useCallback(async () => {
     setTestError(null)
@@ -78,9 +80,9 @@ export function DeviceReadyScreen({ onContinue, onOpenSettings }: Props) {
       captureRef.current = null
       setTesting(false)
       setLevel(0)
-      setTestError(error instanceof Error ? error.message : "No se pudo probar el micrófono.")
+      setTestError(error instanceof Error ? error.message : t("deviceReady.testErrorStart"))
     }
-  }, [selectedId])
+  }, [selectedId, t])
 
   const toggleTest = useCallback(() => {
     if (testing) void stopTest()
@@ -88,47 +90,42 @@ export function DeviceReadyScreen({ onContinue, onOpenSettings }: Props) {
   }, [testing, startTest, stopTest])
 
   const levelPercent = Math.min(100, Math.max(0, Math.round(level * 100)))
-  const levelLabel =
-    testing && levelPercent > 8 ? "Detectando audio…" : testing ? "Esperando audio…" : "Sin prueba activa"
+  const levelLabel = testing
+    ? levelPercent > 8
+      ? t("deviceReady.detecting")
+      : t("deviceReady.waitingForAudio")
+    : t("deviceReady.noTest")
 
   return (
     <div className="page config-page">
       <header className="config-header">
         <div className="config-meta">
-          <span className="kicker-chip">Configuración</span>
+          <span className="kicker-chip">{t("deviceReady.kicker")}</span>
           <span className="meta-dot" aria-hidden="true">
             •
           </span>
-          <span className="muted">Paso 1 de 3</span>
+          <span className="muted">
+            {t("deviceReady.stepOf").replace("{current}", "1").replace("{total}", "3")}
+          </span>
         </div>
-        <h1 className="page-title">Configuración inicial</h1>
-        <p className="muted config-lede">
-          Prepare su entorno para una transcripción clínica óptima. Asegúrese de que su audio esté
-          correctamente configurado antes de que entre el paciente.
-        </p>
+        <h1 className="page-title">{t("deviceReady.title")}</h1>
+        <p className="muted config-lede">{t("deviceReady.lede")}</p>
       </header>
 
       <div className="config-grid">
         <div className="config-main">
           <section className="nl-card config-card">
             <div className="config-card-head">
-              <h2 className="config-card-title">Origen de audio</h2>
-              <span className="req-pill">Requerido</span>
+              <h2 className="config-card-title">{t("deviceReady.audioSourceTitle")}</h2>
+              <span className="req-pill">{t("deviceReady.required")}</span>
             </div>
-            <p className="muted config-note">
-              Seleccione el micrófono que utilizará para dictar o grabar las consultas. La prueba es
-              local: el audio se procesa en este equipo, no se envía a ningún servidor y no queda
-              guardado.
-            </p>
+            <p className="muted config-note">{t("deviceReady.audioSourceNote")}</p>
 
-            <div className="audio-device-list" role="radiogroup" aria-label="Dispositivo de entrada">
+            <div className="audio-device-list" role="radiogroup" aria-label={t("deviceReady.deviceAria")}>
               {devices === null ? (
-                <p className="muted audio-device-note">Buscando dispositivos de entrada…</p>
+                <p className="muted audio-device-note">{t("deviceReady.searchingDevices")}</p>
               ) : devices.length === 0 ? (
-                <p className="muted audio-device-note">
-                  No se detectaron micrófonos. Si continúa, la consulta usará el dispositivo
-                  predeterminado del sistema.
-                </p>
+                <p className="muted audio-device-note">{t("deviceReady.noDevices")}</p>
               ) : (
                 devices.map((device) => {
                   const selected = selectedId === device.deviceId
@@ -150,16 +147,16 @@ export function DeviceReadyScreen({ onContinue, onOpenSettings }: Props) {
                       </span>
                       <span className="audio-option-text">
                         <strong>
-                          {device.label.trim() ? device.label : "Micrófono sin identificar"}
+                          {device.label.trim() ? device.label : t("deviceReady.unlabeledMic")}
                         </strong>
                         <small>
                           {device.isBluetooth
-                            ? "Dispositivo Bluetooth conectado."
-                            : "Micrófono del sistema."}
+                            ? t("deviceReady.bluetooth")
+                            : t("deviceReady.systemMic")}
                         </small>
                       </span>
                       {device.isBluetooth ? (
-                        <span className="nl-badge nl-badge-info">Bluetooth</span>
+                        <span className="nl-badge nl-badge-info">{t("deviceReady.bluetoothBadge")}</span>
                       ) : null}
                     </label>
                   )
@@ -169,13 +166,13 @@ export function DeviceReadyScreen({ onContinue, onOpenSettings }: Props) {
 
             <div className="mic-test-row">
               <button type="button" className="nl-button" onClick={toggleTest}>
-                {testing ? "Detener prueba" : "Probar micrófono"}
+                {testing ? t("deviceReady.stopTest") : t("deviceReady.startTest")}
               </button>
               <div className="mic-test-meter">
                 <div
                   className="level-meter"
                   role="img"
-                  aria-label={`Nivel de entrada del micrófono: ${levelPercent}%`}
+                  aria-label={t("deviceReady.levelAria").replace("{level}", String(levelPercent))}
                 >
                   <div className="level-meter-fill" style={{ width: `${levelPercent}%` }} />
                 </div>
@@ -191,77 +188,74 @@ export function DeviceReadyScreen({ onContinue, onOpenSettings }: Props) {
 
           <section className="nl-card config-card">
             <div className="config-card-head">
-              <h2 className="config-card-title">Detalles de privacidad</h2>
+              <h2 className="config-card-title">{t("deviceReady.privacyDetailsTitle")}</h2>
             </div>
             <table className="privacy-table">
               <thead>
                 <tr>
-                  <th scope="col">Componente</th>
-                  <th scope="col">Estado</th>
-                  <th scope="col">Detalle</th>
+                  <th scope="col">{t("deviceReady.colComponent")}</th>
+                  <th scope="col">{t("deviceReady.colStatus")}</th>
+                  <th scope="col">{t("deviceReady.colDetail")}</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td>Grabación</td>
+                  <td>{t("privacy.recording")}</td>
                   <td>
                     <span className="state-pill state-pill-idle">
                       <span className="state-dot state-dot-idle" aria-hidden="true" />
-                      Inactiva
+                      {t("dashboard.inactive")}
                     </span>
                   </td>
-                  <td>Solo este equipo</td>
+                  <td>{t("deviceReady.recordingDetail")}</td>
                 </tr>
                 <tr>
-                  <td>Procesamiento</td>
+                  <td>{t("privacy.processing")}</td>
                   <td>
                     <span className="state-pill state-pill-ready">
                       <span className="state-dot state-dot-ready" aria-hidden="true" />
-                      Local
+                      {t("deviceReady.processingValue")}
                     </span>
                   </td>
-                  <td>En este equipo, sin servidores externos</td>
+                  <td>{t("deviceReady.processingDetail")}</td>
                 </tr>
                 <tr>
-                  <td>Almacenamiento</td>
+                  <td>{t("privacy.storage")}</td>
                   <td>
                     <span className="state-pill state-pill-idle">
                       <span className="state-dot state-dot-idle" aria-hidden="true" />
-                      DESCONOCIDO
+                      {t("privacy.unknown")}
                     </span>
                   </td>
-                  <td>Sin confirmación del backend</td>
+                  <td>{t("deviceReady.noBackendConfirmation")}</td>
                 </tr>
                 <tr>
-                  <td>Red</td>
+                  <td>{t("privacy.network")}</td>
                   <td>
                     <span className="state-pill state-pill-idle">
                       <span className="state-dot state-dot-idle" aria-hidden="true" />
-                      DESCONOCIDO
+                      {t("privacy.unknown")}
                     </span>
                   </td>
-                  <td>Sin confirmación del backend</td>
+                  <td>{t("deviceReady.noBackendConfirmation")}</td>
                 </tr>
               </tbody>
             </table>
-            <p className="muted privacy-table-note">
-              Lo que el sistema aún no confirma se muestra como DESCONOCIDO. Ninguna fila afirma
-              cumplimiento legal.
-            </p>
+            <p className="muted privacy-table-note">{t("deviceReady.privacyNote")}</p>
           </section>
         </div>
 
         <div className="config-side">
           <section className="nl-card status-card">
-            <h2 className="config-card-title">Estado del sistema</h2>
+            <h2 className="config-card-title">{t("common.systemStatus")}</h2>
             <div className="status-tiles">
               <div className="status-tile">
-                <h4>Grabación</h4>
-                <p>Inactiva</p>
+                <h4>{t("privacy.recording")}</h4>
+                <p>{t("dashboard.inactive")}</p>
               </div>
               <div className="status-tile">
-                <h4>Procesamiento</h4>
-                <p>Listo</p>
+                <h4>{t("privacy.processing")}</h4>
+                <p>{t("deviceReady.readyValue")}</p>
               </div>
             </div>
             <div className="status-engine">
@@ -269,18 +263,15 @@ export function DeviceReadyScreen({ onContinue, onOpenSettings }: Props) {
             </div>
             <div className="status-actions">
               <Button variant="primary" onClick={onContinue}>
-                Nueva consulta
+                {t("action.newConsult")}
               </Button>
-              <Button onClick={onOpenSettings}>Ajustes avanzados</Button>
+              <Button onClick={onOpenSettings}>{t("deviceReady.advancedSettings")}</Button>
             </div>
           </section>
 
           <aside className="tip-card">
-            <h4>Consejo clínico</h4>
-            <p>
-              Ambiente tranquilo y voz clara mejoran la precisión del borrador. Hable con naturalidad:
-              usted revisa y corrige antes de aceptar.
-            </p>
+            <h4>{t("common.clinicalTip")}</h4>
+            <p>{t("deviceReady.tipBody")}</p>
           </aside>
         </div>
       </div>

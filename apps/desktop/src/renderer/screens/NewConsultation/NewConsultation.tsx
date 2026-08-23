@@ -1,6 +1,7 @@
 import { Button, Card } from "@oira/ui"
 import { ModelStatus } from "../../components/ModelStatus"
 import { PrivacyStatusPanel } from "../../components/PrivacyStatusPanel"
+import { useI18n } from "../../i18n/I18nProvider"
 
 type Props = {
   label: string
@@ -21,30 +22,32 @@ export function NewConsultationScreen({
   onInformed,
   onStart,
 }: Props) {
+  const { t } = useI18n()
+
   return (
     <div className="stack page">
       <ModelStatus state="LOCAL_INFERENCE_READY" />
-      <Card title="Nueva consulta">
+      <Card title={t("newConsult.cardTitle")}>
         <ol className="how-steps">
-          <li>Informe al paciente de que va a grabar.</li>
-          <li>Grabe. No hace falta identificador.</li>
-          <li>Revise el borrador. Usted acepta o corrige.</li>
+          <li>{t("newConsult.stepInform")}</li>
+          <li>{t("newConsult.stepRecord")}</li>
+          <li>{t("newConsult.stepReview")}</li>
         </ol>
-        <p className="recording-idle">La grabación no ha comenzado.</p>
+        <p className="recording-idle">{t("newConsult.idleHint")}</p>
         <label className="field">
-          Etiqueta opcional
+          {t("newConsult.labelField")}
           <input
             value={label}
             onChange={(event) => onLabel(event.target.value)}
-            placeholder="Ej. control de rodilla"
+            placeholder={t("newConsult.titlePlaceholder")}
           />
         </label>
         <label className="field">
-          Tipo de consulta (opcional)
+          {t("newConsult.typeLabel")}
           <input
             value={visitType}
             onChange={(event) => onVisitType(event.target.value)}
-            placeholder="Ej. seguimiento"
+            placeholder={t("newConsult.typePlaceholder")}
           />
         </label>
         <label className="check">
@@ -53,21 +56,21 @@ export function NewConsultationScreen({
             checked={informed}
             onChange={(event) => onInformed(event.target.checked)}
           />
-          Confirmé que informé al paciente de la grabación. Esto no es un documento legal.
+          {t("newConsult.consentLabel")}
         </label>
         <Button variant="primary" onClick={onStart} disabled={!informed}>
-          Comenzar grabación
+          {t("newConsult.startRecording")}
         </Button>
-        <p className="muted">El botón se habilita al marcar el aviso al paciente.</p>
+        <p className="muted">{t("newConsult.startHint")}</p>
       </Card>
-      <Card title="Privacidad (estado actual)">
+      <Card title={t("privacy.cardTitle")}>
         <PrivacyStatusPanel
           rows={[
-            { label: "Grabación", value: "No ha comenzado" },
-            { label: "Procesamiento", value: "DESCONOCIDO" },
-            { label: "Proveedor de IA remoto", value: "DESCONOCIDO" },
-            { label: "Almacenamiento", value: "DESCONOCIDO" },
-            { label: "Red", value: "DESCONOCIDO" },
+            { label: t("privacy.recording"), value: t("privacy.notStarted") },
+            { label: t("privacy.processing"), value: t("privacy.unknown") },
+            { label: t("privacy.aiRemote"), value: t("privacy.unknown") },
+            { label: t("privacy.storage"), value: t("privacy.unknown") },
+            { label: t("privacy.network"), value: t("privacy.unknown") },
           ]}
         />
       </Card>

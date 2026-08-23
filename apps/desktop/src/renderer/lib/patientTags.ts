@@ -74,17 +74,26 @@ export function tagInitials(tag: string): string {
     .join("")
 }
 
-export function formatRelativeTime(ms: number, nowMs = Date.now()): string {
+export type RelativeTime =
+  | { kind: "justNow" }
+  | { kind: "minutes"; count: number }
+  | { kind: "hours"; count: number }
+  | { kind: "yesterday" }
+  | { kind: "days"; count: number }
+  | { kind: "oneMonth" }
+  | { kind: "months"; count: number }
+
+export function relativeTime(ms: number, nowMs = Date.now()): RelativeTime {
   const diffMinutes = Math.round((nowMs - ms) / 60_000)
-  if (diffMinutes < 1) return "hace un momento"
-  if (diffMinutes < 60) return `hace ${diffMinutes} min`
+  if (diffMinutes < 1) return { kind: "justNow" }
+  if (diffMinutes < 60) return { kind: "minutes", count: diffMinutes }
   const diffHours = Math.round(diffMinutes / 60)
-  if (diffHours < 24) return `hace ${diffHours} h`
+  if (diffHours < 24) return { kind: "hours", count: diffHours }
   const diffDays = Math.round(diffHours / 24)
-  if (diffDays === 1) return "ayer"
-  if (diffDays < 30) return `hace ${diffDays} días`
+  if (diffDays === 1) return { kind: "yesterday" }
+  if (diffDays < 30) return { kind: "days", count: diffDays }
   const diffMonths = Math.round(diffDays / 30)
-  return diffMonths === 1 ? "hace un mes" : `hace ${diffMonths} meses`
+  return diffMonths === 1 ? { kind: "oneMonth" } : { kind: "months", count: diffMonths }
 }
 
 export function sampleHistory(nowMs = Date.now()): PatientHistoryEntry[] {
