@@ -12,6 +12,7 @@ import { isAppError } from "../errors/core"
 import { encounterNotFoundError } from "../errors/encounters"
 import { invalidStructuredOutputError } from "../errors/notes"
 import type { EncounterRepository } from "../encounters/encounter.repository"
+import { canTransition } from "../encounters/encounter.state"
 import type { StructuringPort, TranscriptionPort } from "../inference/port"
 import { verifySource } from "./verify-source"
 
@@ -36,6 +37,23 @@ export type NotesPipelineDeps = NotesServiceDeps & {
 }
 
 const STRUCTURE_ATTEMPTS = 2
+
+const nowIso = (): string => new Date().toISOString()
+
+async function advanceEncounter(
+  repository: EncounterRepository | undefined,
+  encounterId: string,
+  to: "transcribed" | "failed",
+): Promise<void> {
+  if (!repository) return
+  try {
+    const record = await repository.getById(encounterId)
+    if (!record || !canTransition(record.status, to)) return
+    await repository.update({ ...record, status: to, updatedAt: nowIso() })
+  } catch {
+    // Bookkeeping must never mask the pipeline result.
+  }
+}
 
 export function createNotesStub(deps: NotesServiceDeps = {}): NotesPort {
   const saved = new Map<string, ClinicalNote>()
@@ -96,6 +114,7 @@ export function createNotesService(deps: NotesPipelineDeps): NotesPort {
             if (!verifySource(parsed.data, segments)) {
               throw invalidStructuredOutputError()
             }
+            await advanceEncounter(deps.encounters, encounterId, "transcribed")
             return { transcript: segments, note: parsed.data }
           } catch (error) {
             lastError = error
@@ -106,6 +125,7 @@ export function createNotesService(deps: NotesPipelineDeps): NotesPort {
         }
         throw lastError
       } catch (error) {
+        await advanceEncounter(deps.encounters, encounterId, "failed")
         deps.onProgress?.({ encounterId, phase: "failed" })
         throw error
       } finally {
@@ -118,7 +138,34 @@ export function createNotesService(deps: NotesPipelineDeps): NotesPort {
         if (!record) throw encounterNotFoundError()
       }
       saved.set(input.encounterId, input.note)
+      await settleDrafted(deps.encounters, input.encounterId)
       return { noteId: createId() }
     },
+  }
+}
+
+async function settleDrafted(
+  repository: EncounterRepository | undefined,
+  encounterId: string,
+): Promise<void> {
+  if (!repository) return
+  try {
+    let record = await repository.getById(encounterId)
+    if (!record || !canTransition(record.status, "drafting")) return
+    await repository.update({
+      ...record,
+      status: "drafting",
+      updatedAt: nowIso(),
+    })
+    record = await repository.getById(encounterId)
+    if (record && canTransition(record.status, "drafted")) {
+      await repository.update({
+        ...record,
+        status: "drafted",
+        updatedAt: nowIso(),
+      })
+    }
+  } catch {
+    // Bookkeeping must never mask the pipeline result.
   }
 }

@@ -9,6 +9,11 @@ import { createMockStructuring, createMockTranscription } from "../inference/moc
 import type { StructuringPort } from "../inference/port"
 import { createUnavailableQvacPorts } from "../qvac/unavailable"
 import { createAudioTempStore } from "../audio"
+import {
+  createEncounterService,
+  createMemoryEncounterRepository,
+} from "../encounters"
+import type { EncounterRepository } from "../encounters/encounter.repository"
 import type { InferenceProgress } from "../../shared/types/inference-progress"
 
 const ENCOUNTER = "00000000-0000-4000-8000-000000000001"
@@ -19,6 +24,17 @@ afterEach(() => {
     rmSync(dir, { recursive: true, force: true })
   }
 })
+
+async function recordingEncounter(): Promise<{
+  repository: EncounterRepository
+  encounterId: string
+}> {
+  const repository = createMemoryEncounterRepository()
+  const encounters = createEncounterService({ repository })
+  const started = await encounters.start({})
+  await encounters.stop(started.encounterId)
+  return { repository, encounterId: started.encounterId }
+}
 
 describe("createNotesService", () => {
   it("orchestrates mock ports into a seven-section draft", async () => {
@@ -120,5 +136,34 @@ describe("createNotesService", () => {
     await expect(notes.generate(ENCOUNTER)).rejects.toMatchObject({
       code: "AUDIO_CAPTURE_FAILED",
     })
+  })
+
+  it("marks a failed generate as failed so the encounter stops blocking start", async () => {
+    const { repository, encounterId } = await recordingEncounter()
+    const encounters = createEncounterService({ repository })
+    const notes = createNotesService({
+      ...createUnavailableQvacPorts(),
+      encounters: repository,
+    })
+    await expect(notes.generate(encounterId)).rejects.toMatchObject({
+      code: "MODEL_NOT_READY",
+    })
+    expect((await repository.getById(encounterId))?.status).toBe("failed")
+    await expect(encounters.start({})).resolves.toMatchObject({
+      encounterId: expect.any(String),
+    })
+  })
+
+  it("marks a successful generate as transcribed and save as drafted", async () => {
+    const { repository, encounterId } = await recordingEncounter()
+    const notes = createNotesService({
+      transcription: createMockTranscription(),
+      structuring: createMockStructuring(),
+      encounters: repository,
+    })
+    const generated = await notes.generate(encounterId)
+    expect((await repository.getById(encounterId))?.status).toBe("transcribed")
+    await notes.save({ encounterId, note: generated.note })
+    expect((await repository.getById(encounterId))?.status).toBe("drafted")
   })
 })
