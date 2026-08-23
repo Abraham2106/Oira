@@ -2,10 +2,10 @@
 
 <div align="center">
   <a href="https://github.com/Abraham2106/Notas-Medicas-name-pending">
-    <img src="docs/logo.svg" alt="Logo de NotaLocal" width="128">
+    <img src="docs/logo.svg" alt="Logo de Oira" width="128">
   </a>
 
-  <h1>NotaLocal</h1>
+  <h1>Oira</h1>
 
   <p>
     Aplicación de escritorio local-first para convertir una consulta ambulatoria
@@ -36,13 +36,13 @@
 </div>
 
 > [!IMPORTANT]
-> NotaLocal está en desarrollo activo (`v0.0.0`) como prototipo de escritorio para el track QVAC / Tether. El agente **documenta**; el médico **decide**. No diagnostica, no prescribe y no sustituye el juicio clínico. Antes de usarlo con información real, lee [privacidad y límites](#privacidad-y-límites).
+> Oira está en desarrollo activo (`v0.0.0`) como prototipo de escritorio para el track QVAC / Tether. El agente **documenta**; el médico **decide**. No diagnostica, no prescribe y no sustituye el juicio clínico. Antes de usarlo con información real, lee [privacidad y límites](#privacidad-y-límites).
 
 <details>
   <summary><strong>Tabla de contenidos</strong></summary>
 
 - [Visión general](#visión-general)
-  - [Por qué existe NotaLocal](#por-qué-existe-notalocal)
+  - [Por qué existe Oira](#por-qué-existe-oira)
   - [Construido con](#construido-con)
 - [Capacidades principales](#capacidades-principales)
 - [Experiencia del producto](#experiencia-del-producto)
@@ -66,25 +66,25 @@
 
 ## Visión general
 
-NotaLocal captura una consulta en el equipo del médico, transcribe el audio, estructura un borrador de nota y deja la corrección, la aceptación y la exportación en manos del clínico.
+Oira captura una consulta en el equipo del médico, transcribe el audio, estructura un borrador de nota y deja la corrección, la aceptación y la exportación en manos del clínico.
 
 El producto es una app **desktop 100 % local** para consulta ambulatoria: un médico, una computadora, una consulta a la vez. No hay cuenta, no hay backend cloud y no hay fallback silencioso a un proveedor remoto. Si la inferencia local falla, falla de forma visible.
 
 Este repositorio es un monorepo pnpm. El único producto ejecutable hoy es el cliente Electron (`apps/desktop`). El nombre público del repositorio sigue siendo provisional (`Notas-Medicas-name-pending`).
 
-### Por qué existe NotaLocal
+### Por qué existe Oira
 
-Un scribe genérico puede generar texto, pero suele mezclar lo dicho con lo plausible, ocultar el origen de cada frase y presentar el resultado como nota final. NotaLocal añade la capa operativa que el consultorio necesita:
+Un scribe genérico puede generar texto, pero suele mezclar lo dicho con lo plausible, ocultar el origen de cada frase y presentar el resultado como nota final. Oira añade la capa operativa que el consultorio necesita:
 
 - **El borrador no es la nota.** Nada se da por aceptado hasta que el médico revisa y confirma.
 - **La ausencia es un dato válido.** Si algo no se dijo, la sección queda en *No consta en la consulta* o *Sin determinar*; no se rellena con una conclusión verosímil.
 - **Cada campo puede mostrar su origen.** Las secciones enlazan fragmentos de la transcripción para que la revisión no dependa de la memoria.
 - **La inferencia permanece en el dispositivo.** Transcripción (Whisper) y estructuración (Qwen3) corren por QVAC en el proceso Main de Electron.
-- **Exportar es una decisión explícita.** Copiar al portapapeles saca el contenido de NotaLocal; el destino tiene sus propias prácticas.
+- **Exportar es una decisión explícita.** Copiar al portapapeles saca el contenido de Oira; el destino tiene sus propias prácticas.
 
 ### Construido con
 
-| Tecnología | Papel en NotaLocal |
+| Tecnología | Papel en Oira |
 |---|---|
 | [Electron](https://www.electronjs.org) | Shell de escritorio. El proceso Main es el backend local. |
 | [React](https://react.dev) | Interfaz de consulta, revisión y exportación. |
@@ -147,7 +147,7 @@ La nota lleva el badge *Borrador — requiere revisión médica* hasta que el m�
 
 ### Exportar
 
-La vista previa es exactamente el texto que se copia. Un aviso recuerda que lo pegado en otro sistema queda fuera de NotaLocal. El PDF no forma parte de este prototipo.
+La vista previa es exactamente el texto que se copia. Un aviso recuerda que lo pegado en otro sistema queda fuera de Oira. El PDF no forma parte de este prototipo.
 
 Atajos:
 
@@ -427,7 +427,7 @@ No subas audio, transcripciones ni notas de pacientes reales. No afirmes cumplim
 ### Colaboradores
 
 <a href="https://github.com/Abraham2106/Notas-Medicas-name-pending/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=Abraham2106/Notas-Medicas-name-pending" alt="Colaboradores de NotaLocal">
+  <img src="https://contrib.rocks/image?repo=Abraham2106/Notas-Medicas-name-pending" alt="Colaboradores de Oira">
 </a>
 
 ## Soporte y feedback
@@ -444,6 +444,6 @@ Este repositorio **aún no publica un archivo `LICENSE`**. No asumas MIT ni otro
 
 ## Agradecimientos
 
-NotaLocal se construye sobre [Electron](https://www.electronjs.org), [React](https://react.dev), [TypeScript](https://www.typescriptlang.org), [QVAC](https://docs.qvac.tether.io/) (Tether), Whisper y Qwen3.
+Oira se construye sobre [Electron](https://www.electronjs.org), [React](https://react.dev), [TypeScript](https://www.typescriptlang.org), [QVAC](https://docs.qvac.tether.io/) (Tether), Whisper y Qwen3.
 
 <p align="right"><a href="#readme-top">Volver arriba ↑</a></p>
