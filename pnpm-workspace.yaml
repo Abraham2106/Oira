@@ -1,3 +1,14 @@
 packages:
   - "apps/*"
   - "packages/*"
+onlyBuiltDependencies:
+  - electron
+  - esbuild
+  - "@qvac/sdk"
+publicHoistPattern:
+  - "*require-asset*"
+  - "*bare-runtime*"
+packageExtensions:
+  "bare-runtime-win32-x64":
+    dependencies:
+      require-asset: ^1.0.2

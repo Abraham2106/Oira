@@ -196,27 +196,28 @@ El renderer **nunca** importa `@qvac/sdk`. El único módulo de producción que 
 ### Requisitos
 
 - Node.js `22.17` o posterior (host y runtime embebido de Electron).
-- [pnpm](https://pnpm.io/) `10` (fijado en `packageManager` del `package.json` raíz). Instalar depende de pnpm; para ejecutar los scripts sirve cualquier runner (`npm run dev` o `pnpm dev`).
+- [pnpm](https://pnpm.io/) `10` (fijado en `packageManager` del `package.json` raíz). La instalación de dependencias la hace pnpm; para arrancar sirve cualquier runner (`npm run dev` o `pnpm dev`).
 - Un micrófono, si vas a grabar una consulta real.
 - Disco y RAM suficientes para descargar y cargar los modelos QVAC en la primera ejecución local. El tiempo depende del audio, el modelo y el equipo; este README no publica cifras de latencia.
 
-### 1. Clonar e instalar
+### 1. Clonar y arrancar (un solo comando)
 
 ```bash
 git clone https://github.com/Abraham2106/Oira.git
 cd Oira
-pnpm install
-```
-
-La primera instalación compila binarios de Electron y esbuild.
-
-### 2. Arrancar el escritorio
-
-```bash
 npm run dev
 ```
 
-Abre la ventana nativa con recarga en caliente (con pnpm también funciona `pnpm dev`). El renderer de Vite queda en `http://localhost:5173/`; la app habla con Main a través de `window.oira`.
+`npm run dev` instala las dependencias automáticamente si faltan (la primera vez compila binarios de Electron y esbuild) y abre la ventana nativa con recarga en caliente.
+
+Equivalente manual:
+
+```bash
+pnpm install
+pnpm dev
+```
+
+El renderer de Vite queda en `http://localhost:5173/`; la app habla con Main a través de `window.oira`.
 
 ### 3. Elegir el adaptador de inferencia
 
