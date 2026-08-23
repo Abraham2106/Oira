@@ -1,4 +1,10 @@
 import { isAppErrorCode } from "../../shared/constants/app-error-codes"
+import type { InferenceProgress } from "../../shared/types/inference-progress"
+import {
+  createAudioTempStore,
+  defaultAudioTempDir,
+  type AudioTempStore,
+} from "../audio"
 import { createAuthStub, type SessionPort } from "../auth"
 import {
   createEncounterService,
@@ -6,8 +12,12 @@ import {
   type EncounterPort,
 } from "../encounters"
 import { createExportStub, type ExportPort } from "../export"
+import type { InferenceAdapterName } from "../config/env"
+import { resolveAppEnv } from "../config/env"
+import { createInferencePorts } from "../inference"
 import type { Logger } from "../logging"
-import { createNotesStub, type NotesPort } from "../notes"
+import { createNotesService, type NotesPort } from "../notes"
+import { registerAudioIpc } from "./audio.ipc"
 import { registerAuthIpc } from "./auth.ipc"
 import { registerEncounterIpc } from "./encounters.ipc"
 import { registerExportIpc } from "./export.ipc"
@@ -21,6 +31,13 @@ export type IpcDeps = {
   exportNote: ExportPort
   session: SessionPort
   logger: IpcLogger
+  audio: AudioTempStore
+}
+
+export type StubIpcOptions = {
+  audio?: AudioTempStore
+  onProgress?: (event: InferenceProgress) => void
+  inferenceAdapter?: InferenceAdapterName
 }
 
 export function createSilentIpcLogger(): IpcLogger {
@@ -43,21 +60,45 @@ export function createIpcLogger(logger: Logger): IpcLogger {
   }
 }
 
-export function createStubIpcDeps(logger: IpcLogger = createSilentIpcLogger()): IpcDeps {
+export function createStubIpcDeps(
+  logger: IpcLogger = createSilentIpcLogger(),
+  options: StubIpcOptions = {},
+): IpcDeps {
   const repository = createMemoryEncounterRepository()
+  const audio =
+    options.audio ??
+    createAudioTempStore({ audioTempDir: defaultAudioTempDir() })
+  const inferenceAdapter =
+    options.inferenceAdapter ??
+    resolveAppEnv({
+      isPackaged: false,
+      nodeEnv: process.env.NODE_ENV,
+      inferenceAdapter: process.env.NOTALOCAL_INFERENCE,
+    }).inferenceAdapter
   return {
     encounters: createEncounterService({ repository }),
-    notes: createNotesStub({ encounters: repository }),
+    notes: createNotesService({
+      encounters: repository,
+      audio,
+      onProgress: options.onProgress,
+      ...createInferencePorts(inferenceAdapter),
+    }),
     exportNote: createExportStub(),
     session: createAuthStub(),
     logger,
+    audio,
   }
 }
 
 export function registerIpc(handle: IpcHandle, deps: IpcDeps): void {
   registerEncounterIpc(handle, deps)
+  registerAudioIpc(handle, deps)
   registerNotesIpc(handle, deps)
-  registerExportIpc(handle, { exportNote: deps.exportNote, session: deps.session, logger: deps.logger })
+  registerExportIpc(handle, {
+    exportNote: deps.exportNote,
+    session: deps.session,
+    logger: deps.logger,
+  })
   registerAuthIpc(handle, deps)
 }
 

@@ -1,4 +1,5 @@
 import type { ClinicalNote } from "@oira/types"
+import type { InferenceProgress } from "../../shared/types/inference-progress"
 import type { OiraApi } from "../../shared/types/oira-api"
 import type { Result } from "../../shared/types/result"
 import type { DemoBridge } from "./mock"
@@ -30,6 +31,12 @@ export function adaptOiraApi(api: OiraApi): DemoBridge {
     },
     async saveNote(encounterId, note: ClinicalNote) {
       await unwrap(api.saveNote({ encounterId, note }))
+    },
+    async appendAudio(input) {
+      await unwrap(api.appendAudio(input))
+    },
+    onInferenceProgress(listener: (event: InferenceProgress) => void) {
+      return api.onInferenceProgress(listener)
     },
   }
 }

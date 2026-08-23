@@ -60,9 +60,14 @@ export type FieldValue = {
   reviewed: boolean
 }
 
+export const SPEAKER_ROLES = ["Médico", "Paciente"] as const
+
+export type SpeakerRole = (typeof SPEAKER_ROLES)[number]
+
 export type TranscriptSegment = {
   id: string
-  speaker: "Médico" | "Paciente"
+  /** P0 Whisper has no diarization — absent/null until a human binds a role. */
+  speaker?: SpeakerRole | null
   startMs: number
   text: string
 }
@@ -82,5 +87,5 @@ export type Encounter = {
 
 /**
  * UI view-model only. The IPC API lives in
- * `apps/desktop/src/shared/types/oira-api.ts` (`OiraApi`).
+ * `apps/desktop/src/shared/types/notalocal-api.ts` (`NotaLocalAPI`).
  */

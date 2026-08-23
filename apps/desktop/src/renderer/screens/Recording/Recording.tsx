@@ -40,7 +40,7 @@ export function RecordingScreen({ startedAtMs, onStop, onDiscard }: Props) {
         title="¿Descartar esta grabación?"
         onClose={() => setConfirmDiscard(false)}
       >
-        <p>No se generará nota y no queda copia del audio descartado.</p>
+        <p>Se descartará el audio y la transcripción de esta consulta. No se generará nota y no queda copia.</p>
         <div className="actions">
           <Button
             variant="danger"

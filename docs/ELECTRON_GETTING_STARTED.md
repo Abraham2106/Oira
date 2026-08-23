@@ -1,4 +1,4 @@
-# Electron en Oira — de cero (para Justin)
+# Electron en NotaLocal — de cero (para Justin)
 
 > Para quien **no conoce Electron**. Lee §0–§3 antes de tocar código.
 > Después: arrancar la app, entender `config/`, y seguir el plan agile I01→I12.
@@ -16,13 +16,13 @@
 - **Chromium** → pinta la interfaz (HTML/CSS/React), igual que un navegador.
 - **Node.js** → puede leer disco, abrir bases de datos, usar APIs del sistema.
 
-En Oira eso importa porque **todo el “backend” vive en el PC del médico**. No hay servidor en la nube para el MVP.
+En NotaLocal eso importa porque **todo el “backend” vive en el PC del médico**. No hay servidor en la nube para el MVP.
 
 ### Analogía rápida
 
 Imagina un restaurante:
 
-| Pieza Electron | Analogía | En Oira |
+| Pieza Electron | Analogía | En NotaLocal |
 | --- | --- | --- |
 | **Renderer** | Sala / carta que ve el cliente | Pantallas React (Antonio) |
 | **Main** | Cocina + almacén | Backend local: archivos, SQLite, lógica (tú) |
@@ -35,7 +35,7 @@ La UI **nunca** debería abrir la base de datos ni llamar a QVAC directamente. P
 
 1. **Main** — proceso Node. Arranca la app, crea ventanas, tiene poder de sistema.
 2. **Renderer** — “pestaña” de Chromium con React. Solo UI.
-3. **Preload** — script que corre **antes** de la página y expone una API mínima segura (`window.oira`).
+3. **Preload** — script que corre **antes** de la página y expone una API mínima segura (`window.notalocal`).
 
 **IPC** = *Inter-Process Communication*: cómo Main y Renderer se hablan (`invoke` / `handle`, eventos).
 
@@ -52,7 +52,7 @@ Significa: la página React **no** tiene `require('fs')` ni acceso libre a Node.
 
 ---
 
-## 1. Quién hace qué en Oira
+## 1. Quién hace qué en NotaLocal
 
 | Proceso | Carpeta | Quién | Qué hace |
 | --- | --- | --- | --- |
@@ -60,7 +60,7 @@ Significa: la página React **no** tiene `require('fs')` ni acceso libre a Node.
 | **Preload** | `apps/desktop/src/preload/` | **Tú** | Lista blanca de métodos hacia la UI |
 | **Renderer** | `apps/desktop/src/renderer/` | Antonio | React. Sin Node, sin `@qvac/sdk`, sin SQL |
 
-Hoy el prototipo usa un **mock dentro del renderer** para demos. Tu trabajo (I03–I04) es que la UI pase a `window.oira.*` real vía preload + IPC.
+Hoy el prototipo usa un **mock dentro del renderer** para demos. Tu trabajo (I03–I04) es que la UI pase a `window.notalocal.*` real vía preload + IPC.
 
 ---
 
@@ -84,7 +84,7 @@ El monorepo **ya tiene** Electron + React + TypeScript en `apps/desktop/`.
 
 ### Requisitos
 
-- Node `>= 20` (más adelante, para QVAC: `>= 22.17` y npm `>= 10.9`)
+- Node `>= 22.17` y npm `>= 10.9`
 - pnpm 10 (ver `packageManager` en el `package.json` raíz)
 
 ### Comandos
@@ -94,7 +94,7 @@ pnpm install
 pnpm dev:desktop
 ```
 
-Debería abrirse una ventana **Oira**. Eso ya es Electron funcionando.
+Debería abrirse una ventana **NotaLocal**. Eso ya es Electron funcionando.
 
 ### ¿Qué mirar en la terminal?
 
@@ -137,7 +137,7 @@ Flujo real al arrancar:
 Hoy solo expone un stub:
 
 ```ts
-contextBridge.exposeInMainWorld("oiraPrototype", {
+contextBridge.exposeInMainWorld("notalocalPrototype", {
   usesMockBridge: true,
 })
 ```
@@ -145,7 +145,7 @@ contextBridge.exposeInMainWorld("oiraPrototype", {
 Eso pone un objeto en `window` del renderer. Más adelante (I04) será algo como:
 
 ```ts
-contextBridge.exposeInMainWorld("oira", {
+contextBridge.exposeInMainWorld("notalocal", {
   startEncounter: (...),
   stopEncounter: (...),
   generateNote: (...),
@@ -208,7 +208,7 @@ Orden de trabajo (no saltes a empaquetar ni a QVAC):
 | I01 | App abre sin QVAC | Ya casi |
 | I02 | Carpetas Main + stubs | [Agile](BACKEND_AGILE_DELIVERABLE.md) |
 | I03 | Schemas / errores compartidos | ídem |
-| I04 | Preload `oira` + IPC | ídem |
+| I04 | Preload `notalocal` + IPC | ídem |
 | I05+ | SQLite, audio, mocks, export, seguridad | ídem |
 
 **Reglas de higiene**
@@ -239,7 +239,7 @@ apps/desktop/
 | `pnpm dev:desktop` | Abrir la app en desarrollo |
 | `pnpm test` | Tests del paquete desktop |
 | `pnpm typecheck` | Comprobar tipos |
-| `pnpm --filter oira-desktop build` | Bundle en `apps/desktop/out/` |
+| `pnpm --filter notalocal-desktop build` | Bundle en `apps/desktop/out/` |
 
 ---
 
@@ -266,7 +266,7 @@ Fuente: <https://docs.qvac.tether.io/tutorials/electron/>
 | --- | --- |
 | Main + preload + IPC | Sí |
 | Aislamiento del renderer | Sí (ya está) |
-| Instalar `@qvac/sdk` y cargar modelos | **No** en el primer entregable (solo mock) |
+| Instalar `@qvac/sdk` y cargar modelos | Pin 0.17.1; Whisper small en `generateNote` (`language: es`) |
 | UI chat del tutorial | **No** (renderer de Antonio) |
 | Empaquetar con Forge + plugin QVAC | **Después** |
 
@@ -281,7 +281,7 @@ Cuando toque IA real: un solo sitio de import bajo `src/main/qvac/` (o `inferenc
 - [ ] Abrí la app con `pnpm dev:desktop`.
 - [ ] Sé que `config/` define rutas y settings, no la UI.
 - [ ] Sé que el siguiente trabajo útil es I02–I04, no empaquetar ni QVAC.
-- [ ] Sé que Antonio consume `window.oira`; yo no meto lógica clínica en React.
+- [ ] Sé que Antonio consume `window.notalocal`; yo no meto lógica clínica en React.
 
 Si falta una firma de QVAC en docs oficiales o `.d.ts`: **no la inventes** — `TODO: VERIFY FROM OFFICIAL QVAC DOCUMENTATION`.
 

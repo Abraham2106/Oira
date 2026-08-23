@@ -15,7 +15,12 @@ export type CreateLoggerOptions = {
 }
 
 export function createLogger(options: CreateLoggerOptions = {}): Logger {
-  const sink = options.sink ?? ((line: string) => console.info(line))
+  const sink =
+    options.sink ??
+    ((line: string) => {
+      // eslint-disable-next-line no-console -- default sink is local stdout (§12)
+      console.info(line)
+    })
   const now = options.now ?? (() => new Date())
 
   return {

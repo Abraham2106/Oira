@@ -1,13 +1,12 @@
-import { useCallback, useMemo, useState } from "react"
+import { useCallback, useMemo, useRef, useState } from "react"
 import type { ClinicalNote, Encounter, ProductState, TranscriptSegment } from "@oira/types"
 import { getBridge } from "../bridge/oira"
+import { startMicCapture, type MicCapture } from "../lib/micCapture"
 import {
   createMachine,
   reduceMachine,
   type MachineSnapshot,
 } from "./encounterMachine"
-
-const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 type EncounterView = {
   productState: ProductState
@@ -44,6 +43,7 @@ export function useEncounter(): EncounterView {
   const [note, setNote] = useState<ClinicalNote | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  const captureRef = useRef<MicCapture | null>(null)
 
   const apply = useCallback((event: Parameters<typeof reduceMachine>[1]) => {
     setMachine((current) => reduceMachine(current, event))
@@ -51,12 +51,29 @@ export function useEncounter(): EncounterView {
 
   const fail = useCallback((message: string) => {
     setErrorMessage(message)
-    setMachine((current) => reduceMachine(current, "FAIL"))
+    setMachine((current) => {
+      if (current.state === "ERROR") return current
+      return reduceMachine(current, "FAIL")
+    })
   }, [])
 
   const startRecording = useCallback(async () => {
     try {
       const started = await bridge.startEncounter({ label, visitType })
+      try {
+        captureRef.current = await startMicCapture({
+          onChunk: (pcm, sequence) =>
+            bridge.appendAudio({
+              encounterId: started.encounterId,
+              sequence,
+              pcm,
+            }),
+        })
+      } catch {
+        await bridge.stopEncounter(started.encounterId).catch(() => undefined)
+        fail("No se pudo usar el micrófono.")
+        return
+      }
       setEncounter({
         id: started.encounterId,
         startedAt: started.startedAt,
@@ -75,19 +92,32 @@ export function useEncounter(): EncounterView {
 
   const stopRecording = useCallback(async () => {
     if (!encounter) return
+    const unsubscribe = bridge.onInferenceProgress((event) => {
+      if (event.encounterId !== encounter.id) return
+      if (event.phase === "structuring") apply("TRANSCRIBE_DONE")
+      if (event.phase === "failed") fail("No pudimos transcribir esta consulta. Puedes reintentar.")
+    })
     try {
+      if (captureRef.current) {
+        await captureRef.current.stop()
+        captureRef.current = null
+      }
       await bridge.stopEncounter(encounter.id)
       setRecordingStartedAt(null)
       apply("STOP")
-      await wait(800)
-      apply("TRANSCRIBE_DONE")
-      await wait(800)
       const generated = await bridge.generateNote(encounter.id)
       setTranscript(generated.transcript)
       setNote(generated.note)
-      apply("STRUCTURE_DONE")
+      setMachine((current) => {
+        let next = current
+        if (next.state === "TRANSCRIBING") next = reduceMachine(next, "TRANSCRIBE_DONE")
+        if (next.state === "STRUCTURING") next = reduceMachine(next, "STRUCTURE_DONE")
+        return next
+      })
     } catch {
       fail("No pudimos transcribir esta consulta. Puedes reintentar.")
+    } finally {
+      unsubscribe()
     }
   }, [apply, bridge, encounter, fail])
 
@@ -147,6 +177,10 @@ export function useEncounter(): EncounterView {
   }, [apply])
 
   const reset = useCallback(() => {
+    if (captureRef.current) {
+      void captureRef.current.stop().catch(() => undefined)
+      captureRef.current = null
+    }
     setMachine(createMachine())
     setLabel("")
     setVisitType("")

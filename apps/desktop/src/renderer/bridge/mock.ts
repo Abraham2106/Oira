@@ -6,6 +6,8 @@ import {
   type TranscriptSegment,
 } from "@oira/types"
 
+import type { InferenceProgress } from "../../shared/types/inference-progress"
+
 /** UI fixture for the renderer prototype — not the Main IPC contract. */
 export type DemoBridge = {
   startEncounter: (input: {
@@ -13,11 +15,17 @@ export type DemoBridge = {
     visitType: string
   }) => Promise<{ encounterId: string; startedAt: string }>
   stopEncounter: (encounterId: string) => Promise<void>
+  appendAudio: (input: {
+    encounterId: string
+    sequence: number
+    pcm: number[]
+  }) => Promise<void>
   generateNote: (encounterId: string) => Promise<{
     transcript: TranscriptSegment[]
     note: ClinicalNote
   }>
   saveNote: (encounterId: string, note: ClinicalNote) => Promise<void>
+  onInferenceProgress: (listener: (event: InferenceProgress) => void) => () => void
 }
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
@@ -106,6 +114,10 @@ export function createMockBridge(): DemoBridge {
       if (encounterId !== activeId) {
         throw new Error("Consulta desconocida")
       }
+    },
+    async appendAudio() {},
+    onInferenceProgress() {
+      return () => {}
     },
     async generateNote(encounterId) {
       if (encounterId !== activeId) {

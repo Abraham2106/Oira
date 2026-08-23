@@ -28,4 +28,14 @@ export default tseslint.config(
       ],
     },
   },
+  {
+    files: ["src/main/**/*.ts"],
+    rules: {
+      "no-console": "error",
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
+      ],
+    },
+  },
 )

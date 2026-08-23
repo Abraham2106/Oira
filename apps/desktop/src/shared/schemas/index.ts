@@ -4,6 +4,7 @@ export {
   transcriptSegmentSchema,
 } from "./clinical.schema"
 export {
+  appendAudioInputSchema,
   exportNoteInputSchema,
   generateNoteInputSchema,
   lockInputSchema,
@@ -13,6 +14,7 @@ export {
   unlockInputSchema,
 } from "./ipc.schema"
 export type {
+  AppendAudioInput,
   ExportNoteInput,
   GenerateNoteInput,
   LockInput,

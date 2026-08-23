@@ -14,7 +14,7 @@ export type LogMetaValue = number | boolean | string
 export type LogEntry = {
   /** UTC ISO-8601; the logger fills it when omitted. */
   ts?: string
-  /** Stable operation name, e.g. `ipc.oira:notes:save`. */
+  /** Stable operation name, e.g. `ipc.notalocal:notes:save`. */
   action: string
   status: LogStatus
   latencyMs?: number

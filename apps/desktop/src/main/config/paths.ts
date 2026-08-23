@@ -18,9 +18,9 @@ export function resolveAppDirectories(
   return {
     userData,
     systemTemp,
-    databaseFile: path.join(userData, "oira.sqlite"),
+    databaseFile: path.join(userData, "notalocal.sqlite"),
     modelCacheDir: path.join(userData, "model-cache"),
-    audioTempDir: path.join(userData, "tmp-audio"),
+    audioTempDir: path.join(userData, `tmp-audio-${process.pid}`),
     logsDir: path.join(userData, "logs"),
     settingsFile: path.join(userData, "settings.json"),
   }

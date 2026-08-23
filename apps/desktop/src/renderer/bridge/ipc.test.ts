@@ -25,6 +25,8 @@ describe("adaptOiraApi", () => {
         ok: true,
         data: { noteId: "00000000-0000-4000-8000-000000000002" },
       }),
+      appendAudio: async () => ({ ok: true, data: { accepted: true } }),
+      onInferenceProgress: () => () => {},
     }
 
     const bridge = adaptOiraApi(api)
@@ -34,6 +36,9 @@ describe("adaptOiraApi", () => {
     const generated = await bridge.generateNote(encounterId)
     expect(Object.keys(generated.note.sections).sort()).toEqual([...SECTION_IDS].sort())
     await bridge.saveNote(encounterId, generated.note)
+    await bridge.appendAudio({ encounterId, sequence: 0, pcm: [0, 0] })
+    const stop = bridge.onInferenceProgress(() => {})
+    stop()
   })
 
   it("throws on Result error", async () => {
@@ -58,6 +63,11 @@ describe("adaptOiraApi", () => {
         ok: false,
         error: { code: "INVALID_INPUT", message: "x", retryable: false },
       }),
+      appendAudio: async () => ({
+        ok: false,
+        error: { code: "INVALID_INPUT", message: "x", retryable: false },
+      }),
+      onInferenceProgress: () => () => {},
     }
 
     await expect(

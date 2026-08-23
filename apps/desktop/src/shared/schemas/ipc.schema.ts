@@ -14,6 +14,17 @@ export const stopEncounterInputSchema = z
   })
   .strict()
 
+export const appendAudioInputSchema = z
+  .object({
+    encounterId: z.string().uuid(),
+    sequence: z.number().int().nonnegative(),
+    pcm: z.union([
+      z.instanceof(Uint8Array),
+      z.array(z.number().int().min(0).max(255)),
+    ]),
+  })
+  .strict()
+
 export const generateNoteInputSchema = z
   .object({
     encounterId: z.string().uuid(),
@@ -42,6 +53,7 @@ export const unlockInputSchema = z
 
 export const lockInputSchema = z.object({}).strict()
 
+export type AppendAudioInput = z.infer<typeof appendAudioInputSchema>
 export type StartEncounterInput = z.infer<typeof startEncounterInputSchema>
 export type StopEncounterInput = z.infer<typeof stopEncounterInputSchema>
 export type GenerateNoteInput = z.infer<typeof generateNoteInputSchema>

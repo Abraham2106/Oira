@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <title>NotaLocal · Whisper small ES</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: "Segoe UI", system-ui, sans-serif;
+      }
+      body {
+        margin: 24px;
+        max-width: 28rem;
+      }
+      button {
+        font: inherit;
+        padding: 0.6rem 1rem;
+        margin-right: 0.5rem;
+      }
+      #status {
+        min-height: 1.5rem;
+      }
+      #result {
+        white-space: pre-wrap;
+        background: #f4f1ea;
+        padding: 0.75rem;
+        border-radius: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Grabar y transcribir</h1>
+    <p>Whisper small, forzado a español. La primera vez descarga ~264 MB; después habla, espera medio segundo y Detener.</p>
+    <p id="status">Listo.</p>
+    <p>
+      <button id="record" type="button">Grabar</button>
+      <button id="stop" type="button" disabled>Detener</button>
+    </p>
+    <p id="result"></p>
+    <script>
+      const TARGET_RATE = 16000
+      const statusEl = document.getElementById("status")
+      const resultEl = document.getElementById("result")
+      const recordBtn = document.getElementById("record")
+      const stopBtn = document.getElementById("stop")
+
+      let mediaStream
+      let audioContext
+      let processor
+      let chunks = []
+
+      function setStatus(text) {
+        statusEl.textContent = text
+      }
+
+      function downsample(input, fromRate) {
+        if (fromRate === TARGET_RATE) return input
+        const ratio = fromRate / TARGET_RATE
+        const length = Math.max(1, Math.floor(input.length / ratio))
+        const output = new Float32Array(length)
+        for (let i = 0; i < length; i++) {
+          const src = i * ratio
+          const i0 = Math.floor(src)
+          const i1 = Math.min(i0 + 1, input.length - 1)
+          const t = src - i0
+          output[i] = input[i0] * (1 - t) + input[i1] * t
+        }
+        return output
+      }
+
+      function trimAndNormalize(input, sampleRate) {
+        const threshold = 0.012
+        const pad = Math.floor(sampleRate * 0.2)
+        let start = 0
+        let end = input.length - 1
+        while (start < input.length && Math.abs(input[start]) < threshold) start += 1
+        while (end > start && Math.abs(input[end]) < threshold) end -= 1
+        start = Math.max(0, start - pad)
+        end = Math.min(input.length - 1, end + pad)
+        const sliced = input.subarray(start, end + 1)
+        let peak = 0
+        for (let i = 0; i < sliced.length; i++) {
+          const abs = Math.abs(sliced[i])
+          if (abs > peak) peak = abs
+        }
+        if (peak < 0.02) return sliced
+        const gain = Math.min(0.89 / peak, 8)
+        if (gain <= 1.05) return sliced
+        const out = new Float32Array(sliced.length)
+        for (let i = 0; i < sliced.length; i++) out[i] = sliced[i] * gain
+        return out
+      }
+
+      function toPcmBytes(float32) {
+        const pcm = new Int16Array(float32.length)
+        for (let i = 0; i < float32.length; i++) {
+          const sample = Math.max(-1, Math.min(1, float32[i]))
+          pcm[i] = sample < 0 ? sample * 0x8000 : sample * 0x7fff
+        }
+        return Array.from(new Uint8Array(pcm.buffer))
+      }
+
+      async function start() {
+        resultEl.textContent = ""
+        chunks = []
+        mediaStream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            channelCount: 1,
+            sampleRate: TARGET_RATE,
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          },
+        })
+        audioContext = new AudioContext({ sampleRate: TARGET_RATE })
+        const source = audioContext.createMediaStreamSource(mediaStream)
+        processor = audioContext.createScriptProcessor(4096, 1, 1)
+        processor.onaudioprocess = (event) => {
+          chunks.push(new Float32Array(event.inputBuffer.getChannelData(0)))
+        }
+        source.connect(processor)
+        const mute = audioContext.createGain()
+        mute.gain.value = 0
+        processor.connect(mute)
+        mute.connect(audioContext.destination)
+        recordBtn.disabled = true
+        stopBtn.disabled = false
+        setStatus("Grabando… habla ahora.")
+      }
+
+      async function stop() {
+        stopBtn.disabled = true
+        setStatus("Cerrando el audio…")
+        await new Promise((resolve) => setTimeout(resolve, 280))
+        const rate = audioContext ? audioContext.sampleRate : TARGET_RATE
+        if (processor) processor.disconnect()
+        if (audioContext) await audioContext.close()
+        if (mediaStream) mediaStream.getTracks().forEach((track) => track.stop())
+        const total = chunks.reduce((sum, chunk) => sum + chunk.length, 0)
+        const merged = new Float32Array(total)
+        let offset = 0
+        for (const chunk of chunks) {
+          merged.set(chunk, offset)
+          offset += chunk.length
+        }
+        const pcm = toPcmBytes(trimAndNormalize(downsample(merged, rate), TARGET_RATE))
+        setStatus("Transcribiendo en este equipo…")
+        try {
+          const result = await window.notalocalRecord.transcribePcm(pcm)
+          if (!result.ok) {
+            setStatus("Falló la transcripción.")
+            resultEl.textContent = result.error
+            return
+          }
+          setStatus("Listo.")
+          resultEl.textContent = result.text || "(sin texto)"
+        } catch (error) {
+          setStatus("Falló la transcripción.")
+          resultEl.textContent = String(error)
+        } finally {
+          recordBtn.disabled = false
+        }
+      }
+
+      recordBtn.addEventListener("click", () => {
+        start().catch((error) => {
+          setStatus("No se pudo usar el micrófono.")
+          resultEl.textContent = String(error)
+        })
+      })
+      stopBtn.addEventListener("click", () => {
+        stop().catch((error) => {
+          setStatus("No se pudo detener.")
+          resultEl.textContent = String(error)
+          recordBtn.disabled = false
+        })
+      })
+    </script>
+  </body>
+</html>

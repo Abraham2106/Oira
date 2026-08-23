@@ -19,7 +19,8 @@ export function TranscriptSegmentView({ segment, highlighted = false }: Props) {
       className={highlighted ? "segment segment-highlighted" : "segment"}
     >
       <span className="muted">
-        {minutes}:{seconds} · {segment.speaker}
+        {minutes}:{seconds}
+        {segment.speaker ? ` · ${segment.speaker}` : ""}
       </span>
       <p>{segment.text}</p>
     </li>

@@ -39,7 +39,7 @@ export function sttEngineUnavailableError(): SttError {
     "NOT_IMPLEMENTED",
     "Local speech-to-text is not available in this build.",
     {
-      hint: "The QVAC (@qvac/sdk) engine integration lands in qvac-stt.adapter.ts.",
+      hint: "The QVAC SDK engine integration lands in qvac-stt.adapter.ts.",
       retryable: false,
     },
   )
