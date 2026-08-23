@@ -1,12 +1,14 @@
 import { spawn, spawnSync } from "node:child_process"
+import { readFileSync } from "node:fs"
 import { createRequire } from "node:module"
 import os from "node:os"
 import { fileURLToPath } from "node:url"
+import { rejectOnTimeout } from "./watchdog.mjs"
 
 const self = fileURLToPath(import.meta.url)
-const LOAD_WATCHDOG_MS = 120_000
-const COMPLETION_WATCHDOG_MS = 180_000
-const MIN_FREE_BYTES = 800 * 1024 * 1024
+const LOAD_WATCHDOG_MS = 600_000
+const COMPLETION_WATCHDOG_MS = 240_000
+const MIN_FREE_BYTES = 400 * 1024 * 1024
 
 const FIELD = {
   type: "object",
@@ -89,38 +91,40 @@ if (!process.versions.electron) {
     process.exit(code ?? 1)
   })
 } else {
-  const { close, completion, loadModel, unloadModel, QWEN3_600M_INST_Q4 } =
+  const { close, completion, loadModel, unloadModel, QWEN3_1_7B_INST_Q4 } =
     await import("@qvac/sdk")
   assertResources()
   let modelId
   try {
     modelId = await Promise.race([
       loadModel({
-        modelSrc: QWEN3_600M_INST_Q4,
+        modelSrc: QWEN3_1_7B_INST_Q4,
         onProgress: (progress) => {
-          assertResources()
           const percentage = Number(progress.percentage)
           if (Number.isFinite(percentage)) {
             process.stderr.write(`qvac.qwen ${Math.round(percentage)}\n`)
           }
         },
       }),
-      new Promise((_, reject) => {
-        setTimeout(() => reject(new Error("LOAD_WATCHDOG")), LOAD_WATCHDOG_MS)
-      }),
+      rejectOnTimeout(LOAD_WATCHDOG_MS, () => new Error("LOAD_WATCHDOG")),
     ])
+    const spoken = (
+      process.env.QWEN_TRANSCRIPT_FILE
+        ? readFileSync(process.env.QWEN_TRANSCRIPT_FILE, "utf8")
+        : process.env.QWEN_TRANSCRIPT
+    )?.trim() ||
+      "[seg-1] Hola doctor, me duele la rodilla izquierda desde ayer.\n[seg-2] No me caí, apareció al caminar."
     const run = completion({
       modelId,
       history: [
         {
           role: "system",
           content:
-            "Eres un asistente de documentación clínica. Extrae SOLO lo dicho. JSON only. No diagnostiques. /no_think",
+            "Eres un asistente de documentación clínica. Extrae SOLO lo explícito. JSON only. No diagnostiques. NOT_STATED exige text vacío. PROHIBIDO copiar la misma frase en las 7 secciones. assessment/plan/follow_up vacíos si el médico no los verbaliza. Ejemplo: solo dolor de rodilla → visit_context y clinical_narrative STATED; el resto NOT_STATED. /no_think",
         },
         {
           role: "user",
-          content:
-            "<<<TRANSCRIPCION_INICIO>>>\n[seg-1] Hola doctor, me duele la rodilla izquierda desde ayer.\n[seg-2] No me caí, apareció al caminar.\n<<<TRANSCRIPCION_FIN>>>",
+          content: `Extrae la nota. Deja vacías las secciones sin evidencia.\n<<<TRANSCRIPCION_INICIO>>>\n${spoken}\n<<<TRANSCRIPCION_FIN>>>`,
         },
       ],
       stream: true,
@@ -138,12 +142,54 @@ if (!process.versions.electron) {
     }
     const raw = await Promise.race([
       run.final,
-      new Promise((_, reject) => {
-        setTimeout(() => reject(new Error("COMPLETION_WATCHDOG")), COMPLETION_WATCHDOG_MS)
-      }),
+        rejectOnTimeout(COMPLETION_WATCHDOG_MS, () => new Error("COMPLETION_WATCHDOG")),
     ])
     process.stderr.write("\n")
-    process.stdout.write(`qvac.qwen text=${raw.contentText}\n`)
+    const parsed = JSON.parse(raw.contentText)
+    const allowed = new Set(
+      [...spoken.matchAll(/\[([^\]]+)\]/g)].map((match) => match[1]),
+    )
+    if (allowed.size === 0) allowed.add("seg-1")
+    const keep = new Set(["visit_context", "clinical_narrative"])
+    const norm = (value) => String(value ?? "").trim().toLowerCase().replace(/\s+/g, " ")
+    for (const id of SECTIONS) {
+      const field = parsed.sections[id]
+      const text = String(field?.text ?? "").trim()
+      const sources = Array.isArray(field?.sourceSegmentIds)
+        ? field.sourceSegmentIds.filter((sourceId) => allowed.has(sourceId))
+        : []
+      parsed.sections[id] = text
+        ? { text, presence: "STATED", sourceSegmentIds: sources }
+        : { text: "", presence: "NOT_STATED", sourceSegmentIds: [] }
+    }
+    const primaryKeys = new Set(
+      [...keep].map((id) => norm(parsed.sections[id].text)).filter(Boolean),
+    )
+    const combo = norm(
+      `${parsed.sections.visit_context.text} ${parsed.sections.clinical_narrative.text}`,
+    )
+    for (const id of SECTIONS) {
+      if (keep.has(id)) continue
+      const key = norm(parsed.sections[id].text)
+      if (key && (primaryKeys.has(key) || key === combo)) {
+        parsed.sections[id] = { text: "", presence: "NOT_STATED", sourceSegmentIds: [] }
+      }
+    }
+    const counts = new Map()
+    for (const id of SECTIONS) {
+      const key = norm(parsed.sections[id].text)
+      if (!key) continue
+      counts.set(key, (counts.get(key) ?? 0) + 1)
+    }
+    const dump = [...counts.entries()].find(([, n]) => n >= 3)?.[0]
+    if (dump) {
+      for (const id of SECTIONS) {
+        if (norm(parsed.sections[id].text) === dump && !keep.has(id)) {
+          parsed.sections[id] = { text: "", presence: "NOT_STATED", sourceSegmentIds: [] }
+        }
+      }
+    }
+    process.stdout.write(`qvac.qwen text=${JSON.stringify(parsed, null, 2)}\n`)
     await unloadModel({ modelId })
   } finally {
     await close().catch(() => undefined)

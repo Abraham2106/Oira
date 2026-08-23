@@ -14,7 +14,10 @@
     "qvac:smoke": "node scripts/qvac-smoke.mjs",
     "qvac:whisper": "node scripts/qvac-whisper.mjs",
     "qvac:record": "electron scripts/qvac-record.mjs",
-    "qvac:qwen": "node scripts/qvac-qwen.mjs"
+    "qvac:qwen": "node scripts/qvac-qwen.mjs",
+    "eval": "vitest run src/main/qvac/eval-cases.test.ts src/main/qvac/eval-runner.test.ts",
+    "qvac:eval": "vitest run src/main/qvac/eval-cases.test.ts src/main/qvac/eval-runner.test.ts",
+    "qvac:eval:prepare": "vitest run src/main/qvac/eval-runner.test.ts"
   },
   "dependencies": {
     "@notalocal/types": "workspace:*",

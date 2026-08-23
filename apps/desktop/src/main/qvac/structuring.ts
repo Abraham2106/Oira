@@ -5,13 +5,16 @@ import { isAppError } from "../errors/core"
 import { invalidStructuredOutputError } from "../errors/notes"
 import { transcriptionFailedError } from "../errors/inference"
 import type { StructuringPort } from "../inference/port"
+import { QWEN_GENERATION_PARAMS } from "./generation"
 import { CLINICAL_NOTE_JSON_SCHEMA } from "./note-json-schema"
 import { P0_LLM_MODEL_ID } from "./model-ids"
 import { buildExtractionPrompt, QWEN_SYSTEM_PROMPT } from "./prompts"
+import { sanitizeQwenNote } from "./sanitize-note"
+import { rejectOnTimeout } from "./watchdog"
 
-const LOAD_WATCHDOG_MS = 120_000
-const COMPLETION_WATCHDOG_MS = 180_000
-const MIN_FREE_BYTES = 800 * 1024 * 1024
+const LOAD_WATCHDOG_MS = 600_000
+const COMPLETION_WATCHDOG_MS = 240_000
+const MIN_FREE_BYTES = 400 * 1024 * 1024
 
 const llmFieldSchema = z.object({
   text: z.string(),
@@ -38,31 +41,6 @@ function assertMemory(): void {
   }
 }
 
-function sanitizeNote(note: ClinicalNote, allowedIds: Set<string>): ClinicalNote {
-  const sections = {} as ClinicalNote["sections"]
-  for (const id of SECTION_IDS) {
-    const field = note.sections[id]
-    const text = field.text.trim()
-    const sources = field.sourceSegmentIds.filter((sourceId) => allowedIds.has(sourceId))
-    if (!text) {
-      sections[id] = {
-        text: "",
-        presence: "NOT_STATED",
-        sourceSegmentIds: [],
-        reviewed: false,
-      }
-      continue
-    }
-    sections[id] = {
-      text,
-      presence: field.presence === "UNKNOWN" ? "UNKNOWN" : "STATED",
-      sourceSegmentIds: sources,
-      reviewed: false,
-    }
-  }
-  return { sections }
-}
-
 function hydrateNote(raw: unknown): ClinicalNote {
   const parsed = llmNoteSchema.safeParse(raw)
   if (!parsed.success) throw invalidStructuredOutputError()
@@ -87,7 +65,7 @@ async function drainCompletion(
   return (final.contentText ?? "").trim()
 }
 
-/** On-device Qwen 600M: load → json_schema completion → unload → close. */
+/** On-device Qwen 1.7B: load → json_schema completion → unload → close. */
 export function createQvacStructuring(): StructuringPort {
   return {
     async structure(input) {
@@ -96,19 +74,17 @@ export function createQvacStructuring(): StructuringPort {
         completion,
         loadModel,
         unloadModel,
-        QWEN3_600M_INST_Q4,
+        QWEN3_1_7B_INST_Q4,
       } = await import("./sdk")
-      if (QWEN3_600M_INST_Q4.name !== P0_LLM_MODEL_ID) {
+      if (QWEN3_1_7B_INST_Q4.name !== P0_LLM_MODEL_ID) {
         throw transcriptionFailedError("SMOKE_MODEL_MISMATCH")
       }
       assertMemory()
       let modelId: string | undefined
       try {
         modelId = await Promise.race([
-          loadModel({ modelSrc: QWEN3_600M_INST_Q4 }),
-          new Promise<never>((_, reject) => {
-            setTimeout(() => reject(transcriptionFailedError("LOAD_WATCHDOG")), LOAD_WATCHDOG_MS)
-          }),
+          loadModel({ modelSrc: QWEN3_1_7B_INST_Q4 }),
+          rejectOnTimeout(LOAD_WATCHDOG_MS, () => transcriptionFailedError("LOAD_WATCHDOG")),
         ])
         const run = completion({
           modelId,
@@ -125,16 +101,13 @@ export function createQvacStructuring(): StructuringPort {
               schema: CLINICAL_NOTE_JSON_SCHEMA as unknown as Record<string, unknown>,
             },
           },
-          generationParams: { temp: 0, seed: 42, predict: 2048, reasoning_budget: 0 },
+          generationParams: { ...QWEN_GENERATION_PARAMS },
         })
         const rawText = await Promise.race([
           drainCompletion(run),
-          new Promise<never>((_, reject) => {
-            setTimeout(
-              () => reject(transcriptionFailedError("COMPLETION_WATCHDOG")),
-              COMPLETION_WATCHDOG_MS,
-            )
-          }),
+          rejectOnTimeout(COMPLETION_WATCHDOG_MS, () =>
+            transcriptionFailedError("COMPLETION_WATCHDOG"),
+          ),
         ])
         let parsedJson: unknown
         try {
@@ -143,9 +116,10 @@ export function createQvacStructuring(): StructuringPort {
           throw invalidStructuredOutputError()
         }
         return {
-          note: sanitizeNote(
+          note: sanitizeQwenNote(
             hydrateNote(parsedJson),
             new Set(input.transcript.map((segment) => segment.id)),
+            input.transcript,
           ),
         }
       } catch (error) {

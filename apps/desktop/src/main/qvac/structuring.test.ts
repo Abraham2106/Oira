@@ -36,7 +36,7 @@ vi.mock("./sdk", () => ({
   })),
   unloadModel: vi.fn(async () => undefined),
   close: vi.fn(async () => undefined),
-  QWEN3_600M_INST_Q4: { name: "QWEN3_600M_INST_Q4" },
+  QWEN3_1_7B_INST_Q4: { name: "QWEN3_1_7B_INST_Q4" },
 }))
 
 describe("createQvacStructuring", () => {
@@ -58,10 +58,93 @@ describe("createQvacStructuring", () => {
         modelId: "llm-1",
         kvCache: false,
         responseFormat: expect.objectContaining({ type: "json_schema" }),
+        generationParams: expect.objectContaining({ predict: 2048 }),
       }),
     )
     expect(sdk.unloadModel).toHaveBeenCalledWith({ modelId: "llm-1" })
     expect(sdk.close).toHaveBeenCalledOnce()
+  })
+
+  it("collapses a dumped sentence into visit_context and clinical_narrative", async () => {
+    const sdk = await import("./sdk")
+    const dumped = "Hola doctor, me duele la rodilla izquierda desde ayer."
+    const field = {
+      text: dumped,
+      presence: "NOT_STATED",
+      sourceSegmentIds: ["seg-1", "seg-2"],
+    }
+    vi.mocked(sdk.completion).mockReturnValueOnce({
+      events: (async function* () {})(),
+      final: Promise.resolve({
+        contentText: JSON.stringify({
+          sections: {
+            visit_context: field,
+            clinical_narrative: field,
+            relevant_history: field,
+            reported_findings: field,
+            clinician_documented_assessment: field,
+            clinician_documented_plan: field,
+            follow_up: field,
+          },
+        }),
+      }),
+    } as never)
+    const port = createQvacStructuring()
+    const { note } = await port.structure({
+      transcript: [
+        { id: "seg-1", speaker: null, startMs: 0, text: dumped },
+        { id: "seg-2", speaker: null, startMs: 1000, text: "No me caí." },
+      ],
+    })
+    expect(note.sections.visit_context.presence).toBe("STATED")
+    expect(note.sections.visit_context.text).toContain("rodilla")
+    expect(note.sections.clinical_narrative.text).toContain("caí")
+    expect(note.sections.relevant_history.text).toBe("")
+    expect(note.sections.clinician_documented_assessment.presence).toBe("NOT_STATED")
+    expect(note.sections.clinician_documented_plan.text).toBe("")
+    expect(note.sections.follow_up.text).toBe("")
+  })
+
+  it("clears relevant_history when it copies visit_context", async () => {
+    const sdk = await import("./sdk")
+    vi.mocked(sdk.completion).mockReturnValueOnce({
+      events: (async function* () {})(),
+      final: Promise.resolve({
+        contentText: JSON.stringify({
+          sections: {
+            visit_context: {
+              text: "Hola doctor, me duele la rodilla izquierda desde ayer.",
+              presence: "STATED",
+              sourceSegmentIds: ["seg-1"],
+            },
+            clinical_narrative: {
+              text: "No me caí, apareció al caminar.",
+              presence: "STATED",
+              sourceSegmentIds: ["seg-2"],
+            },
+            relevant_history: {
+              text: "Hola doctor, me duele la rodilla izquierda desde ayer.",
+              presence: "STATED",
+              sourceSegmentIds: ["seg-1"],
+            },
+            reported_findings: emptyField(),
+            clinician_documented_assessment: emptyField(),
+            clinician_documented_plan: emptyField(),
+            follow_up: emptyField(),
+          },
+        }),
+      }),
+    } as never)
+    const port = createQvacStructuring()
+    const { note } = await port.structure({
+      transcript: [
+        { id: "seg-1", speaker: null, startMs: 0, text: "Hola doctor, me duele la rodilla izquierda desde ayer." },
+        { id: "seg-2", speaker: null, startMs: 1000, text: "No me caí, apareció al caminar." },
+      ],
+    })
+    expect(note.sections.clinical_narrative.text).toContain("caminar")
+    expect(note.sections.relevant_history.text).toBe("")
+    expect(note.sections.relevant_history.presence).toBe("NOT_STATED")
   })
 
   it("maps invalid JSON to INVALID_STRUCTURED_OUTPUT", async () => {

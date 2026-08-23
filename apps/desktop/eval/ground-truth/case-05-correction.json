@@ -1,0 +1,63 @@
+{
+  "case_id": "05-correction",
+  "skipSyntheticAudio": false,
+  "expected": {
+    "visit_context": "STATED",
+    "clinical_narrative": "STATED",
+    "relevant_history": "NOT_STATED",
+    "reported_findings": "NOT_STATED",
+    "clinician_documented_assessment": "NOT_STATED",
+    "clinician_documented_plan": "NOT_STATED",
+    "follow_up": "NOT_STATED"
+  },
+  "note": {
+    "sections": {
+      "visit_context": {
+        "text": "Consulta por dolor de rodilla.",
+        "presence": "STATED",
+        "sourceSegmentIds": [
+          "seg-2"
+        ],
+        "reviewed": false
+      },
+      "clinical_narrative": {
+        "text": "Dolor de rodilla desde hace cinco días (corrigió tres).",
+        "presence": "STATED",
+        "sourceSegmentIds": [
+          "seg-2"
+        ],
+        "reviewed": false
+      },
+      "relevant_history": {
+        "text": "",
+        "presence": "NOT_STATED",
+        "sourceSegmentIds": [],
+        "reviewed": false
+      },
+      "reported_findings": {
+        "text": "",
+        "presence": "NOT_STATED",
+        "sourceSegmentIds": [],
+        "reviewed": false
+      },
+      "clinician_documented_assessment": {
+        "text": "",
+        "presence": "NOT_STATED",
+        "sourceSegmentIds": [],
+        "reviewed": false
+      },
+      "clinician_documented_plan": {
+        "text": "",
+        "presence": "NOT_STATED",
+        "sourceSegmentIds": [],
+        "reviewed": false
+      },
+      "follow_up": {
+        "text": "",
+        "presence": "NOT_STATED",
+        "sourceSegmentIds": [],
+        "reviewed": false
+      }
+    }
+  }
+}

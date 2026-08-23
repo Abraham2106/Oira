@@ -1,0 +1,65 @@
+{
+  "case_id": "04-dosage",
+  "skipSyntheticAudio": false,
+  "expected": {
+    "visit_context": "STATED",
+    "clinical_narrative": "STATED",
+    "relevant_history": "NOT_STATED",
+    "reported_findings": "NOT_STATED",
+    "clinician_documented_assessment": "NOT_STATED",
+    "clinician_documented_plan": "STATED",
+    "follow_up": "NOT_STATED"
+  },
+  "note": {
+    "sections": {
+      "visit_context": {
+        "text": "Consulta sobre la pauta analgésica.",
+        "presence": "STATED",
+        "sourceSegmentIds": [
+          "seg-1"
+        ],
+        "reviewed": false
+      },
+      "clinical_narrative": {
+        "text": "El médico pregunta cómo lo está tomando.",
+        "presence": "STATED",
+        "sourceSegmentIds": [
+          "seg-1"
+        ],
+        "reviewed": false
+      },
+      "relevant_history": {
+        "text": "",
+        "presence": "NOT_STATED",
+        "sourceSegmentIds": [],
+        "reviewed": false
+      },
+      "reported_findings": {
+        "text": "",
+        "presence": "NOT_STATED",
+        "sourceSegmentIds": [],
+        "reviewed": false
+      },
+      "clinician_documented_assessment": {
+        "text": "",
+        "presence": "NOT_STATED",
+        "sourceSegmentIds": [],
+        "reviewed": false
+      },
+      "clinician_documented_plan": {
+        "text": "Ibuprofeno 400 miligramos cada 8 horas y un gramo de paracetamol si duele mucho.",
+        "presence": "STATED",
+        "sourceSegmentIds": [
+          "seg-2"
+        ],
+        "reviewed": false
+      },
+      "follow_up": {
+        "text": "",
+        "presence": "NOT_STATED",
+        "sourceSegmentIds": [],
+        "reviewed": false
+      }
+    }
+  }
+}

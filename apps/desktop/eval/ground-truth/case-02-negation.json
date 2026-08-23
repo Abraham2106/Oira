@@ -1,0 +1,64 @@
+{
+  "case_id": "02-negation",
+  "skipSyntheticAudio": false,
+  "expected": {
+    "visit_context": "STATED",
+    "clinical_narrative": "STATED",
+    "relevant_history": "NOT_STATED",
+    "reported_findings": "NOT_STATED",
+    "clinician_documented_assessment": "NOT_STATED",
+    "clinician_documented_plan": "NOT_STATED",
+    "follow_up": "NOT_STATED"
+  },
+  "note": {
+    "sections": {
+      "visit_context": {
+        "text": "Consulta por dolor de garganta.",
+        "presence": "STATED",
+        "sourceSegmentIds": [
+          "seg-2"
+        ],
+        "reviewed": false
+      },
+      "clinical_narrative": {
+        "text": "Lleva tres días con dolor de garganta. No he tenido fiebre.",
+        "presence": "STATED",
+        "sourceSegmentIds": [
+          "seg-2",
+          "seg-3"
+        ],
+        "reviewed": false
+      },
+      "relevant_history": {
+        "text": "",
+        "presence": "NOT_STATED",
+        "sourceSegmentIds": [],
+        "reviewed": false
+      },
+      "reported_findings": {
+        "text": "",
+        "presence": "NOT_STATED",
+        "sourceSegmentIds": [],
+        "reviewed": false
+      },
+      "clinician_documented_assessment": {
+        "text": "",
+        "presence": "NOT_STATED",
+        "sourceSegmentIds": [],
+        "reviewed": false
+      },
+      "clinician_documented_plan": {
+        "text": "",
+        "presence": "NOT_STATED",
+        "sourceSegmentIds": [],
+        "reviewed": false
+      },
+      "follow_up": {
+        "text": "",
+        "presence": "NOT_STATED",
+        "sourceSegmentIds": [],
+        "reviewed": false
+      }
+    }
+  }
+}

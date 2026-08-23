@@ -4,3 +4,5 @@ dist/
 out/
 *.tsbuildinfo
 .DS_Store
+apps/desktop/eval/audio/*.wav
+apps/desktop/eval/results/

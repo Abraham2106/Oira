@@ -5,6 +5,6 @@ export {
   loadModel,
   transcribe,
   unloadModel,
-  QWEN3_600M_INST_Q4,
+  QWEN3_1_7B_INST_Q4,
   WHISPER_SMALL_Q8_0,
 } from "@qvac/sdk"

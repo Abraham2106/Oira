@@ -30,7 +30,7 @@
   </head>
   <body>
     <h1>Grabar y transcribir</h1>
-    <p>Whisper small, forzado a español. La primera vez descarga ~264 MB; después habla, espera medio segundo y Detener.</p>
+    <p>Whisper small, forzado a español. Habla, espera medio segundo y Detener. El WAV se guarda en <code>eval/audio/voice-sample.wav</code>.</p>
     <p id="status">Listo.</p>
     <p>
       <button id="record" type="button">Grabar</button>
@@ -148,11 +148,11 @@
         try {
           const result = await window.notalocalRecord.transcribePcm(pcm)
           if (!result.ok) {
-            setStatus("Falló la transcripción.")
+            setStatus(result.savedPath ? `Audio guardado, falló la transcripción.` : "Falló la transcripción.")
             resultEl.textContent = result.error
             return
           }
-          setStatus("Listo.")
+          setStatus(result.savedPath ? `Guardado: ${result.savedPath}` : "Listo.")
           resultEl.textContent = result.text || "(sin texto)"
         } catch (error) {
           setStatus("Falló la transcripción.")

@@ -1,0 +1,77 @@
+{
+  "case_id": "10-longer",
+  "skipSyntheticAudio": false,
+  "expected": {
+    "visit_context": "STATED",
+    "clinical_narrative": "STATED",
+    "relevant_history": "STATED",
+    "reported_findings": "STATED",
+    "clinician_documented_assessment": "STATED",
+    "clinician_documented_plan": "STATED",
+    "follow_up": "STATED"
+  },
+  "note": {
+    "sections": {
+      "visit_context": {
+        "text": "Consulta ambulatoria por dolor de rodilla izquierda de unas dos semanas. El médico invita a sentarse y contar con calma.",
+        "presence": "STATED",
+        "sourceSegmentIds": [
+          "seg-1",
+          "seg-2"
+        ],
+        "reviewed": false
+      },
+      "clinical_narrative": {
+        "text": "Duele sobre todo al bajar escaleras, al caminar más de dos cuadras y al levantarse del sofá. No se cayó. El dolor empezó al día siguiente de un partido de fútbol en el que jugó unos cuarenta minutos. Por las noches se hincha un poco y por la mañana está rígida unos diez minutos; el calor de la ducha alivia y el frío empeora. Refiere 130 sobre 80 en casa. No ha tenido fiebre ni calor en el resto de la pierna.",
+        "presence": "STATED",
+        "sourceSegmentIds": [
+          "seg-2",
+          "seg-3",
+          "seg-4",
+          "seg-6"
+        ],
+        "reviewed": false
+      },
+      "relevant_history": {
+        "text": "Hipertensión en tratamiento con enalapril diez miligramos cada mañana desde hace años. Alergia a la penicilina desde la infancia, con erupción.",
+        "presence": "STATED",
+        "sourceSegmentIds": [
+          "seg-5"
+        ],
+        "reviewed": false
+      },
+      "reported_findings": {
+        "text": "El médico describe la rodilla caliente al tacto, sin herida ni enrojecimiento en cinta, movilidad limitada al flexionar más de noventa grados y ligera crepitación.",
+        "presence": "STATED",
+        "sourceSegmentIds": [
+          "seg-7"
+        ],
+        "reviewed": false
+      },
+      "clinician_documented_assessment": {
+        "text": "Impresión del médico: sobrecarga mecánica, no parece infeccioso; tratar como tendinitis o bursitis leve. No ve datos de rotura que hoy requieran imagen urgente.",
+        "presence": "STATED",
+        "sourceSegmentIds": [
+          "seg-8"
+        ],
+        "reviewed": false
+      },
+      "clinician_documented_plan": {
+        "text": "Hielo local veinte minutos tres veces al día, reposo relativo, evitar escaleras y fútbol una semana, ibuprofeno 400 miligramos cada 8 horas con alimento durante cinco días, omeprazol veinte miligramos si arde el estómago.",
+        "presence": "STATED",
+        "sourceSegmentIds": [
+          "seg-9"
+        ],
+        "reviewed": false
+      },
+      "follow_up": {
+        "text": "Si en siete días no mejora o se pone roja y muy caliente, vuelve el mismo día. Control en una semana. Si aparece fiebre o no puede apoyar, consulta antes.",
+        "presence": "STATED",
+        "sourceSegmentIds": [
+          "seg-10"
+        ],
+        "reviewed": false
+      }
+    }
+  }
+}

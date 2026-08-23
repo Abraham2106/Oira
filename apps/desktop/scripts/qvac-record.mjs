@@ -1,5 +1,5 @@
-import { writeFileSync, mkdtempSync, rmSync } from "node:fs"
-import { freemem, tmpdir } from "node:os"
+import { writeFileSync, mkdirSync } from "node:fs"
+import { freemem } from "node:os"
 import { join, dirname } from "node:path"
 import { fileURLToPath } from "node:url"
 import { createRequire } from "node:module"
@@ -11,6 +11,8 @@ const here = dirname(fileURLToPath(import.meta.url))
 const SAMPLE_RATE = 16_000
 const CHANNELS = 1
 const BITS = 16
+const FIXTURE_DIR = join(here, "..", "eval", "audio")
+const FIXTURE_WAV = join(FIXTURE_DIR, "voice-sample.wav")
 
 const STT_CONFIG = {
   language: "es",
@@ -111,24 +113,27 @@ app.whenReady().then(() => {
     if (!Array.isArray(pcm) || pcm.length < 2 || pcm.length % 2 !== 0) {
       return { ok: false, error: "AUDIO_FORMAT_UNSUPPORTED" }
     }
-    const dir = mkdtempSync(join(tmpdir(), "nl-whisper-"))
-    const wavPath = join(dir, "capture.wav")
+    mkdirSync(FIXTURE_DIR, { recursive: true })
+    const wav = encodeWavPcm16le(preparePcm(Buffer.from(pcm)))
+    writeFileSync(FIXTURE_WAV, wav)
+    process.stdout.write(`qvac.record saved=${FIXTURE_WAV}\n`)
     try {
-      writeFileSync(wavPath, encodeWavPcm16le(preparePcm(Buffer.from(pcm))))
       const session = await getSession()
       const segments = await session.sdk.transcribe({
         modelId: session.modelId,
-        audioChunk: wavPath,
+        audioChunk: FIXTURE_WAV,
         metadata: true,
       })
       const text = segments.map((segment) => segment.text).join("").trim()
       process.stdout.write(`qvac.whisper text=${JSON.stringify(text)}\n`)
-      return { ok: true, text, segments: segments.length }
+      return { ok: true, text, segments: segments.length, savedPath: FIXTURE_WAV }
     } catch (error) {
       await releaseSession()
-      return { ok: false, error: error instanceof Error ? error.message : "TRANSCRIPTION_FAILED" }
-    } finally {
-      rmSync(dir, { recursive: true, force: true })
+      return {
+        ok: false,
+        error: error instanceof Error ? error.message : "TRANSCRIPTION_FAILED",
+        savedPath: FIXTURE_WAV,
+      }
     }
   })
 

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest"
-import { createQvacTranscription } from "./transcription"
+import { createQvacTranscription, whisperSttConfig } from "./transcription"
 
 vi.mock("./sdk", () => ({
   loadModel: vi.fn(async () => "model-1"),
@@ -12,6 +12,16 @@ vi.mock("./sdk", () => ({
 }))
 
 describe("createQvacTranscription", () => {
+  it("omits initial_prompt unless NOTALOCAL_STT_PROMPT=1", () => {
+    const previous = process.env.NOTALOCAL_STT_PROMPT
+    delete process.env.NOTALOCAL_STT_PROMPT
+    expect(whisperSttConfig().initial_prompt).toBeUndefined()
+    process.env.NOTALOCAL_STT_PROMPT = "1"
+    expect(whisperSttConfig().initial_prompt).toContain("ibuprofeno")
+    expect(whisperSttConfig().initial_prompt).not.toMatch(/gastritis/i)
+    if (previous == null) delete process.env.NOTALOCAL_STT_PROMPT
+    else process.env.NOTALOCAL_STT_PROMPT = previous
+  })
   it("loadModel → transcribe → unloadModel → close", async () => {
     const sdk = await import("./sdk")
     const port = createQvacTranscription()

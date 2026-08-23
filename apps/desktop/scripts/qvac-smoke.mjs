@@ -2,6 +2,7 @@ import { spawn, spawnSync } from "node:child_process"
 import { createRequire } from "node:module"
 import os from "node:os"
 import { fileURLToPath } from "node:url"
+import { rejectOnTimeout } from "./watchdog.mjs"
 
 const self = fileURLToPath(import.meta.url)
 const LOAD_WATCHDOG_MS = 120_000
@@ -73,9 +74,7 @@ if (!process.versions.electron) {
           }
         },
       }),
-      new Promise((_, reject) => {
-        setTimeout(() => reject(new Error("LOAD_WATCHDOG")), LOAD_WATCHDOG_MS)
-      }),
+      rejectOnTimeout(LOAD_WATCHDOG_MS, () => new Error("LOAD_WATCHDOG")),
     ])
     await unloadModel({ modelId })
     process.stdout.write(

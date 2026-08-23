@@ -3,6 +3,7 @@
   "private": true,
   "scripts": {
     "dev:desktop": "pnpm --filter notalocal-desktop dev",
+    "eval": "pnpm --filter notalocal-desktop eval",
     "test": "pnpm --filter notalocal-desktop test",
     "lint:desktop": "pnpm --filter notalocal-desktop lint",
     "typecheck": "pnpm --filter @notalocal/types typecheck && pnpm --filter notalocal-desktop typecheck"
