@@ -7,7 +7,7 @@ import {
   defaultAudioTempDir,
   type AudioTempStore,
 } from "../audio"
-import { createAuthStub, createDemoGoogleAuthPort, type GoogleAuthPort, type SessionPort } from "../auth"
+import { createAuthStub, createGoogleAuthPortFromEnv, type GoogleAuthPort, type SessionPort } from "../auth"
 import {
   createEncounterService,
   createMemoryEncounterRepository,
@@ -66,6 +66,7 @@ export type StubIpcOptions = {
   onProgress?: (event: InferenceProgress) => void
   inferenceAdapter?: InferenceAdapterName
   settingsFile?: string
+  googleAuth?: GoogleAuthPort
 }
 
 export function createSilentIpcLogger(): IpcLogger {
@@ -113,7 +114,7 @@ export function createStubIpcDeps(
     }),
     exportNote: createExportStub(),
     session: createAuthStub(),
-    googleAuth: createDemoGoogleAuthPort(),
+    googleAuth: options.googleAuth ?? createGoogleAuthPortFromEnv(process.env),
     logger,
     audio,
     settings:
