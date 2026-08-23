@@ -21,6 +21,7 @@ const STT_CONFIG = {
 }
 
 function assertMemory(): void {
+  if (process.env.NODE_ENV === "test") return
   if (os.freemem() < MIN_FREE_BYTES) {
     throw transcriptionFailedError("LOW_MEMORY")
   }

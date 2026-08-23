@@ -1,7 +1,7 @@
 import type { InferenceAdapterName } from "../config/env"
-import { createTranscriptDraftStructuring } from "./draft"
 import { createMockStructuring, createMockTranscription } from "./mock"
 import type { StructuringPort, TranscriptionPort } from "./port"
+import { createQvacStructuring } from "../qvac/structuring"
 import { createQvacTranscription } from "../qvac/transcription"
 
 export type { InferenceAdapterName }
@@ -13,7 +13,7 @@ export function createInferencePorts(adapter: InferenceAdapterName): {
   if (adapter === "qvac") {
     return {
       transcription: createQvacTranscription(),
-      structuring: createTranscriptDraftStructuring(),
+      structuring: createQvacStructuring(),
     }
   }
   return {
