@@ -25,7 +25,7 @@ Esto preserva dos posibilidades de laboratorio: una ruta a WAV emitido por la ap
 
 ## 4. Contrato propio propuesto
 
-Sin atribuirlo al SDK, NotaLocal puede definir una operación propia pushAudioChunk con: identificador de operación, bytes o referencia temporal controlada por Main, formato declarado por la aplicación, duración estimada y secuencia. Main valida límites, crea el WAV temporal si la decisión final lo exige y entrega al adaptador únicamente la forma confirmada de QVAC. Este contrato no expone Node ni rutas arbitrarias al renderer.
+Sin atribuirlo al SDK, Oira puede definir una operación propia pushAudioChunk con: identificador de operación, bytes o referencia temporal controlada por Main, formato declarado por la aplicación, duración estimada y secuencia. Main valida límites, crea el WAV temporal si la decisión final lo exige y entrega al adaptador únicamente la forma confirmada de QVAC. Este contrato no expone Node ni rutas arbitrarias al renderer.
 
 ## 5. Matriz de laboratorio
 

@@ -1,4 +1,4 @@
-# D3 — Salida estructurada: qué aplica a NotaLocal
+# D3 — Salida estructurada: qué aplica a Oira
 
 > **Estado:** CONFIRMED para la decisión de arquitectura; la viabilidad del esquema clínico completo en un modelo de 600M sigue siendo **BLOCKED — NEEDS TARGET HARDWARE** (Q3).  
 > **Fecha de investigación:** 22 de agosto de 2026.  
@@ -6,7 +6,7 @@
 
 ## Decisión
 
-**Mantener `responseFormat: json_schema` como la única modalidad aceptable para la estructuración clínica de NotaLocal.** `json_object` y las instrucciones de «responde solo JSON» no son rutas de producción. La decisión no elimina los controles posteriores: el proceso Main debe seguir aplicando `JSON.parse`, validación Zod, verificación de estados (`OBSERVED`, `UNCERTAIN`, `NOT_STATED`) y comprobación de evidencia de origen antes de exponer una nota al renderer.
+**Mantener `responseFormat: json_schema` como la única modalidad aceptable para la estructuración clínica de Oira.** `json_object` y las instrucciones de «responde solo JSON» no son rutas de producción. La decisión no elimina los controles posteriores: el proceso Main debe seguir aplicando `JSON.parse`, validación Zod, verificación de estados (`OBSERVED`, `UNCERTAIN`, `NOT_STATED`) y comprobación de evidencia de origen antes de exponer una nota al renderer.
 
 Esta decisión es de **forma**, no de verdad clínica. Una salida válida contra un esquema puede contener un valor clínicamente incorrecto, no dicho o atribuido a un segmento equivocado. Q3 sigue siendo la prueba de envío: debe demostrar, con el SDK y el modelo de 600M instalados, que el esquema clínico elegido se completa y valida en todos los casos sintéticos definidos por el proyecto.
 
@@ -20,21 +20,21 @@ El criterio de aceptación no es solo «produce JSON». La salida debe tener una
 
 La documentación oficial de la interfaz HTTP de QVAC declara tres valores de `response_format.type`: `text`, `json_object` y `json_schema`. Para `json_schema`, QVAC exige además un objeto JSON Schema en `json_schema.schema`; permite un nombre y la opción `strict`. Esto confirma que el modo tiene un contrato de forma más específico que `json_object`, pero **no equivale a una garantía documentada de exactitud semántica de una nota clínica** [QVAC, 2026].
 
-La misma documentación indica una limitación de integración: los modos de salida estructurada no se combinan con `tools`; la petición debe separarlos. NotaLocal no necesita herramientas en la llamada que estructura el transcript, por lo que esta restricción no cambia la decisión, pero debe constar en la allow-list y en las pruebas de integración [QVAC, 2026].
+La misma documentación indica una limitación de integración: los modos de salida estructurada no se combinan con `tools`; la petición debe separarlos. Oira no necesita herramientas en la llamada que estructura el transcript, por lo que esta restricción no cambia la decisión, pero debe constar en la allow-list y en las pruebas de integración [QVAC, 2026].
 
 QVAC también documenta que, con modelos de razonamiento híbrido y un presupuesto de tokens ajustado, una respuesta estructurada puede finalizar por longitud mientras el razonamiento sigue activo y dejar `content` vacío. La mitigación documentada es desactivar el razonamiento con `reasoning_budget: false` o aumentar el presupuesto; la elección de parámetros exactos sigue siendo una cuestión de tipos/documentación de la versión instalada y de prueba de laboratorio. Esto refuerza que incluso con un esquema la ruta debe tratar finalización por longitud, contenido vacío y errores como fallos de estructuración, no como notas parcialmente fiables [QVAC, 2026].
 
 ## Por qué `json_schema` y no `json_object`
 
-`json_object` describe una salida JSON, pero no expresa por sí solo los campos obligatorios, enumeraciones ni tipos que NotaLocal necesita para impedir que la forma del borrador cambie entre ejecuciones. En cambio, `json_schema` entrega al motor una especificación declarativa de esa estructura. El contrato mínimo debería expresar: el objeto de nota, las secciones permitidas, los estados admisibles, `null` cuando corresponde a `NOT_STATED`, la evidencia literal y el identificador de segmento. La semántica de tales campos sigue requiriendo validación propia.
+`json_object` describe una salida JSON, pero no expresa por sí solo los campos obligatorios, enumeraciones ni tipos que Oira necesita para impedir que la forma del borrador cambie entre ejecuciones. En cambio, `json_schema` entrega al motor una especificación declarativa de esa estructura. El contrato mínimo debería expresar: el objeto de nota, las secciones permitidas, los estados admisibles, `null` cuando corresponde a `NOT_STATED`, la evidencia literal y el identificador de segmento. La semántica de tales campos sigue requiriendo validación propia.
 
-La literatura de generación restringida explica el motivo: el decodificador puede enmascarar los tokens que no son compatibles con las restricciones, produciendo salidas que siguen la estructura especificada. Geng et al. evalúan este tipo de sistemas con casi diez mil esquemas JSON reales y advierten que la evaluación debe separar **cumplimiento**, **cobertura de características del esquema**, **eficiencia** y **calidad de la tarea**. Esa separación coincide con la arquitectura de NotaLocal: Q3 puede medir la primera dimensión, mientras que los casos clínicos, Zod y `verifySource()` abordan las otras [Geng et al., 2025].
+La literatura de generación restringida explica el motivo: el decodificador puede enmascarar los tokens que no son compatibles con las restricciones, produciendo salidas que siguen la estructura especificada. Geng et al. evalúan este tipo de sistemas con casi diez mil esquemas JSON reales y advierten que la evaluación debe separar **cumplimiento**, **cobertura de características del esquema**, **eficiencia** y **calidad de la tarea**. Esa separación coincide con la arquitectura de Oira: Q3 puede medir la primera dimensión, mientras que los casos clínicos, Zod y `verifySource()` abordan las otras [Geng et al., 2025].
 
 No se debe interpretar el resultado como una licencia para ampliar el esquema sin pruebas. Los marcos de decodificación no implementan necesariamente el mismo subconjunto de JSON Schema; Geng et al. encontraron diferencias materiales de cobertura entre motores. Por ello el esquema clínico de P0 debe ser deliberadamente pequeño, explícito y validado contra la versión real de QVAC. Si un constructo no pasa las pruebas, se simplifica el esquema; no se sustituye silenciosamente por salida libre [Geng et al., 2025].
 
 ## Estructura válida no es contenido correcto
 
-Un esquema puede impedir una llave no permitida o un tipo erróneo, pero no puede probar que «faringitis» fue pronunciado, que una negación fue conservada o que una cita corresponde al segmento indicado. La literatura distingue la exactitud de esquema de la similitud/adecuación de contenido; ambas deben evaluarse separadamente. También señala que el prompting directo para imponer un formato suele rendir peor que mecanismos estructurados, mientras que el entrenamiento o la evaluación específica pueden cambiar los resultados. Ninguno de esos hallazgos mide QVAC ni el corpus clínico español de NotaLocal, por lo que se clasifican como evidencia de diseño general, no como desempeño del producto [Shi et al., 2025].
+Un esquema puede impedir una llave no permitida o un tipo erróneo, pero no puede probar que «faringitis» fue pronunciado, que una negación fue conservada o que una cita corresponde al segmento indicado. La literatura distingue la exactitud de esquema de la similitud/adecuación de contenido; ambas deben evaluarse separadamente. También señala que el prompting directo para imponer un formato suele rendir peor que mecanismos estructurados, mientras que el entrenamiento o la evaluación específica pueden cambiar los resultados. Ninguno de esos hallazgos mide QVAC ni el corpus clínico español de Oira, por lo que se clasifican como evidencia de diseño general, no como desempeño del producto [Shi et al., 2025].
 
 En consecuencia, se conserva la cadena de seguridad establecida por el proyecto:
 

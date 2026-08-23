@@ -1,11 +1,12 @@
 {
-  "name": "notalocal",
+  "name": "oira",
   "private": true,
   "scripts": {
-    "dev:desktop": "pnpm --filter notalocal-desktop dev",
-    "test": "pnpm --filter notalocal-desktop test",
-    "lint:desktop": "pnpm --filter notalocal-desktop lint",
-    "typecheck": "pnpm --filter @notalocal/types typecheck && pnpm --filter notalocal-desktop typecheck"
+    "dev": "pnpm dev:desktop",
+    "dev:desktop": "pnpm --filter oira-desktop dev",
+    "test": "pnpm --filter oira-desktop test",
+    "lint:desktop": "pnpm --filter oira-desktop lint",
+    "typecheck": "pnpm --filter @oira/types typecheck && pnpm --filter oira-desktop typecheck"
   },
   "packageManager": "pnpm@10.33.3",
   "engines": {

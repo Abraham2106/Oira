@@ -1,4 +1,4 @@
-import type { TranscriptSegment } from "@notalocal/types"
+import type { TranscriptSegment } from "@oira/types"
 
 type Props = {
   segment: TranscriptSegment

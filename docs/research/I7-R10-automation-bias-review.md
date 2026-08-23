@@ -2,7 +2,7 @@
 
 **Estado:** recomendación P1 para `canAccept`  
 **Fecha de acceso a fuentes:** 22 de agosto de 2026  
-**No es una atestación legal.** “Aceptar” expresa la acción de revisión del médico dentro de NotaLocal; no certifica cumplimiento, exactitud ni una firma normativa.
+**No es una atestación legal.** “Aceptar” expresa la acción de revisión del médico dentro de Oira; no certifica cumplimiento, exactitud ni una firma normativa.
 
 ## Decisión
 

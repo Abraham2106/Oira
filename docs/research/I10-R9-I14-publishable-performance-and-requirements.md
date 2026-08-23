@@ -17,13 +17,13 @@
 | Tiempo de transcripción/estructura | Plantilla vacía | Múltiples corridas sintéticas registradas. |
 | Pico RAM | Plantilla vacía | Medición de proceso/worker en máquina objetivo. |
 
-QVAC publica requisitos generales y una herramienta de diagnóstico, pero los mínimos del proveedor no son una medida de rendimiento de NotaLocal ni una garantía de capacidad clínica [QVAC, System requirements](https://docs.qvac.tether.io/system-requirements/).
+QVAC publica requisitos generales y una herramienta de diagnóstico, pero los mínimos del proveedor no son una medida de rendimiento de Oira ni una garantía de capacidad clínica [QVAC, System requirements](https://docs.qvac.tether.io/system-requirements/).
 
 ## 2. Copy antes de resultados
 
 Texto permitido:
 
-> “El tiempo de procesamiento depende de la duración del audio, los modelos seleccionados y las capacidades del equipo. NotaLocal muestra el estado de la operación; revise el borrador antes de aprobarlo.”
+> “El tiempo de procesamiento depende de la duración del audio, los modelos seleccionados y las capacidades del equipo. Oira muestra el estado de la operación; revise el borrador antes de aprobarlo.”
 
 Texto prohibido: “instantáneo”, “en segundos”, “listo al terminar la consulta”, “funciona en cualquier computadora”, “GPU no requerida” o “GPU obligatoria”, salvo que una fuente y la tabla de resultados correspondan exactamente al claim.
 

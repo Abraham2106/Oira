@@ -1,4 +1,4 @@
-import type { ClinicalNote, FieldValue, TranscriptSegment } from "@notalocal/types"
+import type { ClinicalNote, FieldValue, TranscriptSegment } from "@oira/types"
 
 function field(
   text: string,

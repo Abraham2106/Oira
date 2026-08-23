@@ -3,7 +3,7 @@
 Revisión del código en `apps/desktop/src/main/` (y contrato `shared/`).
 **Auditoría del propio documento:** 22 ago 2026, contra `origin/main` @ `94d34fd`.
 
-**Veredicto de la auditoría:** la conclusión original (“esqueleto bueno, comportamiento de teatro”) **sigue en pie**. Los cortes 1–4 y 6 son correctos y accionables. La **§5 original estaba desactualizada** tras el merge del prototipo Electron + IPC: sí hay shell `electron-vite`, sí hay preload, pero **IPC no está cableado** a Main ni expuesto en `window.notalocal`.
+**Veredicto de la auditoría:** la conclusión original (“esqueleto bueno, comportamiento de teatro”) **sigue en pie**. Los cortes 1–4 y 6 son correctos y accionables. La **§5 original estaba desactualizada** tras el merge del prototipo Electron + IPC: sí hay shell `electron-vite`, sí hay preload, pero **IPC no está cableado** a Main ni expuesto en `window.oira`.
 
 **Conclusión (vigente):** no tirar el árbol de carpetas ni la idea (Zod en la puerta, `Result` al Renderer, QVAC fuera de IPC). Eso coincide con la guía de Justin. Lo que está mal es que **parte del código parece producto y es teatro**.
 
@@ -17,8 +17,8 @@ Anclas de verificación (no inventar firmas):
 | Notes / export stubs | `apps/desktop/src/main/notes/notes.service.ts`, `…/export/export.service.ts` |
 | Registro IPC (sin callers) | `apps/desktop/src/main/ipc/index.ts` → `registerIpc` |
 | Entry Main | `apps/desktop/src/main/index.ts` (carga config + ventana; **no** llama `registerIpc`) |
-| Preload | `apps/desktop/src/preload/index.ts` (solo `notalocalPrototype`) |
-| Contrato paralelo UI | `packages/types/src/index.ts` (`NotaLocalBridge`) |
+| Preload | `apps/desktop/src/preload/index.ts` (solo `oiraPrototype`) |
+| Contrato paralelo UI | `packages/types/src/index.ts` (`OiraBridge`) |
 
 ---
 
@@ -84,14 +84,14 @@ Hoy el choque es concreto, no hipotético:
 | Contrato | `startEncounter` input | Nota |
 | --- | --- | --- |
 | `shared/schemas/ipc.schema.ts` | `{}` estricto | Main / Zod |
-| `packages/types` `NotaLocalBridge` | `{ label, visitType }` | Renderer / mock |
+| `packages/types` `OiraBridge` | `{ label, visitType }` | Renderer / mock |
 | Mock bridge | ignora label/visitType en runtime | Demo UI |
 
 Tres formas de encounter/nota = merge eterno, no flexibilidad.
 
 Settings en **JSON** (`settings.service.ts`) y la guía con tabla **SQLite** `settings`: o se migra en I05, o hay dos fuentes de verdad.
 
-**Corte concreto:** un solo dueño del contrato (Justin / `apps/desktop/src/shared`). Frontend reexporta desde ahí o desde un paquete que **Justin publica**; no redefine `NotaLocalBridge` en paralelo.
+**Corte concreto:** un solo dueño del contrato (Justin / `apps/desktop/src/shared`). Frontend reexporta desde ahí o desde un paquete que **Justin publica**; no redefine `OiraBridge` en paralelo.
 
 ---
 
@@ -106,7 +106,7 @@ Settings en **JSON** (`settings.service.ts`) y la guía con tabla **SQLite** `se
 ### Qué es verdad ahora
 
 1. **`registerIpc` no se llama** desde `main/index.ts`. La frontera Zod existe como módulo muerto.
-2. Preload expone solo `window.notalocalPrototype = { usesMockBridge: true }`, **no** `window.notalocal` con los 4 métodos del entregable.
+2. Preload expone solo `window.oiraPrototype = { usesMockBridge: true }`, **no** `window.oira` con los 4 métodos del entregable.
 3. No hay test que invoque handlers Main (`startEncounter` vía IPC). El test de `bridge/mock.test.ts` ejercita el mock del renderer.
 4. I01 parcialmente cubierto (shell). **I04 no cerrado** (preload tipado + Zod en el camino real).
 

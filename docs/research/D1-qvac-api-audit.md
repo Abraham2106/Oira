@@ -1,4 +1,4 @@
-# D1 — Auditoría de API QVAC y allow-list para NotaLocal
+# D1 — Auditoría de API QVAC y allow-list para Oira
 
 > **Estado:** investigación de escritorio, sin ejecución del SDK.  
 > **Fecha de acceso:** 22 de agosto de 2026.  
@@ -6,7 +6,7 @@
 
 ## Decisión
 
-NotaLocal adopta una **allow-list mínima, versionada y de doble verificación**. Para el MVP de transcripción por lotes y estructuración local, los únicos símbolos de operación que un spike puede invocar son:
+Oira adopta una **allow-list mínima, versionada y de doble verificación**. Para el MVP de transcripción por lotes y estructuración local, los únicos símbolos de operación que un spike puede invocar son:
 
 `loadModel`, `transcribe`, `completion`, `unloadModel` y, exclusivamente para cancelar una operación ya identificada, `cancel`.
 
@@ -32,7 +32,7 @@ La documentación pública consultada se presenta como API «v0.17.x (latest)» 
 
 ## Allow-list
 
-| Símbolo | Uso permitido en NotaLocal | Fuente primaria / archivo que debe contrastarse en 0.17.1 | Estado |
+| Símbolo | Uso permitido en Oira | Fuente primaria / archivo que debe contrastarse en 0.17.1 | Estado |
 | --- | --- | --- | --- |
 | `loadModel` | Cargar **un** descriptor de catálogo para STT o LLM; omitir `modelType` cuando el descriptor lo permita. | [API Summary](https://docs.qvac.tether.io/reference/api/); `node_modules/@qvac/sdk/dist/index.d.ts` | **CONFIRMED** para la función; configuración exacta **TODO** |
 | `transcribe` | STT batch. Q1/Q2 deben solicitar `metadata: true` para conservar `id` y marcas temporales. | [API Summary](https://docs.qvac.tether.io/reference/api/); `dist/index.d.ts` y definición de transcripción instalada | **CONFIRMED** |
@@ -56,7 +56,7 @@ Las fuentes oficiales actuales no son internamente homogéneas: la guía de tran
 
 Quedan fuera de esta allow-list: delegación/P2P, servidor HTTP compatible con OpenAI, RAG, plugins personalizados, recarga de configuración, logs de servidor, borrado de caché, streaming y cualquier API de diarización no documentada específicamente. Algunas podrán ser objeto de Q14–Q19, pero no son necesarias para Q1–Q6 ni deben entrar por arrastre.
 
-También queda excluida toda inferencia remota. Que el SDK pueda descargar modelos o exponer otras capacidades no autoriza un fallback cloud ni el envío de audio, transcript o JSON clínico fuera del flujo local de NotaLocal.
+También queda excluida toda inferencia remota. Que el SDK pueda descargar modelos o exponer otras capacidades no autoriza un fallback cloud ni el envío de audio, transcript o JSON clínico fuera del flujo local de Oira.
 
 ## Checklist obligatorio antes de laboratorio
 

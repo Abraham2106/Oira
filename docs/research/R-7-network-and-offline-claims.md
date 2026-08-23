@@ -6,7 +6,7 @@
 
 ## 1. Resumen y decisión
 
-QVAC documenta que la descarga inicial de un modelo necesita acceso al registry. También documenta que, tras una descarga completa y usando la misma cacheDirectory, una carga posterior del mismo modelo puede usar caché sin contactar el registry [QVAC, Download lifecycle](https://docs.qvac.tether.io/models/download-lifecycle/). Esta es una afirmación estrecha sobre loadModel y el registry: no prueba que el pipeline completo de NotaLocal no realice conexiones, que no haya P2P, ni qué puertos/dominios se usen.
+QVAC documenta que la descarga inicial de un modelo necesita acceso al registry. También documenta que, tras una descarga completa y usando la misma cacheDirectory, una carga posterior del mismo modelo puede usar caché sin contactar el registry [QVAC, Download lifecycle](https://docs.qvac.tether.io/models/download-lifecycle/). Esta es una afirmación estrecha sobre loadModel y el registry: no prueba que el pipeline completo de Oira no realice conexiones, que no haya P2P, ni qué puertos/dominios se usen.
 
 **Decisión: DEFER toda alegación pública general de “offline”.** Hasta observar el tráfico en el artefacto empaquetado, solo puede describirse el requisito documental de caché previa; no se afirma cero egress durante inferencia ni que close detenga toda actividad residual.
 
@@ -52,7 +52,7 @@ Permitido, solo con referencia a preparación previa:
 
 Prohibido hasta laboratorio:
 
-- “NotaLocal nunca usa internet.”
+- “Oira nunca usa internet.”
 - “La inferencia no genera tráfico.”
 - “No hay P2P.”
 - “Funciona offline desde el primer inicio.”

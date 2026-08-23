@@ -10,10 +10,10 @@ importers:
 
   apps/desktop:
     dependencies:
-      '@notalocal/types':
+      '@oira/types':
         specifier: workspace:*
         version: link:../../packages/types
-      '@notalocal/ui':
+      '@oira/ui':
         specifier: workspace:*
         version: link:../../packages/ui
       react:

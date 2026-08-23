@@ -9,9 +9,9 @@
 
 La documentación actual de QVAC distingue dos caminos: transcribe devuelve la transcripción completa como una sola cadena, mientras que transcribeStream ofrece resultados parciales mediante una sesión dúplex. La guía de transcripción especifica eventos tipados de texto incremental, segmento, VAD y fin de turno; el API summary además documenta sobrecargas antiguas de streaming con audio upfront como deprecadas [QVAC, Transcription](https://docs.qvac.tether.io/ai-capabilities/transcription/), [QVAC, API Summary](https://docs.qvac.tether.io/reference/api/).
 
-No se encontró una fuente oficial que explique la semántica de negocio de los campos append e id para un TranscribeSegment concreto de la versión que NotaLocal instalará. Tampoco hay tipos instalados en este entorno. Por la regla del proyecto, no se puede inventar si append significa concatenar, reemplazar, corregir una hipótesis anterior o cualquier otra operación; tampoco se puede asignar semántica a id.
+No se encontró una fuente oficial que explique la semántica de negocio de los campos append e id para un TranscribeSegment concreto de la versión que Oira instalará. Tampoco hay tipos instalados en este entorno. Por la regla del proyecto, no se puede inventar si append significa concatenar, reemplazar, corregir una hipótesis anterior o cualquier otra operación; tampoco se puede asignar semántica a id.
 
-**Decisión P0: usar transcripción batch y persistir únicamente la cadena completa devuelta por transcribe, junto con metadatos propios de NotaLocal.** No se usa append/id en P0.  
+**Decisión P0: usar transcripción batch y persistir únicamente la cadena completa devuelta por transcribe, junto con metadatos propios de Oira.** No se usa append/id en P0.  
 **Decisión P2: DEFER streaming.** No se implementa ensamblador de parciales hasta capturar eventos reales y compararlos contra una transcripción completa para el mismo audio no clínico.
 
 ## 2. Evidencia oficial
@@ -48,17 +48,17 @@ Por ello no se declara que concatenar eventos de texto sea correcto, ni que un i
 
 ## 4. Algoritmo normativo P0: batch
 
-P0 no requiere streaming. El algoritmo de NotaLocal debe:
+P0 no requiere streaming. El algoritmo de Oira debe:
 
 1. guardar un identificador de operación propio y la ruta temporal o referencia de audio propia;
 2. enviar el audio completo por el camino documentado y recibir la transcripción final;
-3. validar que el resultado es una cadena dentro de los límites definidos por NotaLocal;
+3. validar que el resultado es una cadena dentro de los límites definidos por Oira;
 4. persistir una única revisión de transcript propia, con timestamp, modelo/pin conocidos y estado de operación;
 5. no inferir campos de QVAC que no estén confirmados en la versión instalada;
 6. no concatenar, reemplazar ni deduplicar parciales porque no habrá parciales en P0;
 7. si ocurre error/cancelación, conservar un error tipado propio sin convertir contenido clínico en logs.
 
-La “revisión” de NotaLocal es un concepto de dominio propio y no equivale a append ni id del SDK. Este diseño no afirma ninguna firma de QVAC y permite que R-2 defina después la entrada de audio.
+La “revisión” de Oira es un concepto de dominio propio y no equivale a append ni id del SDK. Este diseño no afirma ninguna firma de QVAC y permite que R-2 defina después la entrada de audio.
 
 ## 5. Streaming P2: condición de entrada
 
@@ -95,7 +95,7 @@ Con el pin de R-1, el audio/captura de R-2 y material no clínico:
 
 ## 7. Datos propios que se pueden persistir
 
-Mientras P0 opere en batch, NotaLocal puede persistir conceptos propios: identificador de encuentro, identificador de operación, timestamp, versión de app, pin/modelo confirmados, estado de transcripción y texto final. R-2/R-5/R-6 determinan la forma segura de audio, cifrado y directorio; R-8 no autoriza almacenar eventos crudos de streaming con contenido clínico más allá de una necesidad depurada y con retención definida.
+Mientras P0 opere en batch, Oira puede persistir conceptos propios: identificador de encuentro, identificador de operación, timestamp, versión de app, pin/modelo confirmados, estado de transcripción y texto final. R-2/R-5/R-6 determinan la forma segura de audio, cifrado y directorio; R-8 no autoriza almacenar eventos crudos de streaming con contenido clínico más allá de una necesidad depurada y con retención definida.
 
 ## 8. Afirmaciones prohibidas
 

@@ -62,7 +62,7 @@ Theme A aporta un límite: copiar “borrador revisable por profesional” y no 
 
 ## Caveats
 
-- La NOM-004 es obligatoria en México para el expediente clínico de su ámbito; no es la especificación de NotaLocal ni una licencia para publicar “cumplimiento NOM” [S1].
+- La NOM-004 es obligatoria en México para el expediente clínico de su ámbito; no es la especificación de Oira ni una licencia para publicar “cumplimiento NOM” [S1].
 - La Ley 26.529 argentina regula una historia clínica, no el flujo de un borrador de software; se cita para reconocer integridad/recuperabilidad como responsabilidades del contexto que la UI no puede certificar [S2].
 - Esta investigación no decide campos de identificación, retención, firma, historial, receta ni EHR. I5 y backend/IA deben resolverlos por separado.
 - Validar con médicos ambulatorios hispanohablantes antes de fijar títulos; los dos títulos con “documentada por el médico” son deliberadamente conservadores.

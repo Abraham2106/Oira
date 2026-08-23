@@ -1,4 +1,4 @@
-# Research kit — NotaLocal
+# Research kit — Oira
 
 Prompts listos para un **modelo investigador**. Cada ID de las guías (`I*`, `R-*`, `Q*`) tiene un prompt autónomo: contexto, restricciones, método y decisión exigida.
 

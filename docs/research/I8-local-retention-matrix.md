@@ -2,13 +2,13 @@
 
 **Estado:** matriz de consecuencias P1 — **no decide el valor por defecto**  
 **Fecha de acceso a fuentes:** 22 de agosto de 2026  
-**Ámbito:** audio, transcripción, borrador/nota y sus controles locales en NotaLocal.
+**Ámbito:** audio, transcripción, borrador/nota y sus controles locales en Oira.
 
 ## Decisión
 
 **No elegir A, B ni C todavía.** Antes de activar cualquier opción, Justin debe confirmar qué objetos existen, dónde se guardan, cuánto persisten, qué operación de borrado es real y cómo se informa un fallo. La interfaz debe describir comportamiento observado, no intención.
 
-La recolección, almacenamiento y eliminación de datos son operaciones de tratamiento en la LGPD [S1]; la Ley argentina 25.326 exige pertinencia/no exceso y destruir datos cuando dejan de ser necesarios para su finalidad [S2]. Estas fuentes orientan a hacer la retención visible, limitada y controlable; no determinan cuál opción cumple una obligación clínica de conservación en cada país. La eventual obligación del médico de conservar su expediente pertenece al contexto jurídico/profesional y **no convierte automáticamente a NotaLocal en custodio del registro definitivo**.
+La recolección, almacenamiento y eliminación de datos son operaciones de tratamiento en la LGPD [S1]; la Ley argentina 25.326 exige pertinencia/no exceso y destruir datos cuando dejan de ser necesarios para su finalidad [S2]. Estas fuentes orientan a hacer la retención visible, limitada y controlable; no determinan cuál opción cumple una obligación clínica de conservación en cada país. La eventual obligación del médico de conservar su expediente pertenece al contexto jurídico/profesional y **no convierte automáticamente a Oira en custodio del registro definitivo**.
 
 ## Objetos y estados que el backend debe aclarar
 
@@ -25,13 +25,13 @@ La recolección, almacenamiento y eliminación de datos son operaciones de trata
 
 | Tema | A. Sin retención | B. Notas solamente | C. Notas + audio |
 | --- | --- | --- | --- |
-| **Propósito de producto** | Preparar, revisar y exportar una sesión; luego no conservar dentro de NotaLocal. | Permitir revisar/reabrir notas locales; audio no queda como colección local. | Permitir reconsulta de nota y audio; aumenta superficie y expectativas de control. |
+| **Propósito de producto** | Preparar, revisar y exportar una sesión; luego no conservar dentro de Oira. | Permitir revisar/reabrir notas locales; audio no queda como colección local. | Permitir reconsulta de nota y audio; aumenta superficie y expectativas de control. |
 | **PrivacyStatusPanel** | **CONDICIONAL — Justin:** “Audio temporal: no retenido” solo si se prueba borrado real; “Notas guardadas: no”. Mostrar una fila de estado de transcripción si existe temporalmente. | **CONDICIONAL — Justin:** “Audio temporal: no retenido”; “Notas guardadas en este equipo: sí/no” con ubicación y alcance confirmados. | **CONDICIONAL — Justin:** “Audio guardado en este equipo: sí”, cuándo/por qué; “Notas guardadas: sí”; mostrar tamaño/fecha si el backend los entrega. Nunca traducir a “privado” o “cumple”. |
 | **Settings / controles** | No mostrar interruptor de retención. Ofrecer “Ver qué se elimina al cerrar” si hay semántica confirmada. | Control real de conservar/eliminar notas, con explicación de alcance; no control de audio si no existe. | Controles separados para notas y audio; no unirlos bajo “Privacidad” si sus efectos difieren. Toda preferencia debe modificar backend, no solo UI. |
-| **Qué puede borrar NotaLocal** | La sesión temporal que el backend controle, si existe y confirma éxito. | Notas locales y temporales definidos por backend; distinguir borrar una nota vs todas. | Audio, notas y temporales gestionados por la app, por objeto y alcance explícitos. |
+| **Qué puede borrar Oira** | La sesión temporal que el backend controle, si existe y confirma éxito. | Notas locales y temporales definidos por backend; distinguir borrar una nota vs todas. | Audio, notas y temporales gestionados por la app, por objeto y alcance explícitos. |
 | **Qué no puede borrar** | Archivos que el médico guardó, texto pegado en otro sistema, copias del SO, respaldos ajenos, capturas y destinatarios externos. | Igual. | Igual; el riesgo de duplicados/respaldos es mayor y debe ser visible. |
 | **Fallo durante Recording / Processing** | No prometer limpieza: “No pudimos confirmar si se eliminó el audio temporal.” Ofrecer reintentar/consultar estado. | Igual para audio; distinguir nota local preservada de audio no confirmado. | Informar objeto y resultado: “No pudimos borrar el audio de esta consulta”; no mostrar éxito optimista. |
-| **Website: qué almacenamos** | Solo tras verificación: “Esta versión no conserva audio ni notas en NotaLocal después de [evento confirmado].” | Solo tras verificación: “Esta versión guarda notas en este equipo.” Nombrar audio separadamente. | Solo tras verificación: “Esta versión guarda notas y audio en este equipo.” Añadir control y límites de borrado. |
+| **Website: qué almacenamos** | Solo tras verificación: “Esta versión no conserva audio ni notas en Oira después de [evento confirmado].” | Solo tras verificación: “Esta versión guarda notas en este equipo.” Nombrar audio separadamente. | Solo tras verificación: “Esta versión guarda notas y audio en este equipo.” Añadir control y límites de borrado. |
 | **Control deshabilitado** | “La retención no está disponible en esta versión.” | “El guardado de notas está disponible cuando el almacenamiento local esté listo.” Si no está listo, explicar el motivo técnico. | “El control de audio está deshabilitado porque el backend no confirmó su estado.” Nunca mostrar un switch activo sin efecto. |
 | **Riesgo dominante** | Pérdida de una sesión / expectativas confusas si el borrado falla. | Persistencia de contenido clínico y confusión entre nota local y registro definitivo. | Mayor exposición si el equipo, cuenta de SO o respaldos se comprometen; complejidad de borrado y retención. |
 | **Dependencias** | Lifecycle de proceso, errores, cleanup, logs. | SQLite/almacenamiento local, listado, borrado atómico, mensajes de error. | Todo B + gestión segura de archivos grandes, recuperación, disponibilidad, borrado verificable y política sobre copias. |
@@ -43,8 +43,8 @@ La recolección, almacenamiento y eliminación de datos son operaciones de trata
 | Audio temporal eliminado | “El audio temporal de esta consulta se eliminó.” | “Tu audio nunca se guardó.” |
 | Eliminación fallida | “No pudimos confirmar la eliminación del audio temporal. Revisa el estado antes de cerrar.” | “El audio se eliminó” tras un error. |
 | Nota local guardada | “Esta nota se guarda en este equipo.” | “Tu historial está seguro” / “es un expediente clínico oficial”. |
-| Nota local eliminada | “Esta nota se eliminó de los datos gestionados por NotaLocal.” | “Eliminamos todas las copias.” |
-| Exportación | “Lo que copies o guardes fuera de NotaLocal puede permanecer en el sistema de destino.” | “Exportar no afecta la privacidad.” |
+| Nota local eliminada | “Esta nota se eliminó de los datos gestionados por Oira.” | “Eliminamos todas las copias.” |
+| Exportación | “Lo que copies o guardes fuera de Oira puede permanecer en el sistema de destino.” | “Exportar no afecta la privacidad.” |
 | Estado no disponible | “No podemos confirmar el estado de retención en esta versión.” | “No se guarda nada” por ausencia de datos. |
 | Control no implementado | “Este control estará disponible cuando el almacenamiento local lo admita.” | Un interruptor que aparenta funcionar. |
 
@@ -54,7 +54,7 @@ La recolección, almacenamiento y eliminación de datos son operaciones de trata
 2. **Borrado por objeto.** La acción nombra exactamente el objeto: “Eliminar audio de esta consulta”, “Eliminar esta nota”, “Eliminar todas las notas locales”. No usar un único “Borrar datos” sin alcance.
 3. **Confirmación de resultado.** Éxito solo después de confirmación de backend; fallo conserva estado/diagnóstico en lenguaje humano y una acción concreta.
 4. **Deshabilitado y explicado.** Si una capacidad depende de backend, deshabilitar con ayuda textual; no ocultar la diferencia ni simular persistencia.
-5. **Exportación visible.** Copiar/guardar crea una frontera: NotaLocal no debe declarar control sobre el destino.
+5. **Exportación visible.** Copiar/guardar crea una frontera: Oira no debe declarar control sobre el destino.
 6. **Sin default encubierto.** No seleccionar A/B/C por copy, valor de switch, ejemplo o comportamiento de mock. El valor debe llegar como política/configuración real.
 
 ## Secuencias de error

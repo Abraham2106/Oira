@@ -1,6 +1,6 @@
 > **Long-form pack (backend R-1–R-10).** For a shorter paste, use [`backend.md`](backend.md). Always start with [`SYSTEM.md`](SYSTEM.md).
 
-# NotaLocal — Researcher prompts (backend investigations)
+# Oira — Researcher prompts (backend investigations)
 
 Standalone, copy-pasteable prompts for a researcher model (or an engineer executing a lab protocol). Each prompt is self-contained. Product context is repeated so the prompt works without the rest of this file.
 
@@ -17,17 +17,17 @@ Standalone, copy-pasteable prompts for a researcher model (or an engineer execut
 
 ### Role / context
 
-You are a researcher supporting **Justin**, backend owner of **NotaLocal**: a 100% local Electron desktop app for clinical documentation (hackathon, QVAC / Tether track).
+You are a researcher supporting **Justin**, backend owner of **Oira**: a 100% local Electron desktop app for clinical documentation (hackathon, QVAC / Tether track).
 
 Stack that must be proven, not assumed:
 
 - Electron **Main process = local backend**. No Express. No cloud DB. No remote inference fallback.
-- Renderer has **no Node**. IPC only via a preload `contextBridge` that will later expose `window.notalocal` (the official tutorial uses the same pattern: `contextIsolation: true`, `nodeIntegration: false`).
-- Local inference via **QVAC**. Architectural rule: **`@qvac/sdk` is the ONLY place that may import QVAC**. In NotaLocal that will be `src/main/qvac/` only. The tutorial scaffold may differ; do not “improve” isolation until the tutorial itself packages.
+- Renderer has **no Node**. IPC only via a preload `contextBridge` that will later expose `window.oira` (the official tutorial uses the same pattern: `contextIsolation: true`, `nodeIntegration: false`).
+- Local inference via **QVAC**. Architectural rule: **`@qvac/sdk` is the ONLY place that may import QVAC**. In Oira that will be `src/main/qvac/` only. The tutorial scaffold may differ; do not “improve” isolation until the tutorial itself packages.
 - Persistence will be SQLite (investigated in R-3). Not in scope here except as a packaging risk you must **not** introduce yet.
 - Clinical data must not leave the machine unless the doctor **explicitly exports**. You will **not** claim “data never leaves the device.”
 
-This investigation is the gate. If the official tutorial cannot be installed, run, and packaged on **target hardware**, NotaLocal has no stack.
+This investigation is the gate. If the official tutorial cannot be installed, run, and packaged on **target hardware**, Oira has no stack.
 
 ### Hard constraints
 
@@ -35,19 +35,19 @@ This investigation is the gate. If the official tutorial cannot be installed, ru
 2. Do **not** claim “100% secure”, “military encryption”, HIPAA / HIPAA-compliant, “100% offline”, or “data never leaves the device”. Export is an explicit doctor action and is a permitted data exit.
 3. Prefer **official** sources: QVAC docs, Electron docs, Node docs. Blog posts and GitHub issues are secondary and must be labeled unofficial.
 4. Follow the official tutorial **literally** first (including answering **No** to the Electron updater plugin and **No** to the download-mirror proxy if the tutorial still says so). Record every deviation you were forced to make.
-5. Do not add NotaLocal features, SQLite, SQLCipher, custom preload APIs, or extra native addons in this spike. The artifact is a **faithful packaged tutorial app**.
+5. Do not add Oira features, SQLite, SQLCipher, custom preload APIs, or extra native addons in this spike. The artifact is a **faithful packaged tutorial app**.
 6. Produce a **concrete decision** written to `docs/research/R-1-qvac-electron-tutorial.md`. An investigation without a written decision is incomplete.
 7. If you cannot run the lab (no hardware, no GPU, CI-only environment), complete Phase 0 (desk) fully, mark every lab step `BLOCKED — NEEDS TARGET HARDWARE`, and do **not** invent pass/fail results.
 
 ### Questions this investigation must answer
 
 1. Does the official QVAC Electron stack **install, run, load a model, and complete the tutorial’s inference path** on each target machine we care about (record OS, CPU arch, RAM, GPU if any)?
-2. Which **exact versions** must we pin in NotaLocal `package.json` / lockfile? (`@qvac/sdk`, Electron, Node, npm, electron-vite, Electron Forge and the QVAC Forge plugin if the tutorial uses them, and any other packages the scaffold pulls in.)
+2. Which **exact versions** must we pin in Oira `package.json` / lockfile? (`@qvac/sdk`, Electron, Node, npm, electron-vite, Electron Forge and the QVAC Forge plugin if the tutorial uses them, and any other packages the scaffold pulls in.)
 3. What is the official **minimum environment** (Node, npm, OS, RAM/disk) as documented today? Does our hardware meet it?
 4. What **breaks `npm run package`** (or the tutorial’s exact package script)? Native addons, ASAR, universal macOS builds, missing helper / sandbox, path collisions (`dist/` vs `out/`), missing binaries, architecture mismatches?
 5. After packaging, does the **packaged app** start and complete the same inference path as `npm run dev`?
 6. Which tutorial caveats are **confirmed on our machines** (for example: Linux `--no-sandbox` / `app.commandLine.appendSwitch('no-sandbox')`; Forge plugin forcing `asar: false`; macOS universal builds blocked)? Treat each as `TODO: VERIFY FROM OFFICIAL QVAC DOCUMENTATION` until you have both a doc citation **and** an empirical result.
-7. What is the smallest honest **go / no-go** for NotaLocal: proceed on these pins, proceed with listed workarounds, or the stack is not viable on target hardware?
+7. What is the smallest honest **go / no-go** for Oira: proceed on these pins, proceed with listed workarounds, or the stack is not viable on target hardware?
 
 ### Method / sources
 
@@ -65,7 +65,7 @@ Gather and quote (with URL + retrieval date + section heading). Do not paraphras
 | Electron official docs (version = the Electron the tutorial installs) | `contextIsolation`, `nodeIntegration`, packaging, `app.commandLine` |
 | Node official docs | The Node version Electron embeds vs the Node you use to install |
 
-Internal notes (not sources of API truth): NotaLocal `docs/BACKEND_DESKTOP_ARCHITECTURE_GUIDE.md` §0.6, §7.7, §21 R-1, Appendix A. If an internal note disagrees with official docs, **official docs win** and you record the discrepancy.
+Internal notes (not sources of API truth): Oira `docs/BACKEND_DESKTOP_ARCHITECTURE_GUIDE.md` §0.6, §7.7, §21 R-1, Appendix A. If an internal note disagrees with official docs, **official docs win** and you record the discrepancy.
 
 #### Phase 1 — lab protocol (target hardware required)
 
@@ -167,7 +167,7 @@ Also decide the **pin set** (Node, npm, Electron, `@qvac/sdk`, Forge/vite as app
 
 ### Role / context
 
-You are a researcher supporting **Justin** (NotaLocal backend). NotaLocal is a local Electron clinical-documentation app. The Renderer (Antonio) captures microphone audio with **no Node**. Main writes temp files and will later expose something like `pushAudioChunk` on `window.notalocal`. That IPC shape **depends on this decision**.
+You are a researcher supporting **Justin** (Oira backend). Oira is a local Electron clinical-documentation app. The Renderer (Antonio) captures microphone audio with **no Node**. Main writes temp files and will later expose something like `pushAudioChunk` on `window.oira`. That IPC shape **depends on this decision**.
 
 Product pipeline: encounter → record → local STT → local LLM structuring → draft → doctor review → export. P0 transcription is **batch** on a complete file after stop (streaming is P2 / R-8). Audio is deleted when the note is approved; the database stores a **path**, never the audio blob.
 
@@ -285,7 +285,7 @@ If both packaged paths fail, the decision is **BLOCKED** with the exact errors �
 
 ### Role / context
 
-You are a researcher supporting **Justin** (NotaLocal backend). Storage is **local only**, in `app.getPath('userData')`, accessed **only from Electron Main**. Renderer has no Node and never talks to SQLite.
+You are a researcher supporting **Justin** (Oira backend). Storage is **local only**, in `app.getPath('userData')`, accessed **only from Electron Main**. Renderer has no Node and never talks to SQLite.
 
 Candidates:
 
@@ -331,7 +331,7 @@ Do not solve encryption here (R-5). Do not invent QVAC APIs.
 
 #### Phase 1 — lab protocol
 
-Use the **R-1 packaged tutorial app** (or a branch of it). Do not start NotaLocal services.
+Use the **R-1 packaged tutorial app** (or a branch of it). Do not start Oira services.
 
 **S1. Binding A — `node:sqlite`**
 
@@ -398,7 +398,7 @@ Choose **one**:
 
 ### Role / context
 
-You are a researcher supporting **Justin** (NotaLocal). The app will load a **speech-to-text** model and a **structuring LLM** via QVAC. They are different engines. Do not confuse Qwen (LLM) with Whisper/Parakeet (STT).
+You are a researcher supporting **Justin** (Oira). The app will load a **speech-to-text** model and a **structuring LLM** via QVAC. They are different engines. Do not confuse Qwen (LLM) with Whisper/Parakeet (STT).
 
 Internal **assumption**: do **not** keep STT and LLM loaded at once on a clinical laptop; sequence is load STT → transcribe → unload → load LLM → structure → unload. Cost is latency; benefit is avoiding OOM.
 
@@ -505,7 +505,7 @@ Choose:
 
 ### Role / context
 
-You are a researcher supporting **Justin** (NotaLocal). Threat model is **not** a remote attacker (there is no app server). Realistic threats: someone in front of an unlocked laptop; another OS user; device theft (a PIN does **not** replace full-disk encryption).
+You are a researcher supporting **Justin** (Oira). Threat model is **not** a remote attacker (there is no app server). Realistic threats: someone in front of an unlocked laptop; another OS user; device theft (a PIN does **not** replace full-disk encryption).
 
 P0 auth assumption: local PIN, salted KDF (`scrypt` / Argon2id via established libraries or `node:crypto`), constant-time compare, lockout/backoff **without** wiping clinical notes. Session in Main memory only.
 
@@ -554,7 +554,7 @@ Legal-adjacent: you may summarize **risk** in plain language. You are **not** a 
 
 For each: `isEncryptionAvailable()`, encrypt/decrypt roundtrip, persist the ciphertext to disk, **reboot or new process**, decrypt again. Then log out / lock and note whether another OS user can decrypt.
 
-**K2. Linux no-keyring.** Document Electron version-specific behavior. If a switch enables `basic_text`, state whether that stores secrets reversibly on disk and whether NotaLocal must **refuse** that mode.
+**K2. Linux no-keyring.** Document Electron version-specific behavior. If a switch enables `basic_text`, state whether that stores secrets reversibly on disk and whether Oira must **refuse** that mode.
 
 **K3. Packaging.** If recommending SQLCipher or a native crypto addon: `npm run package` with QVAC present (R-1 app). If it fails, encryption cannot be “yes” for MVP unless Plan B is pure JS `node:crypto` + key in `safeStorage`.
 
@@ -608,7 +608,7 @@ You must also answer: **where the key lives**, and **what happens when `safeStor
 
 ### Role / context
 
-You are a researcher supporting **Justin** (NotaLocal). P0 unlock is a **local PIN**. This investigation decides whether MVP also offers **OS unlock** (Touch ID, Windows Hello, platform PAM/keyring unlock) **in addition to** the PIN — never as a replacement that stores biometrics ourselves.
+You are a researcher supporting **Justin** (Oira). P0 unlock is a **local PIN**. This investigation decides whether MVP also offers **OS unlock** (Touch ID, Windows Hello, platform PAM/keyring unlock) **in addition to** the PIN — never as a replacement that stores biometrics ourselves.
 
 Temp audio lives under a Main-derived path (internal assumption): `<userData>/tmp-audio/<encounterId>/`. Renderer never sends filesystem paths. Directories should be created with **restrictive permissions**. POSIX `0700` is not Windows ACL.
 
@@ -701,7 +701,7 @@ And separately:
 
 ### Role / context
 
-You are a researcher supporting **Justin** (NotaLocal). Product rule: **initial model download needs network**; inference is intended to be local on cached models; everything else in NotaLocal must not phone home. Export is a user-initiated **local** write (or clipboard), not an upload.
+You are a researcher supporting **Justin** (Oira). Product rule: **initial model download needs network**; inference is intended to be local on cached models; everything else in Oira must not phone home. Export is a user-initiated **local** write (or clipboard), not an upload.
 
 QVAC documentation (verify current wording) describes resumable downloads, cache validation on later `loadModel`, and that the **first** download needs registry access. The Electron tutorial warns the first run **may download from peers**. That implies **P2P**, not only an HTTPS CDN. Hospital firewalls may block this.
 
@@ -783,7 +783,7 @@ Cache dir:
 
 Decide:
 
-- The **exact offline claim** NotaLocal may use (one paragraph, no superlatives).
+- The **exact offline claim** Oira may use (one paragraph, no superlatives).
 - **Hospital firewall** needs for first download vs day-2 use.
 - Whether we must document **P2P** to IT (yes/no, with evidence).
 - Whether `close()` is sufficient or we must **kill the process** to stop network activity.
@@ -800,7 +800,7 @@ Decide:
 
 ### Role / context
 
-You are a researcher supporting **Justin** (NotaLocal). P0 uses **batch** `transcribe()` on a complete WAV (R-2). Product still stores **segments + timestamps** for clinical traceability (doctor sees which span grounded a fact). Streaming live transcript is **P2**.
+You are a researcher supporting **Justin** (Oira). P0 uses **batch** `transcribe()` on a complete WAV (R-2). Product still stores **segments + timestamps** for clinical traceability (doctor sees which span grounded a fact). Streaming live transcript is **P2**.
 
 Internal notes describe a segment object with `text`, `startMs`, `endMs`, `append`, `id`, and a duplex `transcribeStream()` session with `write` / `end` / `destroy` and events that may include `text`, `segment`, `vad`, `endOfTurn`. **Every one of those names is a lead.** You will confirm against official documentation and the pinned SDK types. If the next SDK release renamed them, the types win.
 
@@ -897,7 +897,7 @@ Decide:
 
 ### Role / context
 
-You are a researcher supporting **Justin** (NotaLocal). R-1 already proved (or failed) packaging on at least one machine. This investigation decides **which platforms the demo ships** and **what install warnings the doctor sees**.
+You are a researcher supporting **Justin** (Oira). R-1 already proved (or failed) packaging on at least one machine. This investigation decides **which platforms the demo ships** and **what install warnings the doctor sees**.
 
 Internal notes (verify): QVAC’s Electron Forge plugin **forces `asar: false`** because a Bare worker cannot load native addons from an ASAR archive; **macOS universal binaries are blocked** (per-arch prebuilds); cross-build may be supported. `asar: false` means app files are visible on disk — relevant to how we talk about security (R-5), not a reason to invent obfuscation.
 
@@ -977,7 +977,7 @@ Decide:
 
 ### Role / context
 
-You are a researcher supporting **Justin** (NotaLocal backend) and you must coordinate with **Antonio** (Renderer/UI). P0 export is **TXT, JSON, and clipboard**. PDF is optional P2.
+You are a researcher supporting **Justin** (Oira backend) and you must coordinate with **Antonio** (Renderer/UI). P0 export is **TXT, JSON, and clipboard**. PDF is optional P2.
 
 Rules that already exist and are not yours to relax:
 
@@ -1017,7 +1017,7 @@ Candidate API (Electron official): `webContents.printToPDF`. That implies a hidd
 
 #### Phase 1 — lab protocol
 
-**D1.** In the R-1 or NotaLocal shell, open a **hidden** `BrowserWindow` with the same security prefs as production. Load a **local** HTML template with **fictional** clinical-looking text (fake patient). Call `printToPDF` with documented options. Save via save dialog.
+**D1.** In the R-1 or Oira shell, open a **hidden** `BrowserWindow` with the same security prefs as production. Load a **local** HTML template with **fictional** clinical-looking text (fake patient). Call `printToPDF` with documented options. Save via save dialog.
 
 **D2.** Check: Spanish accents, long table, page break, header/footer if options exist. Open the PDF in a stock viewer.
 
@@ -1050,7 +1050,7 @@ Antonio sign-off: pending | agreed-in | deferred
 Choose **one**, jointly with Antonio:
 
 - **PDF OUT OF SCOPE for this delivery.** TXT/JSON/clipboard only. Revisit after demo.
-- **PDF IN SCOPE** using `webContents.printToPDF` + Antonio’s local print template; list must-have visual requirements and the IPC method name you will add to `window.notalocal`.
+- **PDF IN SCOPE** using `webContents.printToPDF` + Antonio’s local print template; list must-have visual requirements and the IPC method name you will add to `window.oira`.
 - **PDF IN SCOPE BUT AFTER P0** — implement only if R-1–R-4 are done.
 
 If `printToPDF` is inadequate (e.g. cannot embed a usable layout without Node in the print window), decide **no PDF** rather than adding a cloud converter.

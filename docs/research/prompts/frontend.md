@@ -96,7 +96,7 @@ SOAP is a hypothesis, not the truth. Users are ambulatory, not inpatient. Fronte
 
 **Theme A — P0 companion — desk.** Artifact: `docs/research/THEME-A-ambient-scribes-patterns.md`
 
-Write **1–2 pages** (plus sources): how human scribes and ambient documentation products work; what the physician still does; **copy / adapt / forbid** for NotaLocal.
+Write **1–2 pages** (plus sources): how human scribes and ambient documentation products work; what the physician still does; **copy / adapt / forbid** for Oira.
 
 Test every pattern against: *The agent documents. The doctor decides.* Do not decide I3/I7/I11/I12 here — only tag patterns those prompts must not import blindly. No HIPAA badges, no EHR writeback, no diagnosis widgets as “copy.”
 
@@ -136,7 +136,7 @@ Evaluate ≥5 patterns (checklist, forced exposure of content, unsourced-field g
 
 **Do not decide the default.** Produce the consequence matrix for: (A) no retention, (B) notes only, (C) notes + audio.
 
-Any retention must be visible and controllable. Copy describes **actual** behavior. A control that does nothing is worse than no control. Failed delete must never show optimistic success. Doctor’s legal record-retention duty is not NotaLocal’s.
+Any retention must be visible and controllable. Copy describes **actual** behavior. A control that does nothing is worse than no control. Failed delete must never show optimistic success. Doctor’s legal record-retention duty is not Oira’s.
 
 **Matrix topics:** PrivacyStatusPanel rows; Settings controls; what is deletable; what delete cannot reach (OS copies, pasted EHR); Recording/Processing error copy; website “what we store”; disabled-control copy. Mark backend-unknowns `CONDITIONAL — Justin`.
 
@@ -150,7 +150,7 @@ Any retention must be visible and controllable. Copy describes **actual** behavi
 
 Research what independent / small-clinic ambulatory physicians in Spanish-speaking practice actually paste into. Confidence-tag thin market data; do not fabricate share. Rank: paste fidelity, familiarity, official-looking risk, Justin cost (qualitative).
 
-Every format keeps `NOT_STATED` / empty sections. Destination warning: what leaves NotaLocal is no longer our scope.
+Every format keeps `NOT_STATED` / empty sections. Destination warning: what leaves Oira is no longer our scope.
 
 ---
 

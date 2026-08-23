@@ -1,4 +1,4 @@
-# D0 — Síntesis de investigación IA/QVAC para NotaLocal
+# D0 — Síntesis de investigación IA/QVAC para Oira
 
 > **Estado:** consolidación de escritorio. No incluye resultados de inferencia, hardware ni audio.  
 > **Fecha:** 22 de agosto de 2026.  
@@ -6,7 +6,7 @@
 
 ## Decisión consolidada
 
-NotaLocal conserva un MVP local, por lotes y conservador:
+Oira conserva un MVP local, por lotes y conservador:
 
 1. **STT:** se investigan `WHISPER_SPANISH_TINY_Q8_0` y `WHISPER_TINY`, pero no se elige default antes de Q1/Q2.
 2. **Estructuración:** el contrato de aplicación exige `json_schema`, validación posterior y grounding; la compatibilidad real con el esquema clínico pertenece a Q3.
@@ -34,7 +34,7 @@ La prioridad no es maximizar automatización. Es impedir que una forma de salida
 | STT español | Comparar primero Spanish Tiny Q8 y Tiny. | Registro/documentación oficial; sin calidad medida. | Q1 valida `language: 'es'`; Q2 realiza los 13 casos. | **BLOCKED — NEEDS TARGET HARDWARE** |
 | Default STT | No decidido. | Ninguna medición clínica sintética. | Q2. | **BLOCKED — NEEDS TARGET HARDWARE** |
 | Structured output | Sólo `json_schema` para el contrato clínico. | D3; la estructura no prueba grounding ni veracidad. | Q3 con esquema completo, parse/Zod/grounding. | **BLOCKED — NEEDS TARGET SDK/HARDWARE** |
-| Diagnóstico/prescripción | Prohibidos en el schema y en la salida del producto. | Decisión de producto de NotaLocal. | Revisión de schema y evaluación de hechos no respaldados. | No resoluble sólo con docs |
+| Diagnóstico/prescripción | Prohibidos en el schema y en la salida del producto. | Decisión de producto de Oira. | Revisión de schema y evaluación de hechos no respaldados. | No resoluble sólo con docs |
 | Source grounding | Requerido para cada campo `OBSERVED`; las marcas temporales Whisper son necesarias pero no suficientes. | D1/D2; no hay audio de prueba. | Q1/Q2 y verificador de fuentes. | **BLOCKED — NEEDS TARGET HARDWARE** |
 | Diarización | Excluida de P0; no hay roles automáticos. | D4. | Q17 ya fija forma; Q11 evalúa estabilidad y errores. | **BLOCKED — NEEDS TARGET HARDWARE** |
 | Forma Sortformer | Parsear texto con patrón oficial estricto; no crear `diarize()` ni tipos imaginados. | Q17. | Smoke test de forma y Q11, con datos sintéticos. | **BLOCKED — NEEDS TARGET SDK/HARDWARE** |
@@ -45,7 +45,7 @@ La prioridad no es maximizar automatización. Es impedir que una forma de salida
 La síntesis usa las etiquetas de las guías:
 
 - **CONFIRMED:** superficie y ejemplos documentados oficialmente; nunca se extrapolan a rendimiento clínico.
-- **DECISIÓN / ASSUMPTION:** elecciones explícitas de NotaLocal, por ejemplo excluir roles automáticos de P0.
+- **DECISIÓN / ASSUMPTION:** elecciones explícitas de Oira, por ejemplo excluir roles automáticos de P0.
 - **UNVERIFIED:** precisión, estabilidad de speaker index, soporte real de español, uso de memoria, latencia y JSON válido en el modelo concreto.
 - **TODO: VERIFY FROM OFFICIAL QVAC DOCUMENTATION:** todo campo o firma que sólo aparece en documentación de una versión distinta, no está en los tipos instalados, o no coincide con los ejemplos.
 - **BLOCKED — NEEDS TARGET SDK/HARDWARE:** cualquier medición o smoke test no realizado.
@@ -107,4 +107,4 @@ No se han completado estos artefactos ni se han escrito números de relleno. Est
 
 ## Conclusión
 
-La investigación de escritorio ya delimita qué puede programarse con seguridad y qué debe esperar a un laboratorio. El siguiente paso válido no es ampliar funciones: es fijar el SDK real, comprobar su superficie y producir evidencia reproducible con casos sintéticos. Hasta entonces, NotaLocal puede diseñar un pipeline que trate toda salida como borrador y conserve la decisión clínica en el médico.
+La investigación de escritorio ya delimita qué puede programarse con seguridad y qué debe esperar a un laboratorio. El siguiente paso válido no es ampliar funciones: es fijar el SDK real, comprobar su superficie y producir evidencia reproducible con casos sintéticos. Hasta entonces, Oira puede diseñar un pipeline que trate toda salida como borrador y conserve la decisión clínica en el médico.

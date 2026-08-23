@@ -1,10 +1,10 @@
-# NotaLocal
+# Oira
 
-Desktop app for local clinical documentation. NotaLocal captures a consultation on the physician’s computer, prepares a structured **draft note**, and leaves review, correction, and confirmation to the physician.
+Desktop app for local clinical documentation. Oira captures a consultation on the physician’s computer, prepares a structured **draft note**, and leaves review, correction, and confirmation to the physician.
 
 The product principle is fixed: **the agent documents; the physician decides.**
 
-This repository is a monorepo for the NotaLocal desktop client (Electron), shared UI and types, and engineering documentation. The public name is still pending (`Notas-Medicas-name-pending`).
+This repository is a monorepo for the Oira desktop client (Electron), shared UI and types, and engineering documentation. The public name is still pending (`Notas-Medicas-name-pending`).
 
 ## Current status
 
@@ -41,7 +41,7 @@ The first install compiles Electron and esbuild binaries. `pnpm dev:desktop` ope
 | `pnpm test` | Run unit tests (state machine and mock bridge) |
 | `pnpm lint:desktop` | Lint the renderer |
 | `pnpm typecheck` | Typecheck shared types and the desktop app |
-| `pnpm --filter notalocal-desktop build` | Production bundle under `apps/desktop/out/` |
+| `pnpm --filter oira-desktop build` | Production bundle under `apps/desktop/out/` |
 
 ### Prototype flow
 
@@ -49,7 +49,7 @@ The first install compiles Electron and esbuild binaries. `pnpm dev:desktop` ope
 2. Start and stop a simulated recording. No identifier is required.
 3. Wait through transcription and structuring (mock delays).
 4. Review the draft beside the transcript. Empty sections stay **No consta** or **Sin determinar**.
-5. Accept explicitly, then copy the preview. What is pasted elsewhere is outside NotaLocal.
+5. Accept explicitly, then copy the preview. What is pasted elsewhere is outside Oira.
 
 Fixtures are synthetic. Do not commit real patient audio, transcripts, or notes.
 
@@ -65,14 +65,14 @@ packages/ui/                  Presentational primitives (no clinical logic)
 docs/                         Architecture, UX, AI, and research
 ```
 
-The renderer talks to the rest of the system only through `src/renderer/bridge/`. Development uses `mock.ts`; the real `window.notalocal` API is owned by Main/preload.
+The renderer talks to the rest of the system only through `src/renderer/bridge/`. Development uses `mock.ts`; the real `window.oira` API is owned by Main/preload.
 
 ## Ownership
 
 | Area | Owner | Boundary |
 | --- | --- | --- |
 | Website (later), renderer, design system, UX | Antonio | Does not edit `src/main/` or `src/preload/` |
-| Electron Main, IPC, SQLite, QVAC adapter | Justin | Exposes `window.notalocal` — if new to Electron, read [Electron from zero](docs/ELECTRON_GETTING_STARTED.md) first |
+| Electron Main, IPC, SQLite, QVAC adapter | Justin | Exposes `window.oira` — if new to Electron, read [Electron from zero](docs/ELECTRON_GETTING_STARTED.md) first |
 | STT, structuring, prompts, evaluation | IA | Defines transcript and note shape
 
 ## Documentation

@@ -5,7 +5,7 @@ import {
 import type { SerializableError } from "../../shared/types/result"
 
 /** Runtime brand so duck-typed `{ code, message }` cannot pass as AppError. */
-export const APP_ERROR_NAME = "NotaLocalAppError" as const
+export const APP_ERROR_NAME = "OiraAppError" as const
 
 export type AppError = {
   readonly name: typeof APP_ERROR_NAME

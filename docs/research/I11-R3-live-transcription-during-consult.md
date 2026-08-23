@@ -7,7 +7,7 @@
 
 **Mantener la transcripción en vivo oculta y no añadirla —ni como opt-in— hasta contar con evidencia de uso con médicos y capacidades confirmadas de IA/Justin.** P0 conserva el indicador de grabación, temporizador y estado de micrófono, pero no muestra texto generado durante la conversación.
 
-La evidencia disponible es indirecta: el uso de pantallas para documentar durante una visita puede reducir el contacto visual y alterar la interacción médico-paciente [S1, S2]; el diseño ambiental busca precisamente desplazar documentación fuera del foco de la conversación [S3]. No hay evidencia suficiente de que corregir STT en vivo mejore la consulta ambulatoria presencial de NotaLocal, ni una confirmación de que el SDK entregue streaming estable, segmentos/correcciones y límites de recursos aceptables.
+La evidencia disponible es indirecta: el uso de pantallas para documentar durante una visita puede reducir el contacto visual y alterar la interacción médico-paciente [S1, S2]; el diseño ambiental busca precisamente desplazar documentación fuera del foco de la conversación [S3]. No hay evidencia suficiente de que corregir STT en vivo mejore la consulta ambulatoria presencial de Oira, ni una confirmación de que el SDK entregue streaming estable, segmentos/correcciones y límites de recursos aceptables.
 
 ## Opciones evaluadas
 
@@ -45,7 +45,7 @@ Comparar tres prototipos con audio/transcript **sintéticos**: oculto, opt-in y 
 ## Caveats
 
 - Esto no afirma que la transcripción en vivo sea dañina; afirma que no hay evidencia/capacidad suficiente para introducirla en P0.
-- Las fuentes estudian EHR y diseño de consulta, no el layout exacto de NotaLocal.
+- Las fuentes estudian EHR y diseño de consulta, no el layout exacto de Oira.
 - La decisión de aceptación y revisión permanece en I7; mostrar texto en vivo no sustituye Review.
 
 ## Fuentes

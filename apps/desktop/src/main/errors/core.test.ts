@@ -4,7 +4,7 @@ import { createAppError, isAppError, toSerializableError } from "./core"
 describe("errors/core", () => {
   it("brands AppError and accepts only known codes", () => {
     const error = createAppError("INVALID_INPUT", "Bad request.")
-    expect(error.name).toBe("NotaLocalAppError")
+    expect(error.name).toBe("OiraAppError")
     expect(isAppError(error)).toBe(true)
   })
 
@@ -14,7 +14,7 @@ describe("errors/core", () => {
     ).toBe(false)
     expect(
       isAppError({
-        name: "NotaLocalAppError",
+        name: "OiraAppError",
         code: "NOT_A_REAL_CODE",
         message: "nope",
       }),

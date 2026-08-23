@@ -114,7 +114,7 @@ La negación no es aún una métrica bloqueante de calidad en Q1; se registra po
 | Una configuración cumple todos los criterios | Marcar **VIABLE** sólo en el artefacto completado y habilitar Q2 con esa configuración como candidata, sin declararla default. |
 | `language: 'es'` es rechazado | Copiar error exacto. No inventar lista de códigos ni sustituir el campo. Investigar la definición de tipo/documentación antes de reintentar. |
 | El campo se acepta pero se ignora y el resultado sigue en español | Documentar ruta viable condicional; no afirmar que `language` sea un control confirmado. |
-| No hay timestamps o no son utilizables | La ruta no cumple el requisito de grounding de NotaLocal; escalar como bloqueo aunque haya texto. |
+| No hay timestamps o no son utilizables | La ruta no cumple el requisito de grounding de Oira; escalar como bloqueo aunque haya texto. |
 | Ambas configuraciones fallan | Marcar **NOT VIABLE** para este par de candidatas y detener el P0 de español hasta una decisión documentada. |
 | No hay SDK/hardware/clip | Mantener **BLOCKED**. |
 

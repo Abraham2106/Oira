@@ -21,7 +21,7 @@ If you cannot run lab steps: finish desk quotes, mark every trial `BLOCKED — N
 
 **Decide:** GO / GO WITH WORKAROUNDS / NO-GO, plus the **exact pin set** (Node, npm, Electron, `@qvac/sdk`, packager plugins).
 
-Reproduce the **official** QVAC Electron tutorial end-to-end, including its package script (verify the name; internal notes say `npm run package`). Follow the tutorial literally first. Do not add SQLite, NotaLocal APIs, or extra native addons.
+Reproduce the **official** QVAC Electron tutorial end-to-end, including its package script (verify the name; internal notes say `npm run package`). Follow the tutorial literally first. Do not add SQLite, Oira APIs, or extra native addons.
 
 **Questions:** Does install + first inference work on each target machine? What breaks packaging? Does the **packaged** binary still infer? Confirm Linux sandbox notes, `asar`, macOS universal vs per-arch — only with a doc quote **and** an empirical result.
 

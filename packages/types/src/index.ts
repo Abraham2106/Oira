@@ -82,5 +82,5 @@ export type Encounter = {
 
 /**
  * UI view-model only. The IPC API lives in
- * `apps/desktop/src/shared/types/notalocal-api.ts` (`NotaLocalAPI`).
+ * `apps/desktop/src/shared/types/oira-api.ts` (`OiraApi`).
  */

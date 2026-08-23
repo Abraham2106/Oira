@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { SECTION_IDS } from "@notalocal/types"
+import { SECTION_IDS } from "@oira/types"
 import { createMockBridge, SYNTHETIC_TRANSCRIPT } from "./mock"
 
 describe("mock bridge", () => {

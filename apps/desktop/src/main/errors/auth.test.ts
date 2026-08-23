@@ -14,7 +14,7 @@ describe("errors/auth", () => {
     expect(session.isAuthenticated()).toBe(false)
     await expect(session.unlock("0000")).rejects.toMatchObject({
       code: "NOT_IMPLEMENTED",
-      name: "NotaLocalAppError",
+      name: "OiraAppError",
     })
     expect(session.isAuthenticated()).toBe(false)
   })

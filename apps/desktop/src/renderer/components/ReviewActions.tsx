@@ -1,4 +1,4 @@
-import { Button } from "@notalocal/ui"
+import { Button } from "@oira/ui"
 
 type Props = {
   canAccept: boolean

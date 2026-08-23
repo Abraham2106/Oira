@@ -22,14 +22,14 @@ Se revisaron solamente fuentes oficiales de QVAC/Tether:
 - la documentación oficial de transcripción y de la API;
 - el contrato de modelos publicado en el repositorio oficial de QVAC.
 
-No se consultaron model cards, benchmarks, papers ni blogs. Por tanto, este documento **no contiene** afirmaciones de WER, exactitud en español, calidad médica, robustez a acentos, rendimiento o memoria. Si se incorporan más adelante, deben etiquetarse como **UNVERIFIED** para QVAC salvo que procedan de una corrida reproducible de NotaLocal.
+No se consultaron model cards, benchmarks, papers ni blogs. Por tanto, este documento **no contiene** afirmaciones de WER, exactitud en español, calidad médica, robustez a acentos, rendimiento o memoria. Si se incorporan más adelante, deben etiquetarse como **UNVERIFIED** para QVAC salvo que procedan de una corrida reproducible de Oira.
 
-Hay una limitación importante de versionado: el contrato oficial consultado corresponde al commit actual del repositorio de QVAC y su `package.json` declara 0.18.0, mientras que NotaLocal pretende fijar 0.17.1. Los tamaños y SHA que siguen son hechos del snapshot consultado; **no se trasladan automáticamente al pin de NotaLocal**. Antes de ejecutar Q1 o Q2 hay que leer el registro/tipos efectivamente instalados.
+Hay una limitación importante de versionado: el contrato oficial consultado corresponde al commit actual del repositorio de QVAC y su `package.json` declara 0.18.0, mientras que Oira pretende fijar 0.17.1. Los tamaños y SHA que siguen son hechos del snapshot consultado; **no se trasladan automáticamente al pin de Oira**. Antes de ejecutar Q1 o Q2 hay que leer el registro/tipos efectivamente instalados.
 
 ## Hechos confirmados sobre la superficie QVAC
 
 - **CONFIRMED:** QVAC documenta que Whisper es una de las dos rutas de ASR, junto con Parakeet, y que el ciclo de transcripción es cargar un modelo, transcribir y descargarlo. [Transcription de QVAC](https://docs.qvac.tether.io/ai-capabilities/transcription/)
-- **CONFIRMED:** la transcripción batch acepta audio por ruta o buffer y, con `metadata: true`, la referencia pública v0.17.x expone segmentos con texto, id y marcas temporales. Esto hace a Whisper un candidato compatible con la necesidad de grounding temporal de NotaLocal, pero no prueba precisión. [API Summary v0.17.x](https://docs.qvac.tether.io/reference/api/)
+- **CONFIRMED:** la transcripción batch acepta audio por ruta o buffer y, con `metadata: true`, la referencia pública v0.17.x expone segmentos con texto, id y marcas temporales. Esto hace a Whisper un candidato compatible con la necesidad de grounding temporal de Oira, pero no prueba precisión. [API Summary v0.17.x](https://docs.qvac.tether.io/reference/api/)
 - **CONFIRMED:** el ejemplo oficial de Whisper muestra `WHISPER_TINY` como descriptor de catálogo y carga mediante `loadModel`. El ejemplo usa `language: 'en'`; ese ejemplo **no** demuestra la aceptación o el efecto de `'es'`. [Ejemplo oficial de Whisper en Transcription](https://docs.qvac.tether.io/ai-capabilities/transcription/)
 - **CONFIRMED, snapshot actual solamente:** el contrato oficial de modelos contiene entradas de catálogo llamadas `WHISPER_TINY` y `WHISPER_SPANISH_TINY_Q8_0`, ambas con addon `whisper` y engine `whispercpp-transcription`. [Contrato de modelos de QVAC](https://github.com/tetherto/qvac/blob/975b36ea3975e98cff8e1d00354bdfaa8da5c93a/packages/sdk/contract/models.json)
 
@@ -49,7 +49,7 @@ Fuente de todos los valores de la tabla: [contrato de modelos oficial de QVAC, c
 
 | Grupo | Estado | Razón |
 | --- | --- | --- |
-| `WHISPER_EN_*` | **ASSUMPTION / política de elegibilidad** | El objetivo de NotaLocal es habla médica española. Un descriptor etiquetado explícitamente como inglés no forma parte del baseline español. Confirmar su presencia/nombre en 0.17.1 no cambia esta exclusión. |
+| `WHISPER_EN_*` | **ASSUMPTION / política de elegibilidad** | El objetivo de Oira es habla médica española. Un descriptor etiquetado explícitamente como inglés no forma parte del baseline español. Confirmar su presencia/nombre en 0.17.1 no cambia esta exclusión. |
 | Parakeet TDT | **NOT SELECTED FOR Q1/Q2** | QVAC lo documenta como ruta de transcripción multilingüe, pero el protocolo de Q1/Q2 exige comparar las dos constantes Whisper y necesita timestamps para el grounding propuesto. No se usa como sustitución silenciosa. |
 | Modelos externos, GGUF locales no catalogados o fine-tunes no auditados | **NOT ALLOWED** | Romperían el comparativo reproducible y la regla del proyecto de usar únicamente lo que se confirme en el SDK/registro. |
 | `WHISPER_SMALL_Q8_0` | **DEFERRED** | Es una escalada prevista sólo si Q2 concluye que las dos candidatas iniciales no superan los criterios bloqueantes. |
@@ -68,7 +68,7 @@ Los nombres de catálogo y los checksums no responden ninguna de las preguntas q
 - integridad de `startMs`/`endMs` para el source grounding;
 - tasa de palabras erróneas, latencia, consumo de memoria y estabilidad.
 
-Cualquier afirmación sobre esos puntos sería **UNVERIFIED** hasta que Q1/Q2 la produzcan con audio sintético, configuración y versión registradas. No se copiaron claims de model cards upstream: no forman parte de la evidencia usada aquí y, aun si se consultaran, no reemplazarían la evaluación de NotaLocal.
+Cualquier afirmación sobre esos puntos sería **UNVERIFIED** hasta que Q1/Q2 la produzcan con audio sintético, configuración y versión registradas. No se copiaron claims de model cards upstream: no forman parte de la evidencia usada aquí y, aun si se consultaran, no reemplazarían la evaluación de Oira.
 
 ## Protocolo de traspaso a Q1 y Q2
 

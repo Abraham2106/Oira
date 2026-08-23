@@ -1,4 +1,4 @@
-import type { ProductState } from "@notalocal/types"
+import type { ProductState } from "@oira/types"
 
 export type MachineEvent =
   | "START"

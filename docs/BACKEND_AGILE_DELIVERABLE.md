@@ -1,6 +1,6 @@
 # Entregable backend — 12 iteraciones medibles (sin QVAC)
 
-> Plan agile del primer entregable backend de NotaLocal.
+> Plan agile del primer entregable backend de Oira.
 > Cada iteración cierra con un criterio pass/fail verificable en minutos.
 > Referencia de arquitectura: [BACKEND_DESKTOP_ARCHITECTURE_GUIDE.md](BACKEND_DESKTOP_ARCHITECTURE_GUIDE.md).
 
@@ -12,7 +12,7 @@ La inferencia se consume solo vía un **puerto/interface** (`InferencePort`) con
 
 **Regla de corte:** una iteración = **1 objetivo + 1 criterio pass/fail**. Si no se verifica en <5 minutos, es demasiado grande.
 
-**Alineación con frontend:** los 4 métodos del contrato (`startEncounter`, `stopEncounter`, `generateNote`, `saveNote`) coinciden con lo que Antonio espera en `window.notalocal.*`.
+**Alineación con frontend:** los 4 métodos del contrato (`startEncounter`, `stopEncounter`, `generateNote`, `saveNote`) coinciden con lo que Antonio espera en `window.oira.*`.
 
 ```mermaid
 flowchart TD
@@ -60,7 +60,7 @@ flowchart TD
 
 **Medible:**
 
-- [ ] `pnpm dev:desktop` (o `pnpm --filter notalocal-desktop dev`) abre la app
+- [ ] `pnpm dev:desktop` (o `pnpm --filter oira-desktop dev`) abre la app
 - [ ] Main loguea “ready” (o equivalente visible) sin importar QVAC
 - [ ] `package.json` de desktop **no** lista `@qvac/sdk`
 
@@ -92,11 +92,11 @@ flowchart TD
 
 ## I04 — Preload + IPC con Zod
 
-**Hecho:** `contextBridge.exposeInMainWorld('notalocal', { startEncounter, stopEncounter, generateNote, saveNote })`; handlers IPC que validan → llaman stub service → devuelven `Result`.
+**Hecho:** `contextBridge.exposeInMainWorld('oira', { startEncounter, stopEncounter, generateNote, saveNote })`; handlers IPC que validan → llaman stub service → devuelven `Result`.
 
 **Medible:**
 
-- [ ] Renderer (o script de smoke) llama `window.notalocal.startEncounter({})` y recibe `ok` o error tipado
+- [ ] Renderer (o script de smoke) llama `window.oira.startEncounter({})` y recibe `ok` o error tipado
 - [ ] No existe `invoke(channel, args)` genérico en preload
 - [ ] Error IPC **no** incluye `stack`, `cause` ni rutas absolutas
 

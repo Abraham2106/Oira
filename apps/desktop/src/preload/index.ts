@@ -1,8 +1,8 @@
 import { contextBridge, ipcRenderer } from "electron"
 import { IPC_CHANNELS } from "../shared/constants/ipc-channels"
-import type { NotaLocalAPI } from "../shared/types/notalocal-api"
+import type { OiraApi } from "../shared/types/oira-api"
 
-const notalocal: NotaLocalAPI = {
+const oira: OiraApi = {
   startEncounter: (input = {}) =>
     ipcRenderer.invoke(IPC_CHANNELS.START_ENCOUNTER, input),
   stopEncounter: (input) =>
@@ -12,4 +12,4 @@ const notalocal: NotaLocalAPI = {
   saveNote: (input) => ipcRenderer.invoke(IPC_CHANNELS.SAVE_NOTE, input),
 }
 
-contextBridge.exposeInMainWorld("notalocal", notalocal)
+contextBridge.exposeInMainWorld("oira", oira)

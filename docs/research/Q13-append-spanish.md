@@ -83,4 +83,4 @@ Crear tres WAV sintéticos de 16 kHz mono, sin datos reales:
 
 - **[S1] CONFIRMADO — QVAC/Tether.** *QVAC — Decentralized, Local AI in a Single API*. https://qvac.tether.io/ (acceso: 22-08-2026).
 - **[S2] CONFIRMADO — Tether.** *tetherto/qvac*, repositorio oficial. https://github.com/tetherto/qvac (acceso: 22-08-2026).
-- **[S3] CONFIRMADO — NotaLocal.** *Prompt Q13 — IA/QVAC researcher prompts*. docs/research/prompts/ai-qvac.md (acceso: 22-08-2026).
+- **[S3] CONFIRMADO — Oira.** *Prompt Q13 — IA/QVAC researcher prompts*. docs/research/prompts/ai-qvac.md (acceso: 22-08-2026).

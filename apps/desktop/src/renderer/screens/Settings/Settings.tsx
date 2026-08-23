@@ -1,4 +1,4 @@
-import { Button, Card } from "@notalocal/ui"
+import { Button, Card } from "@oira/ui"
 import { ModelStatus } from "../../components/ModelStatus"
 import { PrivacyStatusPanel } from "../../components/PrivacyStatusPanel"
 
@@ -9,11 +9,22 @@ type Props = {
 export function SettingsScreen({ onClose }: Props) {
   return (
     <div className="stack page">
-      <div className="actions">
-        <h1 className="page-title">Privacidad y uso</h1>
-        <Button onClick={onClose}>Volver</Button>
-      </div>
-      <ModelStatus state="LOCAL_INFERENCE_READY" />
+      <header className="config-header">
+        <div className="config-meta">
+          <span className="kicker-chip">Ajustes</span>
+        </div>
+        <h1 className="page-title">Privacidad y ajustes</h1>
+      </header>
+
+      <Card title="Motor de transcripción">
+        <div className="status-engine">
+          <ModelStatus state="LOCAL_INFERENCE_READY" />
+        </div>
+        <p className="muted">
+          El borrador se genera en este equipo. Usted revisa cada sección antes de aceptarla.
+        </p>
+      </Card>
+
       <Card title="Estado reportado">
         <PrivacyStatusPanel
           rows={[
@@ -25,17 +36,22 @@ export function SettingsScreen({ onClose }: Props) {
           ]}
         />
         <p className="muted">
-          Sin dato confirmado por el backend se muestra DESCONOCIDO. Esta pantalla no afirma
-          cumplimiento legal.
+          Sin confirmación del sistema se muestra DESCONOCIDO. Esta pantalla no afirma cumplimiento
+          legal.
         </p>
       </Card>
+
       <Card title="Retención y borrado">
         <p>
-          Los controles de retención y borrado están deshabilitados: el prototipo mock no guarda
-          SQLite ni audio. No hay interruptor decorativo.
+          Los controles de retención y borrado se activan cuando el almacenamiento cifrado del
+          equipo esté conectado. No se muestran controles decorativos.
         </p>
-        <Button disabled>Borrar datos (no disponible en el prototipo)</Button>
+        <Button disabled>Borrar todos los datos locales</Button>
+        <p className="muted check-compact">
+          El botón se habilitará junto con el almacenamiento cifrado.
+        </p>
       </Card>
+
       <Card title="Atajos">
         <ul className="shortcut-list">
           <li>
@@ -50,6 +66,10 @@ export function SettingsScreen({ onClose }: Props) {
           </li>
         </ul>
       </Card>
+
+      <div className="actions">
+        <Button onClick={onClose}>Volver</Button>
+      </div>
     </div>
   )
 }

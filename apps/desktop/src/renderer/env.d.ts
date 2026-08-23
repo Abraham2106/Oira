@@ -1,10 +1,10 @@
 /// <reference types="vite/client" />
 
-import type { NotaLocalAPI } from "../../shared/types/notalocal-api"
+import type { OiraApi } from "../../shared/types/oira-api"
 
 declare global {
   interface Window {
-    notalocal: NotaLocalAPI
+    oira: OiraApi
   }
 }
 

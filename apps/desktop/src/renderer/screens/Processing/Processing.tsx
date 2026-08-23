@@ -1,5 +1,5 @@
-import { Card, StatusBadge } from "@notalocal/ui"
-import type { ProductState } from "@notalocal/types"
+import { Card, StatusBadge } from "@oira/ui"
+import type { ProductState } from "@oira/types"
 
 type Props = {
   state: Extract<ProductState, "TRANSCRIBING" | "STRUCTURING">
@@ -25,7 +25,7 @@ export function ProcessingScreen({ state }: Props) {
             <span>2</span> Estructuración
           </li>
         </ol>
-        <p className="muted">Sin porcentajes ni tiempos estimados: el prototipo no los mide.</p>
+        <p className="muted">Sin porcentajes ni tiempos estimados: preferimos no inventarlos.</p>
       </Card>
     </div>
   )

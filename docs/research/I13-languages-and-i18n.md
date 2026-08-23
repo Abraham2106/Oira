@@ -55,7 +55,7 @@ No crear carpetas de 15 locales ni un selector vacío. La abstracción mínima e
 
 | Superficie | Permitida hoy | No permitida hoy |
 | --- | --- | --- |
-| Website / FAQ | “La interfaz de NotaLocal está disponible en español.” | “NotaLocal transcribe español”, “funciona en varios idiomas”, “traduce la consulta”. |
+| Website / FAQ | “La interfaz de Oira está disponible en español.” | “Oira transcribe español”, “funciona en varios idiomas”, “traduce la consulta”. |
 | Download | “El texto de la aplicación se presenta en español.” | “Compatible con cualquier idioma.” |
 | Desktop | “Idioma de interfaz: Español.” | Selector de idiomas que no modifica toda la interfaz. |
 | Export | “Revisa el contenido antes de exportar.” | “El idioma de la exportación coincide siempre con el idioma hablado.” |

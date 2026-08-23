@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from "react"
-import type { ClinicalNote, Encounter, ProductState, TranscriptSegment } from "@notalocal/types"
-import { getBridge } from "../bridge/notalocal"
+import type { ClinicalNote, Encounter, ProductState, TranscriptSegment } from "@oira/types"
+import { getBridge } from "../bridge/oira"
 import {
   createMachine,
   reduceMachine,

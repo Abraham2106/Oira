@@ -8,13 +8,13 @@
 
 QVAC documenta que su plugin Forge fuerza asar desactivado, poda prebuilds para el objetivo y bloquea macOS universal; los builds arm64 y x64 se deben generar por separado [QVAC, Build an Electron app](https://docs.qvac.tether.io/tutorials/electron/). Electron recomienda firmar distribuciones y explica que Windows y macOS pueden dificultar el lanzamiento de apps sin firma; Apple describe Developer ID y notarización como pasos para distribución macOS fuera de App Store [Electron, Code Signing](https://www.electronjs.org/docs/latest/tutorial/code-signing), [Apple, Developer ID](https://developer.apple.com/developer-id/).
 
-Estos documentos definen restricciones y rutas posibles; no prueban que NotaLocal tenga certificados, artefactos ejecutables, firma válida, notarización, instalación sin advertencias ni soporte multiplataforma.
+Estos documentos definen restricciones y rutas posibles; no prueban que Oira tenga certificados, artefactos ejecutables, firma válida, notarización, instalación sin advertencias ni soporte multiplataforma.
 
 **Decisión: DEFER soporte de plataforma y firma.** La demo debe limitarse a los hosts/arquitecturas que R-1 empaquete y ejecute. Sin artefacto firmado probado, el README debe dar instrucciones honestas y anticipar que el SO puede advertir o impedir la ejecución.
 
 ## 2. Matriz documental
 
-| Tema | Evidencia | Estado de NotaLocal |
+| Tema | Evidencia | Estado de Oira |
 |---|---|---|
 | asar | QVAC lo fuerza desactivado para worker/addons. | Documentado como restricción; package real bloqueado. |
 | macOS universal | QVAC lo bloquea por prebuilds de arquitectura. | No soportado como objetivo único. |

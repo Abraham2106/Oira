@@ -1,5 +1,5 @@
 import { quotesForSources } from "../lib/consultFlow"
-import type { TranscriptSegment } from "@notalocal/types"
+import type { TranscriptSegment } from "@oira/types"
 
 type Props = {
   sourceSegmentIds: string[]

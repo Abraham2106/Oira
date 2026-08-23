@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react"
-import type { TranscriptSegment } from "@notalocal/types"
+import type { TranscriptSegment } from "@oira/types"
 import { filterTranscript } from "../lib/consultFlow"
 import { TranscriptSegmentView } from "./TranscriptSegment"
 

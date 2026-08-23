@@ -6,7 +6,7 @@
 
 ## 1. Evidencia documental
 
-La documentación de QVAC para su servidor HTTP indica que un prompt de transcripción se reenvía a Whisper como initial_prompt. Esa documentación pertenece a la ruta HTTP y no confirma la forma exacta de las APIs SDK que utilizará NotaLocal [QVAC, HTTP server](https://docs.qvac.tether.io/cli/http-server/). La guía de transcripción documenta el procesamiento batch/stream y la entrada audioChunk, pero esta evidencia no expone una equivalencia de campos entre configuración de carga y llamada de transcribe [QVAC, Transcription](https://docs.qvac.tether.io/ai-capabilities/transcription/).
+La documentación de QVAC para su servidor HTTP indica que un prompt de transcripción se reenvía a Whisper como initial_prompt. Esa documentación pertenece a la ruta HTTP y no confirma la forma exacta de las APIs SDK que utilizará Oira [QVAC, HTTP server](https://docs.qvac.tether.io/cli/http-server/). La guía de transcripción documenta el procesamiento batch/stream y la entrada audioChunk, pero esta evidencia no expone una equivalencia de campos entre configuración de carga y llamada de transcribe [QVAC, Transcription](https://docs.qvac.tether.io/ai-capabilities/transcription/).
 
 Por ello, modelConfig.initial_prompt y transcribe.prompt son hipótesis de inspección de tipos, no parámetros que este informe declare existentes.
 

@@ -1,11 +1,11 @@
-# NotaLocal — Guía IA/QVAC para transcripción clínica local
+# Oira — Guía IA/QVAC para transcripción clínica local
 
-> Guía interna de ingeniería para el **rol responsable de IA** de NotaLocal.
+> Guía interna de ingeniería para el **rol responsable de IA** de Oira.
 > Track QVAC (Tether). App desktop 100% local para consulta médica ambulatoria.
 >
 > **Principio del producto: “El agente documenta. El médico decide.”**
 >
-> NotaLocal **no diagnostica, no prescribe y no hace triage**. Convierte la
+> Oira **no diagnostica, no prescribe y no hace triage**. Convierte la
 > conversación médico–paciente en documentación clínica estructurada *lista para
 > revisión humana*, sin que la inferencia ni los datos clínicos salgan del
 > dispositivo.
@@ -170,7 +170,7 @@ dominios y falle el build si aparecen. Barato y evita accidentes.
 > en su `package.json`. El requisito Node `>= v22.17` viene de la documentación,
 > no del manifiesto del paquete. Es decir: **npm no te va a avisar** si instalas
 > con Node 20. Lo comprobamos nosotros con un `preinstall`/`engines` propio en el
-> `package.json` de NotaLocal. `CONFIRMED` (ausencia de `engines` verificada en
+> `package.json` de Oira. `CONFIRMED` (ausencia de `engines` verificada en
 > el paquete).
 
 ### 2.2 Funciones del SDK que usa el rol de IA
@@ -178,7 +178,7 @@ dominios y falle el build si aparecen. Barato y evita accidentes.
 Todas exportadas desde la raíz de `@qvac/sdk`. `CONFIRMED` — leídas en
 `dist/index.d.ts`.
 
-| Función | Uso en NotaLocal |
+| Función | Uso en Oira |
 | --- | --- |
 | `loadModel(...)` | cargar el modelo STT (+ VAD) y el modelo LLM |
 | `unloadModel({ modelId })` | liberar RAM entre etapas |
@@ -410,7 +410,7 @@ Los tamaños son **`expectedSize` en disco**, no consumo de RAM.
 | `WHISPER_SMALL_Q8_0` | 264.464.607 B ≈ **264 MB** | Multilingüe |
 | `WHISPER_LARGE_V3_TURBO` | 1.624.555.275 B ≈ **1,62 GB** | Techo de calidad ASR |
 | `PARAKEET_TDT_0_6B_V3_Q8_0` | 749.625.216 B ≈ **750 MB** | Multilingüe (TDT) |
-| `PARAKEET_CTC_0_6B_Q8_0` | — | **Sólo inglés.** Descartado para NotaLocal |
+| `PARAKEET_CTC_0_6B_Q8_0` | — | **Sólo inglés.** Descartado para Oira |
 | `VAD_SILERO_5_1_2` | 885.098 B ≈ **0,9 MB** | VAD para whisper.cpp |
 
 **Diarización:**
@@ -435,7 +435,7 @@ Interpretación operativa, en este orden:
 3. Subir de tamaño **sólo** si una métrica bloqueante no se cumple.
 4. Documentar la decisión con números reales en la tabla de §16.
 
-“Reliably completes the task” para NotaLocal significa, como mínimo:
+“Reliably completes the task” para Oira significa, como mínimo:
 `JSON validity = 100%` y `unsupported clinical fact rate = 0` (§15).
 
 ### 3.4 Qwen3 0.6B vs ~4B: qué comparar y qué esperar
@@ -477,7 +477,7 @@ avisa literalmente de esto:
 > it doesn't pin the keys. Small models (Qwen3-0.6B in this example) will often
 > emit `{}` because that's the shortest valid completion under the grammar.»
 
-**Conclusión directa para NotaLocal:** usamos siempre
+**Conclusión directa para Oira:** usamos siempre
 `responseFormat: { type: 'json_schema', ... }`. Nunca `json_object`. Con el 0.6B,
 `json_object` degenera en `{}`.
 
@@ -552,7 +552,7 @@ Dos detalles que importan:
   concatenar a ciegas con espacios: el ejemplo oficial une con `.join('')`.
   `CONFIRMED` — `dist/examples/asr/whispercpp-filesystem.js`.
 
-Uso en NotaLocal:
+Uso en Oira:
 
 ```ts
 const segments = await transcribe({
@@ -642,7 +642,7 @@ Otros campos existentes y potencialmente útiles: `initial_prompt`,
 > `ffmpeg`). La lista concreta no se documenta aquí: se imprime y se pega en el
 > log de hardware (§18).
 
-`ASSUMPTION` NotaLocal graba y guarda **siempre WAV 16 kHz mono s16le**. Es el
+`ASSUMPTION` Oira graba y guarda **siempre WAV 16 kHz mono s16le**. Es el
 formato que los ejemplos oficiales usan y evita depender del decodificador y de
 `ffmpeg` en la ruta crítica.
 
@@ -787,7 +787,7 @@ function parseDiarization(text) {
 
 ### 5.3 Decisión
 
-> **NotaLocal no promete diarización clínica DOCTOR/PATIENT en P0.**
+> **Oira no promete diarización clínica DOCTOR/PATIENT en P0.**
 
 Razonamiento: para etiquetar roles hay que mapear `Speaker N → {DOCTOR, PATIENT}`,
 y ese mapeo QVAC no lo da. Cualquier heurística nuestra sería una **inferencia no
@@ -1131,7 +1131,7 @@ Transcript:
 Por qué el primero está mal: “faringitis” es un **diagnóstico**. Requiere
 exploración, criterio clínico y a veces pruebas. El paciente describió un
 síntoma. Convertir el síntoma en diagnóstico es (a) diagnosticar, lo que
-NotaLocal no hace, y (b) inventar, porque la palabra “faringitis” no aparece en
+Oira no hace, y (b) inventar, porque la palabra “faringitis” no aparece en
 el transcript. Y lo peor: `source_text` *parece* respaldarlo, así que el error
 sobrevive a una revisión superficial.
 
@@ -1612,7 +1612,7 @@ const CONSISTENCY_RULES = [
 
 ### 11.1 Prohibiciones absolutas
 
-| # | NotaLocal **nunca** | Por qué |
+| # | Oira **nunca** | Por qué |
 | --- | --- | --- |
 | S1 | Emite un diagnóstico que el médico no verbalizó | Diagnosticar es acto médico |
 | S2 | Sugiere o nombra un tratamiento no mencionado | Prescribir es acto médico |
@@ -2224,7 +2224,7 @@ Se rellena **una vez por máquina** y se guarda en `eval/results/<run>/run.json`
 Sin esto, ningún número de rendimiento es interpretable.
 
 ````markdown
-## Hardware log — NotaLocal AI eval
+## Hardware log — Oira AI eval
 
 ### Máquina
 - Fecha (UTC):
@@ -2412,7 +2412,7 @@ WHISPER_TINY
   sha256Checksum:  be07e048e1e599ad46341c8d2a135645097a538221678b7acdd1b1919c6e1b21
 ```
 
-Práctica en NotaLocal (`ASSUMPTION`):
+Práctica en Oira (`ASSUMPTION`):
 
 1. Fijar las constantes de modelo en el código. Sin selección dinámica por
    nombre en tiempo de ejecución.
@@ -2569,7 +2569,7 @@ Lo más importante del export: `NOT_STATED` **no desaparece**.
 
 ```
 NOTA CLÍNICA — BORRADOR REVISADO
-Generado por NotaLocal · Revisado por el médico · 2026-08-22
+Generado por Oira · Revisado por el médico · 2026-08-22
 
 MOTIVO DE CONSULTA
   Dolor de garganta y dificultad para tragar.
@@ -2605,7 +2605,7 @@ SEGUIMIENTO
 ---
 Documento generado a partir de la transcripción de la consulta y revisado
 por el profesional. Los apartados marcados "No consta en la consulta" no
-fueron mencionados durante la grabación. NotaLocal no emite diagnósticos
+fueron mencionados durante la grabación. Oira no emite diagnósticos
 ni recomendaciones de tratamiento.
 ```
 
@@ -2722,7 +2722,7 @@ atribuir la diferencia al modelo. Es el error de medición más fácil de comete
        nube. Aquí eso no es aceptable.»
 
 0:30  Tesis
-      «NotaLocal convierte la consulta en documentación estructurada lista para
+      «Oira convierte la consulta en documentación estructurada lista para
        revisión, sin que el audio ni los datos clínicos salgan del dispositivo.
        El agente documenta. El médico decide.»
 
@@ -3155,7 +3155,7 @@ RequestValidationFailedError · WorkerCrashedError
 
 ## Apéndice C — Glosario
 
-| Término | Significado en NotaLocal |
+| Término | Significado en Oira |
 | --- | --- |
 | **ASR / STT** | Speech-to-text. Whisper o Parakeet vía QVAC. **No es Qwen** |
 | **Estructuración** | Transcript → JSON. La hace el LLM (Qwen3) vía QVAC |
@@ -3166,5 +3166,5 @@ RequestValidationFailedError · WorkerCrashedError
 | **Unsupported clinical fact** | Afirmación clínica sin respaldo literal. Métrica bloqueante |
 | **Draft note** | Nota borrador, pendiente de revisión médica |
 | **Doctor review** | Única puerta hacia el export. `reviewed_by_doctor: true` |
-| **QVAC** | Capa de inferencia local de Tether. La única que usa NotaLocal |
+| **QVAC** | Capa de inferencia local de Tether. La única que usa Oira |
 | **Métrica bloqueante** | Si falla, no se envía. Ver §15.3 |

@@ -8,7 +8,7 @@
 
 Electron documenta que webContents.printToPDF genera un Buffer del PDF de una página. La API tiene opciones de orientación, fondos, tamaño de página, márgenes, encabezado/pie y opciones experimentales para PDF etiquetado y outline; Electron advierte que las opciones experimentales pueden no cumplir plenamente PDF/UA o WCAG [Electron, webContents](https://www.electronjs.org/docs/latest/api/web-contents).
 
-La existencia de la API no prueba que la plantilla de NotaLocal genere páginas correctas, que las fuentes se incluyan, que no haya contenido remoto, que el PDF sea accesible, ni que se escriba de forma segura. Tampoco autoriza a exportar un borrador no aprobado.
+La existencia de la API no prueba que la plantilla de Oira genere páginas correctas, que las fuentes se incluyan, que no haya contenido remoto, que el PDF sea accesible, ni que se escriba de forma segura. Tampoco autoriza a exportar un borrador no aprobado.
 
 **Decisión: DEFER PDF; fuera de P0.** P0 conserva TXT, JSON y portapapeles de una nota aprobada. PDF solo entra después de un spike local con plantilla de Antonio, ventana de impresión aislada y revisión conjunta.
 

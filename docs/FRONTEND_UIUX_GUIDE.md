@@ -1,4 +1,4 @@
-# Guía Frontend / UI-UX de NotaLocal
+# Guía Frontend / UI-UX de Oira
 
 > **Dueño de este documento:** Antonio (Frontend / UI-UX / investigación de experiencia y privacidad percibida).
 > **Alcance:** todo lo que el médico ve y toca, en el website y en la app desktop.
@@ -8,7 +8,7 @@
 
 ## 0. Contexto mínimo para no perderse
 
-NotaLocal es una app **desktop de documentación clínica local** (Hackathon Track QVAC / Tether).
+Oira es una app **desktop de documentación clínica local** (Hackathon Track QVAC / Tether).
 
 **Tesis del producto:**
 
@@ -29,9 +29,9 @@ Si una decisión de UI no se puede justificar con esa frase, la decisión está 
 5. El médico **revisa, corrige y confirma**.
 6. El médico copia o exporta la nota a su sistema actual.
 
-### Lo que NotaLocal NO hace (y la UI nunca debe insinuar)
+### Lo que Oira NO hace (y la UI nunca debe insinuar)
 
-| NotaLocal NO... | Implicación directa en UI |
+| Oira NO... | Implicación directa en UI |
 | --- | --- |
 | diagnostica | ningún campo se llama "Diagnóstico sugerido por IA" |
 | prescribe | no hay UI de medicamentos sugeridos ni dosis calculadas |
@@ -51,16 +51,16 @@ Esto significa: **un médico, una computadora, una consulta a la vez.** No hay m
 | Persona | Responsabilidad | Frontera con Antonio |
 | --- | --- | --- |
 | **Antonio** | Website, renderer de desktop, design system, UX, investigación de experiencia y privacidad percibida | consume el bridge de `preload`; no entra a `src/main/` ni `src/preload/` |
-| **Justin** | Electron Main, backend local, IPC, SQLite, adapter QVAC | expone `window.notalocal` y los estados reales |
+| **Justin** | Electron Main, backend local, IPC, SQLite, adapter QVAC | expone `window.oira` y los estados reales |
 | **IA** | STT, estructuración, prompts, evaluación | define el **contrato de forma** de transcript y nota |
 
 **Antonio NO implementa el SDK de QVAC ni SQLite.** Consume APIs de `preload` (conceptuales, a confirmar firma exacta con Justin):
 
 ```ts
-window.notalocal.startEncounter()
-window.notalocal.stopEncounter()
-window.notalocal.generateNote()
-window.notalocal.saveNote()
+window.oira.startEncounter()
+window.oira.stopEncounter()
+window.oira.generateNote()
+window.oira.saveNote()
 ```
 
 Cualquier campo, estado o error que la UI necesite y no exista en ese bridge **se negocia con Justin y se documenta**, no se inventa en el renderer.
@@ -82,7 +82,7 @@ Regla dura: **si algo está marcado REQUIERE INVESTIGACIÓN, no aparece en la UI
 Monorepo con dos apps y dos paquetes compartidos. Nada más.
 
 ```text
-notalocal/
+oira/
 ├── apps/
 │   ├── website/                  # sitio público de marketing/explicación
 │   │   ├── index.html
@@ -164,7 +164,7 @@ notalocal/
 │               │   ├── encounterMachine.ts   # estados de producto (sección 5)
 │               │   └── useEncounter.ts       # hook único de acceso al estado
 │               ├── bridge/
-│               │   ├── notalocal.ts          # ÚNICO módulo que toca window.notalocal
+│               │   ├── oira.ts          # ÚNICO módulo que toca window.oira
 │               │   └── mock.ts               # backend falso para desarrollar solo
 │               ├── lib/
 │               │   └── format.ts
@@ -201,7 +201,7 @@ notalocal/
 - **Qué va:** un componente por página pública. Cada archivo compone `sections/` y consume `content/`.
 - **Por qué:** las páginas del website son estáticas y de lectura; no merecen una carpeta por página.
 - **Ejemplo:** `Privacy.tsx` importa `PrivacyTable` y `content/privacy.ts`.
-- **Qué NO va:** lógica de negocio, formularios que envíen datos de pacientes, llamadas a `window.notalocal`.
+- **Qué NO va:** lógica de negocio, formularios que envíen datos de pacientes, llamadas a `window.oira`.
 
 #### `apps/website/src/sections/`
 
@@ -232,7 +232,7 @@ notalocal/
 - **Qué va:** una carpeta por pantalla, con su componente principal y los subcomponentes que **solo** esa pantalla usa.
 - **Por qué:** el flujo del médico es lineal y con estados; agrupar por pantalla hace obvio dónde vive cada estado visual.
 - **Ejemplo:** `screens/Recording/Recording.tsx` + `screens/Recording/RecordingControls.tsx`.
-- **Qué NO va:** llamadas directas a `window.notalocal` (van vía `bridge/`), ni definiciones de tipos compartidos (van a `packages/types`).
+- **Qué NO va:** llamadas directas a `window.oira` (van vía `bridge/`), ni definiciones de tipos compartidos (van a `packages/types`).
 
 #### `apps/desktop/src/renderer/components/`
 
@@ -248,9 +248,9 @@ notalocal/
 
 #### `apps/desktop/src/renderer/bridge/`
 
-- **Qué va:** `notalocal.ts`, la **única** referencia a `window.notalocal` en todo el renderer, con tipos de `packages/types`. Y `mock.ts`, una implementación falsa del mismo contrato.
+- **Qué va:** `oira.ts`, la **única** referencia a `window.oira` en todo el renderer, con tipos de `packages/types`. Y `mock.ts`, una implementación falsa del mismo contrato.
 - **Por qué:** dos razones. (1) Antonio puede construir todas las pantallas antes de que el adapter QVAC exista. (2) Cuando Justin cambie una firma, se rompe un archivo, no veinte.
-- **Ejemplo:** `bridge/notalocal.ts` exporta `startEncounter()` que internamente hace `window.notalocal.startEncounter()` o llama al mock según una bandera de desarrollo.
+- **Ejemplo:** `bridge/oira.ts` exporta `startEncounter()` que internamente hace `window.oira.startEncounter()` o llama al mock según una bandera de desarrollo.
 - **Qué NO va:** `require`, `ipcRenderer`, `fs`, ni nada de Node (ver sección 8).
 
 #### `packages/ui/`
@@ -258,7 +258,7 @@ notalocal/
 - **Qué va:** componentes de presentación sin conocimiento del dominio, y los tokens de diseño.
 - **Por qué:** website y desktop deben verse como el mismo producto. Compartir tokens y primitivas es lo que garantiza identidad visual con responsabilidades distintas.
 - **Ejemplo:** `StatusBadge` recibe `tone` y `label`; no sabe que existe "grabando".
-- **Qué NO va:** referencias a `window.notalocal`, `fetch`, estados de producto, texto clínico hardcodeado, nada que importe de `apps/`.
+- **Qué NO va:** referencias a `window.oira`, `fetch`, estados de producto, texto clínico hardcodeado, nada que importe de `apps/`.
 
 #### `packages/types/`
 
@@ -294,7 +294,7 @@ Regla: **una carpeta nueva necesita un párrafo que explique qué va y qué NO v
 Un médico que llega frío debe entender el producto en menos de 10 segundos.
 
 - **Titular:** **"La consulta termina. La nota ya está lista."**
-- **Subtítulo:** "NotaLocal escucha la consulta y prepara un borrador de nota clínica estructurada en tu computadora. Tú revisas, corriges y confirmas."
+- **Subtítulo:** "Oira escucha la consulta y prepara un borrador de nota clínica estructurada en tu computadora. Tú revisas, corriges y confirmas."
 - **Prueba visual:** captura real de la pantalla de revisión (datos sintéticos) mostrando el badge `Borrador — requiere revisión médica`.
 - **Señal de privacidad visible sin scroll:** un badge `Inferencia local` + una línea: "La IA corre en tu equipo. No enviamos la consulta a un servidor."
 - **CTA primario:** *Descargar para escritorio*.
@@ -419,7 +419,7 @@ Flujo lineal y predecible. El médico nunca debe preguntarse "¿está grabando?"
 - **Estados:** `ACCEPTED` → `EXPORTED`.
 - **Acciones:** copiar, guardar archivo, cancelar.
 - **Errores:** falla al escribir archivo (permisos, ruta), falla al copiar.
-- **Info visible:** exactamente qué contenido se va a exportar, y que **sale del ámbito de NotaLocal** al pegarlo en otro sistema. Ese aviso es honesto y necesario.
+- **Info visible:** exactamente qué contenido se va a exportar, y que **sale del ámbito de Oira** al pegarlo en otro sistema. Ese aviso es honesto y necesario.
 - **NO mostrar:** integraciones con EHR que no existen; ni "enviado" cuando solo se copió al portapapeles.
 - **REQUIERE ACUERDO:** formatos soportados con Justin. **REQUIERE INVESTIGACIÓN:** qué formato pega mejor en los sistemas que estos médicos ya usan.
 
@@ -441,7 +441,7 @@ Dos familias:
 - `packages/ui` → genéricos, sin dominio clínico, sin estado global.
 - `apps/desktop/src/renderer/components` → dominio clínico, presentación de datos que reciben por props.
 
-**Regla común a todos:** ningún componente llama a `window.notalocal`. Reciben datos y disparan callbacks. La única excepción autorizada es `bridge/`, que no es un componente.
+**Regla común a todos:** ningún componente llama a `window.oira`. Reciben datos y disparan callbacks. La única excepción autorizada es `bridge/`, que no es un componente.
 
 | Componente | Ubicación | Responsabilidad | Props conceptuales | Estados | Accesibilidad | Lógica que NO debe contener |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -498,7 +498,7 @@ cualquier estado ─ fallo ─▶ ERROR ─ reintentar/volver ─▶ estado ante
 | `READY_FOR_REVIEW` | borrador disponible, sin tocar | Draft Note; `StatusBadge` "Borrador — requiere revisión médica" fijo |
 | `EDITING` | el médico está corrigiendo | mismos paneles con campos activos; indicador de cambios sin guardar |
 | `ACCEPTED` | el médico asumió la nota | badge cambia a "Revisada por el médico"; acciones de exportación habilitadas |
-| `EXPORTED` | salió a otro sistema | confirmación con formato y destino; recordatorio de que el sistema destino ya no es responsabilidad de NotaLocal |
+| `EXPORTED` | salió a otro sistema | confirmación con formato y destino; recordatorio de que el sistema destino ya no es responsabilidad de Oira |
 | `ERROR` | algo falló | mensaje con causa en lenguaje humano + acción concreta + qué se conserva y qué se pierde |
 
 **Reglas duras:**
@@ -538,7 +538,7 @@ Nunca se colapsan en un guion vacío, y nunca se rellenan con un valor plausible
 
 ## 6. UX médica: investigación obligatoria
 
-El frontend de NotaLocal es visualmente simple a propósito. El trabajo difícil está en **decidir qué se muestra, cuándo y con qué palabras** en un contexto donde un texto mal presentado puede terminar en un expediente clínico. Esta sección es entregable de Antonio igual que el código.
+El frontend de Oira es visualmente simple a propósito. El trabajo difícil está en **decidir qué se muestra, cuándo y con qué palabras** en un contexto donde un texto mal presentado puede terminar en un expediente clínico. Esta sección es entregable de Antonio igual que el código.
 
 ### 6.1 Temas a investigar
 
@@ -603,7 +603,7 @@ El frontend de NotaLocal es visualmente simple a propósito. El trabajo difícil
 
 ## 7. Privacidad en la UI
 
-La privacidad de NotaLocal debe ser **legible**, no prometida. Se muestra estado, no adjetivos.
+La privacidad de Oira debe ser **legible**, no prometida. Se muestra estado, no adjetivos.
 
 ### 7.1 Panel PRIVACY STATUS
 
@@ -824,7 +824,7 @@ El copy es parte del producto. En una herramienta clínica, una palabra de más 
 | Campo sin dato | "No consta en la consulta." |
 | Sin evidencia | "Sin origen identificado. Revisa antes de aceptar." |
 | Antes de aceptar | "Al aceptar, confirmas que revisaste esta nota." |
-| Tras exportar | "Copiado. Lo que pegues en otro sistema queda fuera de NotaLocal." |
+| Tras exportar | "Copiado. Lo que pegues en otro sistema queda fuera de Oira." |
 | Fallo de transcripción | "No pudimos transcribir esta consulta. Puedes reintentar." |
 | Fallo de estructuración | "No pudimos organizar la nota. La transcripción está disponible." |
 
@@ -893,7 +893,7 @@ Lista explícita para no perder el hackathon en features equivocadas.
 | Chat genérico con el modelo | invita a usar la app para algo que no es y expone la superficie de inyección |
 | App móvil completa | el escenario es escritorio en consultorio |
 | Integración Bluetooth o hardware de captura propio | complejidad enorme, valor nulo en el MVP |
-| Sistema médico completo / reemplazo de EHR | NotaLocal **alimenta** el sistema del médico, no lo sustituye |
+| Sistema médico completo / reemplazo de EHR | Oira **alimenta** el sistema del médico, no lo sustituye |
 | Login, cuentas, sincronización, multiusuario, nube | contradice la tesis local del producto |
 | Panel de administración de modelos, selector de parámetros de inferencia | es territorio de Justin/IA, y no es UI de médico |
 | Analytics de comportamiento en el desktop | riesgo de privacidad sin beneficio en el MVP |
@@ -947,7 +947,7 @@ Si aparece una idea nueva, la prueba es una sola: **¿ayuda a que la nota esté 
 - [ ] Monorepo con `apps/website`, `apps/desktop`, `packages/ui`, `packages/types` según sección 1.
 - [ ] Vite + React + TypeScript + Tailwind en ambas apps.
 - [ ] `packages/types` con `Encounter`, `TranscriptSegment`, `ClinicalNote`, `ProductState`, `AiState`, `FieldValue`.
-- [ ] `bridge/notalocal.ts` + `bridge/mock.ts` con las cuatro operaciones conceptuales.
+- [ ] `bridge/oira.ts` + `bridge/mock.ts` con las cuatro operaciones conceptuales.
 - [ ] Reglas de ESLint que prohíban `require`, `dangerouslySetInnerHTML`, `localStorage` y `console.log` en `apps/desktop/src`.
 
 **Design system mínimo**
@@ -1007,7 +1007,7 @@ Si aparece una idea nueva, la prueba es una sola: **¿ayuda a que la nota esté 
 ## Resumen en una página
 
 - Antonio construye **website** (explicar y generar confianza) y **renderer desktop** (el trabajo real del médico). Nada de QVAC, SQLite ni IPC.
-- El renderer habla con el sistema por **un solo módulo**: `bridge/notalocal.ts`. Con `mock.ts` se puede construir todo sin esperar a nadie.
+- El renderer habla con el sistema por **un solo módulo**: `bridge/oira.ts`. Con `mock.ts` se puede construir todo sin esperar a nadie.
 - Todo output es **borrador**. La revisión del médico es un paso explícito e insalvable.
 - La privacidad se **muestra como estado**, no se promete como adjetivo. Sin dato → `DESCONOCIDO`.
 - El transcript es **material de origen y entrada no confiable**: texto plano, visualmente delimitado, y nunca puede cambiar la configuración de la app.

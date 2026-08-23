@@ -26,14 +26,14 @@ La hipótesis de ingeniería es que cargar simultáneamente STT y un LLM puede e
 
 - **CONFIRMED:** QVAC expone `getSystemResources()` y `getModelInfo()` en su referencia pública; estos son útiles como telemetría del SDK, no reemplazan la medición del sistema operativo. [API Summary v0.17.x](https://docs.qvac.tether.io/reference/api/)
 - **CONFIRMED:** el SDK permite cargar y descargar modelos mediante `loadModel()`/`unloadModel()`. [QVAC JS/TS SDK](https://docs.qvac.tether.io/js-ts-sdk/)
-- **CONFIRMED:** QVAC publica requisitos generales de host, pero éstos no certifican que una combinación concreta de modelos sea viable para NotaLocal. [QVAC System requirements](https://docs.qvac.tether.io/system-requirements/)
+- **CONFIRMED:** QVAC publica requisitos generales de host, pero éstos no certifican que una combinación concreta de modelos sea viable para Oira. [QVAC System requirements](https://docs.qvac.tether.io/system-requirements/)
 - **TODO: VERIFY FROM OFFICIAL QVAC DOCUMENTATION:** qué campos de recursos/estadísticas aparecen exactamente en el pin 0.17.1; no se codifican nombres de campos no inspeccionados.
 
 ## Configuraciones de medición
 
 | ID | Estado de modelos | Carga de trabajo | Estado |
 | --- | --- | --- | --- |
-| B0 | Ningún modelo QVAC cargado | proceso de NotaLocal/runner en reposo | **BLOCKED — NEEDS TARGET HARDWARE** |
+| B0 | Ningún modelo QVAC cargado | proceso de Oira/runner en reposo | **BLOCKED — NEEDS TARGET HARDWARE** |
 | L1 | `QWEN3_600M_INST_Q4` | reposo tras carga | **BLOCKED — NEEDS TARGET HARDWARE** |
 | L2 | `QWEN3_600M_INST_Q4` | completion sintética de Q3 | **BLOCKED — NEEDS TARGET HARDWARE** |
 | L3 | `QWEN3_4B_Q4_K_M` | reposo tras carga | **BLOCKED — NEEDS TARGET HARDWARE** |

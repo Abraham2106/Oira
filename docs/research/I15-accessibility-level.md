@@ -27,7 +27,7 @@ La guía frontend ya exige contraste, texto base legible, teclado, foco visible,
 
 ## Mapa de criterios A/AA restantes
 
-| Área WCAG 2.2 | Deltas para NotaLocal | Ejemplos de aceptación |
+| Área WCAG 2.2 | Deltas para Oira | Ejemplos de aceptación |
 | --- | --- | --- |
 | 1.1 Texto alternativo (A) | Iconos de grabar, privacidad, errores y “ver origen” reciben nombre accesible; capturas del website llevan alt útil. | Lectura con nombre y propósito; icono decorativo se oculta correctamente. |
 | 1.3 Estructura y relaciones (A/AA) | Encabezados, listas de transcript, labels de campos, tabla de PrivacyStatus y relaciones error-control. | Navegación por encabezados/listas; label anuncia campo y estado. |

@@ -1,5 +1,5 @@
-import type { ClinicalNote } from "@notalocal/types"
-import type { NotaLocalAPI } from "../../shared/types/notalocal-api"
+import type { ClinicalNote } from "@oira/types"
+import type { OiraApi } from "../../shared/types/oira-api"
 import type { Result } from "../../shared/types/result"
 import type { DemoBridge } from "./mock"
 
@@ -12,7 +12,7 @@ async function unwrap<T>(resultPromise: Promise<Result<T>>): Promise<T> {
 }
 
 /** Maps Justin's `Result<T>` IPC API to the renderer DemoBridge shape. */
-export function adaptNotaLocalApi(api: NotaLocalAPI): DemoBridge {
+export function adaptOiraApi(api: OiraApi): DemoBridge {
   return {
     async startEncounter(input) {
       return unwrap(

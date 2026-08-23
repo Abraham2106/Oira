@@ -6,7 +6,7 @@
 
 ## 1. Evidencia documental
 
-QVAC documenta que audioChunk admite ruta o buffer y publica ejemplos WAV. El ejemplo Parakeet TDT recomienda PCM mono de 16 kHz dentro de WAV [QVAC, Transcription](https://docs.qvac.tether.io/ai-capabilities/transcription/). La documentación de un addon Whisper describe formatos de configuración de decoder, incluyendo tokens de contenedor y representaciones PCM, pero esa documentación de addon no sustituye las constantes públicas del SDK que NotaLocal vaya a instalar [QVAC, transcription-whispercpp addon](https://docs.qvac.tether.io/addons/transcription-whispercpp/).
+QVAC documenta que audioChunk admite ruta o buffer y publica ejemplos WAV. El ejemplo Parakeet TDT recomienda PCM mono de 16 kHz dentro de WAV [QVAC, Transcription](https://docs.qvac.tether.io/ai-capabilities/transcription/). La documentación de un addon Whisper describe formatos de configuración de decoder, incluyendo tokens de contenedor y representaciones PCM, pero esa documentación de addon no sustituye las constantes públicas del SDK que Oira vaya a instalar [QVAC, transcription-whispercpp addon](https://docs.qvac.tether.io/addons/transcription-whispercpp/).
 
 Los tokens de contenedor y los sample types/representaciones PCM son categorías distintas. No se publica una lista recordada de SUPPORTED_AUDIO_FORMATS ni de FORMATS_NEEDING_DECODE: solo el paquete fijado puede confirmarlas.
 

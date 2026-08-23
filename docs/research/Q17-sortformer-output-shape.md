@@ -6,7 +6,7 @@
 
 ## Decisión
 
-Para NotaLocal, la salida de diarización Sortformer se trata como **texto a parsear con el formato del ejemplo oficial**, no como objeto estructurado tipado. No existe evidencia oficial revisada de una operación `diarize()`, ni de un retorno público de `transcribe()` con campos de hablante, inicio y fin para Sortformer.
+Para Oira, la salida de diarización Sortformer se trata como **texto a parsear con el formato del ejemplo oficial**, no como objeto estructurado tipado. No existe evidencia oficial revisada de una operación `diarize()`, ni de un retorno público de `transcribe()` con campos de hablante, inicio y fin para Sortformer.
 
 La única forma admitida, y sólo para el experimento posterior Q11, es reconocer líneas completas con el patrón que usa el ejemplo oficial:
 
@@ -87,7 +87,7 @@ Así se evita el peor error de esta funcionalidad: convertir una asignación num
 
 ## Límite de versión
 
-Las fuentes de código/contrato del repositorio oficial corresponden al snapshot actual, no demuestran por sí solas la instalación 0.17.1 de NotaLocal. Antes de integrar o ejecutar, se deben revisar los `.d.ts` y el ejemplo distribuidos con ese pin. Si no reproducen la forma textual, el estado vuelve a **TODO: VERIFY FROM OFFICIAL QVAC DOCUMENTATION**.
+Las fuentes de código/contrato del repositorio oficial corresponden al snapshot actual, no demuestran por sí solas la instalación 0.17.1 de Oira. Antes de integrar o ejecutar, se deben revisar los `.d.ts` y el ejemplo distribuidos con ese pin. Si no reproducen la forma textual, el estado vuelve a **TODO: VERIFY FROM OFFICIAL QVAC DOCUMENTATION**.
 
 ## Fuentes primarias
 

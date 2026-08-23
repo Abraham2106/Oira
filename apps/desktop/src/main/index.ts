@@ -21,7 +21,7 @@ function createWindow(): void {
     height: 840,
     minWidth: 960,
     minHeight: 640,
-    title: "NotaLocal",
+    title: "Oira",
     autoHideMenuBar: true,
     webPreferences: {
       preload: join(__dirname, "../preload/index.cjs"),

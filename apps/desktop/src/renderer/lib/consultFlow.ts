@@ -1,4 +1,4 @@
-import type { ClinicalNote, ProductState, TranscriptSegment } from "@notalocal/types"
+import type { ClinicalNote, ProductState, TranscriptSegment } from "@oira/types"
 
 export const FLOW_STEPS = [
   { id: "consult", label: "Consulta" },

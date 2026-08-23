@@ -10,12 +10,12 @@
 
 La evidencia revisada justifica la minimización, no una lista universal de campos. La Ley argentina 25.326 exige que los datos recogidos sean adecuados, pertinentes y no excesivos para su finalidad, y que se destruyan cuando dejen de ser necesarios [S1]. La LGPD brasileña define datos de salud como sensibles y tratamiento como un conjunto amplio de operaciones [S2]. Las normas de expediente clínico de México y Argentina tratan la historia clínica como un registro regulado y contextual [S3, S4], pero **no demuestran que un borrador local, previo a exportación, requiera todos los identificadores de una historia/EHR**.
 
-Por ello, esta es una elección de UX y reducción de datos, no una afirmación de que cualquier médico puede prescindir legalmente de identificación en su expediente definitivo. Cuando el médico exporte o transcriba la información al sistema que usa, ese destino puede exigir otros campos; NotaLocal no debe simularlos ni recolectarlos por anticipado.
+Por ello, esta es una elección de UX y reducción de datos, no una afirmación de que cualquier médico puede prescindir legalmente de identificación en su expediente definitivo. Cuando el médico exporte o transcriba la información al sistema que usa, ese destino puede exigir otros campos; Oira no debe simularlos ni recolectarlos por anticipado.
 
 ## Alcance y criterio
 
 - Usuario: médico ambulatorio, una computadora, una consulta a la vez.
-- NotaLocal no es EHR, no tiene multiusuario, cuentas ni integración de expediente.
+- Oira no es EHR, no tiene multiusuario, cuentas ni integración de expediente.
 - La nota es un borrador revisable. El médico decide si la copia/exporta a su sistema actual.
 - “Reconocer” significa recuperar el contexto de una sesión local durante el uso P0; no significa cumplir auditoría, facturación, interoperabilidad, retención o identificación normativa.
 - Cada dato adicional puede ser sensible o conectar la nota con una persona identificable. I1 prohíbe convertir la postura de minimización en claim de cumplimiento.
@@ -42,7 +42,7 @@ Por ello, esta es una elección de UX y reducción de datos, no una afirmación 
 
 | Alternativa | Motivo de rechazo P0 |
 | --- | --- |
-| Nombre completo obligatorio | Aumenta identificabilidad sin evidencia de que sea necesario para crear un borrador de sesión única. Puede inducir a creer que NotaLocal es el expediente definitivo. |
+| Nombre completo obligatorio | Aumenta identificabilidad sin evidencia de que sea necesario para crear un borrador de sesión única. Puede inducir a creer que Oira es el expediente definitivo. |
 | Documento nacional, MRN, seguro o teléfono | Son identificadores de alto impacto para el caso P0 y no añaden valor a la grabación/revisión local. Requieren propósito, políticas y probablemente integración externa. |
 | Fecha de nacimiento obligatoria | Es dato personal adicional; no se justifica por el reconocimiento local de una nota. |
 | Selección obligatoria de especialidad/plantilla | No existe validación con médicos ni esquema IA por especialidad. Puede terminar fabricando estructura o expectativas clínicas. |
@@ -70,5 +70,5 @@ Por ello, esta es una elección de UX y reducción de datos, no una afirmación 
 
 - **[S1] CONFIRMADO — Argentina.gob.ar.** *Ley 25.326 — Protección de los Datos Personales*, art. 4 (calidad, pertinencia, no exceso y destrucción cuando dejan de ser necesarios) y art. 7. https://www.argentina.gob.ar/normativa/nacional/ley-25326-64790/texto (acceso: 22-08-2026).
 - **[S2] CONFIRMADO — Presidência da República do Brasil.** *Lei nº 13.709, de 14 de agosto de 2018 (LGPD), texto compilado*, arts. 5 y 6. https://www.planalto.gov.br/ccivil_03/_ato2015-2018/2018/lei/L13709compilado.htm (acceso: 22-08-2026).
-- **[S3] CONFIRMADO — Diario Oficial de la Federación, México.** *NOM-004-SSA3-2012, Del expediente clínico*. https://dof.gob.mx/nota_detalle_popup.php?codigo=5272787 (acceso: 22-08-2026). Fuente de expediente clínico en su ámbito, no lista de campos para el borrador de NotaLocal.
+- **[S3] CONFIRMADO — Diario Oficial de la Federación, México.** *NOM-004-SSA3-2012, Del expediente clínico*. https://dof.gob.mx/nota_detalle_popup.php?codigo=5272787 (acceso: 22-08-2026). Fuente de expediente clínico en su ámbito, no lista de campos para el borrador de Oira.
 - **[S4] CONFIRMADO — Argentina.gob.ar.** *Ley 26.529 — Derechos del Paciente, Historia Clínica y Consentimiento Informado*, texto actualizado, art. 13. https://www.argentina.gob.ar/normativa/nacional/ley-26529-160432/actualizacion (acceso: 22-08-2026).

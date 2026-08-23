@@ -9,7 +9,7 @@ export default defineConfig({
   preload: {
     plugins: [externalizeDepsPlugin()],
     build: {
-      // Sandboxed preloads cannot be ESM (verified: window.notalocal stayed
+      // Sandboxed preloads cannot be ESM (verified: window.oira stayed
       // undefined with an .mjs preload and sandbox: true).
       rollupOptions: {
         output: {

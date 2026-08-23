@@ -1,9 +1,9 @@
-import type { ClinicalNote } from "@notalocal/types"
+import type { ClinicalNote } from "@oira/types"
 import {
   SYNTHETIC_TRANSCRIPT,
   syntheticClinicalNote,
 } from "../../shared/fixtures/synthetic-consult"
-import type { GenerateNoteResult } from "../../shared/types/notalocal-api"
+import type { GenerateNoteResult } from "../../shared/types/oira-api"
 import { encounterNotFoundError } from "../errors/encounters"
 import type { EncounterRepository } from "../encounters/encounter.repository"
 

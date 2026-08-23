@@ -1,6 +1,6 @@
 import { useEffect } from "react"
-import { Button, Card, StatusBadge } from "@notalocal/ui"
-import { SECTION_IDS, type ClinicalNote, type ProductState, type TranscriptSegment } from "@notalocal/types"
+import { Button, Card, StatusBadge } from "@oira/ui"
+import { SECTION_IDS, type ClinicalNote, type ProductState, type TranscriptSegment } from "@oira/types"
 import { ClinicalNoteSection } from "../../components/ClinicalNoteSection"
 import { ReviewActions } from "../../components/ReviewActions"
 import { TranscriptViewer } from "../../components/TranscriptViewer"

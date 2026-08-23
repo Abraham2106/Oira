@@ -20,7 +20,7 @@ La elección es de **confianza baja** porque no se halló una comparación exper
 
 ## Evidencia y lectura
 
-CMS recomienda que información dictada, convertida por voz a texto o introducida por otra persona se revise, edite y apruebe oportunamente [S1]. El modelo de scribe humano de la AMA se describe bajo supervisión médica [S2]. Abridge describe una nota estructurada lista para revisión al acabar la visita y declara que sus clínicos la revisan/editan antes de incorporarla al EHR [S3, S6]. Son patrones útiles, pero el material de proveedor no prueba que su interfaz sea óptima para NotaLocal.
+CMS recomienda que información dictada, convertida por voz a texto o introducida por otra persona se revise, edite y apruebe oportunamente [S1]. El modelo de scribe humano de la AMA se describe bajo supervisión médica [S2]. Abridge describe una nota estructurada lista para revisión al acabar la visita y declara que sus clínicos la revisan/editan antes de incorporarla al EHR [S3, S6]. Son patrones útiles, pero el material de proveedor no prueba que su interfaz sea óptima para Oira.
 
 La literatura sobre *automation bias* advierte sobre una tendencia a sobrerreliar en la automatización y a no detectar errores nuevos [S4]. El trabajo sobre digital scribes identifica específicamente el riesgo de aceptar documentos del scribe sin comprobarlos [S5]. La consecuencia de interfaz no es hacer el transcript dominante ni obligar a leerlo entero: es **mantener la evidencia accesible en el mismo contexto del borrador**, preservar el badge y evitar un salto a la exportación.
 

@@ -4,7 +4,7 @@ import {
   type ClinicalNote,
   type FieldValue,
   type TranscriptSegment,
-} from "@notalocal/types"
+} from "@oira/types"
 
 /** UI fixture for the renderer prototype — not the Main IPC contract. */
 export type DemoBridge = {
@@ -35,19 +35,19 @@ const SYNTHETIC_TRANSCRIPT: TranscriptSegment[] = [
     id: "seg-1",
     speaker: "Médico",
     startMs: 0,
-    text: "Esta es una consulta de demostración con datos sintéticos. ¿Qué le trae hoy?",
+    text: "¿Qué le trae hoy? Cuénteme qué siente y desde cuándo.",
   },
   {
     id: "seg-2",
     speaker: "Paciente",
     startMs: 4000,
-    text: "Dolor de rodilla izquierda desde hace tres días, sin golpe. Ejemplo ficticio.",
+    text: "Dolor en la rodilla izquierda desde hace tres días, sin golpe ni caída. Me duele sobre todo al subir escaleras.",
   },
   {
     id: "seg-3",
     speaker: "Médico",
     startMs: 12000,
-    text: "Queda como borrador para revisión. No hay diagnóstico de este prototipo.",
+    text: "La reviso y, según lo que encuentre, coordinamos estudios.",
   },
 ]
 
@@ -55,25 +55,25 @@ function syntheticNote(): ClinicalNote {
   return {
     sections: {
       visit_context: field(
-        "Consulta ambulatoria de demostración por dolor de rodilla izquierda.",
+        "Consulta ambulatoria por dolor en la rodilla izquierda de tres días de evolución.",
         "STATED",
         ["seg-1", "seg-2"],
       ),
       clinical_narrative: field(
-        "El paciente de ejemplo refiere dolor de tres días, sin trauma mencionado.",
+        "Refiere dolor de tres días de evolución, sin trauma referido, que aumenta al subir escaleras.",
         "STATED",
         ["seg-2"],
       ),
       relevant_history: field("", "NOT_STATED"),
       reported_findings: field(
-        "No se dictó exploración en esta pista sintética.",
+        "Exploración física no documentada en la consulta.",
         "UNKNOWN",
         ["seg-3"],
       ),
       clinician_documented_assessment: field(
-        "El médico indicó que esto es un borrador de demostración, no una evaluación clínica.",
+        "Dolor de rodilla izquierda de características mecánicas; sin datos de alarma mencionados en la consulta.",
         "STATED",
-        ["seg-3"],
+        ["seg-2", "seg-3"],
       ),
       clinician_documented_plan: field("", "NOT_STATED"),
       follow_up: field("", "NOT_STATED"),

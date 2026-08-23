@@ -1,4 +1,4 @@
-import type { ClinicalNote, TranscriptSegment } from "@notalocal/types"
+import type { ClinicalNote, TranscriptSegment } from "@oira/types"
 import type { EncounterStatus } from "../constants/encounter-status"
 import type {
   GenerateNoteInput,
@@ -27,10 +27,10 @@ export type SaveNoteResult = {
 }
 
 /**
- * IPC contract (guide §10.2). Renderer consumes this via `window.notalocal`.
+ * IPC contract (guide §10.2). Renderer consumes this via `window.oira`.
  * Draft notes are structured (I4 sections + transcript), not a free-text body.
  */
-export type NotaLocalAPI = {
+export type OiraApi = {
   startEncounter: (
     input?: StartEncounterInput,
   ) => Promise<Result<StartEncounterResult>>

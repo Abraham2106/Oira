@@ -13,7 +13,7 @@ La telemedicina añade una distancia, un canal remoto, posibles terceros, dispos
 
 | Escenario | Definición de producto | Estado |
 | --- | --- | --- |
-| **P0 presencial** | Médico y paciente en la misma consulta; NotaLocal captura una fuente de micrófono local después del preflight de I2. Sin bot, enlace de reunión, captura de audio de sistema ni mezcla de fuentes. | Único escenario soportado. |
+| **P0 presencial** | Médico y paciente en la misma consulta; Oira captura una fuente de micrófono local después del preflight de I2. Sin bot, enlace de reunión, captura de audio de sistema ni mezcla de fuentes. | Único escenario soportado. |
 | **P2 remoto tipo Zoom** | Médico y paciente participan mediante una plataforma ajena; pueden existir micrófono local, audio de sistema, auriculares, terceros o grabación nativa de la plataforma. | No soportado; requiere diseño y validación separados. |
 
 ## Matriz de deltas
@@ -26,16 +26,16 @@ La telemedicina añade una distancia, un canal remoto, posibles terceros, dispos
 | Recording | Indicador de micrófono local, temporizador, detener. | Indicadores distintos por micrófono/audio de sistema/mezcla, pérdida de fuente y parada verificable de todas las capturas. | Sí. | Señal “grabando” falsa o incompleta; captura residual. |
 | Processing | Audio único y contrato de transcript. | Metadatos de fuente, separación/mezcla, hablantes y errores de canal. | Sí. | Atribución equivocada y notas sin origen fiable. |
 | Review | Transcript/nota y evidencia por segmento. | Evidencia debe mostrar fuente/canal y ambigüedad; no asumir diarización. | Sí. | El médico confunde quién dijo qué. |
-| Settings/Privacy | Estado de micrófono, retención y almacenamiento local. | Estado por fuente, permisos de SO, aplicación externa y limitaciones de lo que NotaLocal no controla. | Sí. | Promesas falsas sobre privacidad/borrado. |
-| Export / FAQ | Exportación manual del borrador. | Debe declarar qué se puede exportar y qué sigue bajo control de la plataforma de videollamada. | Sí. | Se confunde NotaLocal con proveedor de teleconsulta. |
+| Settings/Privacy | Estado de micrófono, retención y almacenamiento local. | Estado por fuente, permisos de SO, aplicación externa y limitaciones de lo que Oira no controla. | Sí. | Promesas falsas sobre privacidad/borrado. |
+| Export / FAQ | Exportación manual del borrador. | Debe declarar qué se puede exportar y qué sigue bajo control de la plataforma de videollamada. | Sí. | Se confunde Oira con proveedor de teleconsulta. |
 
 ## FAQ: frases permitidas ahora
 
 | Pregunta | Copy público permitido hoy |
 | --- | --- |
-| “¿Funciona con Zoom, Meet o Teams?” | **“NotaLocal está diseñado para consultas presenciales en esta versión. No se conecta a plataformas de videollamada.”** |
+| “¿Funciona con Zoom, Meet o Teams?” | **“Oira está diseñado para consultas presenciales en esta versión. No se conecta a plataformas de videollamada.”** |
 | “¿Graba el audio de una llamada?” | **“La captura de audio de videollamadas no está disponible en esta versión.”** |
-| “¿Puedo invitar un bot a mi reunión?” | **“NotaLocal no añade bots ni participa en reuniones.”** |
+| “¿Puedo invitar un bot a mi reunión?” | **“Oira no añade bots ni participa en reuniones.”** |
 | “¿Qué pasa con el audio del paciente remoto?” | **“Esta versión no ofrece captura remota de pacientes.”** |
 
 Estas frases describen el alcance actual; deben retirarse o versionarse si cambia la implementación.
@@ -44,7 +44,7 @@ Estas frases describen el alcance actual; deben retirarse o versionarse si cambi
 
 - “Esta versión puede capturar [fuente exacta] cuando el estado del sistema la confirma.”
 - “Antes de iniciar, revisa qué fuentes de audio están activas.”
-- “NotaLocal no controla las grabaciones, transcripciones ni políticas de la plataforma de videollamada.”
+- “Oira no controla las grabaciones, transcripciones ni políticas de la plataforma de videollamada.”
 - Cualquier texto sobre consentimiento, retención o proveedores requiere país/organización y comportamiento técnico confirmados; no publicar una plantilla legal.
 
 ## Dependencias

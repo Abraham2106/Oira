@@ -29,7 +29,7 @@ Estas barreras reducen capacidad de acción automática, pero no autorizan afirm
 
 **Título:** “Por qué se revisan los borradores”
 
-> “Los borradores generados a partir de una conversación pueden incluir texto que intente parecer una instrucción para el sistema. NotaLocal trata ese texto como contenido de la conversación, no como una orden clínica. Verifique el borrador contra la fuente identificada y su criterio profesional antes de aprobarlo o exportarlo.”
+> “Los borradores generados a partir de una conversación pueden incluir texto que intente parecer una instrucción para el sistema. Oira trata ese texto como contenido de la conversación, no como una orden clínica. Verifique el borrador contra la fuente identificada y su criterio profesional antes de aprobarlo o exportarlo.”
 
 **Límite:**
 
@@ -39,7 +39,7 @@ Estas barreras reducen capacidad de acción automática, pero no autorizan afirm
 
 **Title:** “Why drafts require review”
 
-> “Drafts generated from a conversation can contain text that attempts to look like an instruction to the system. NotaLocal treats that text as conversation content, not as a clinical order. Verify the draft against the identified source and your professional judgment before approving or exporting it.”
+> “Drafts generated from a conversation can contain text that attempts to look like an instruction to the system. Oira treats that text as conversation content, not as a clinical order. Verify the draft against the identified source and your professional judgment before approving or exporting it.”
 
 **Limit:**
 

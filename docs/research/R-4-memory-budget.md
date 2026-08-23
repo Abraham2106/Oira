@@ -18,7 +18,7 @@ El API summary documenta getModelInfo como estado de un modelo de catálogo, inc
 
 ## 3. Principio de preflight
 
-El preflight de NotaLocal será código propio en Main. Debe combinar:
+El preflight de Oira será código propio en Main. Debe combinar:
 
 1. requisitos mínimos documentados de plataforma, memoria disponible y disco;
 2. información de caché/modelo solo cuando las firmas estén confirmadas en los tipos instalados;
@@ -52,7 +52,7 @@ Todos los pasos están **BLOCKED — NEEDS TARGET HARDWARE**.
 
 ## 6. Afirmaciones prohibidas
 
-No afirmar que un modelo cabe en una clase de hardware, que getSystemResources predice correctamente OOM, que STT y LLM pueden convivir, ni que la carga secuencial tiene una latencia aceptable. Tampoco convertir mínimos generales del proveedor en requisitos suficientes para NotaLocal.
+No afirmar que un modelo cabe en una clase de hardware, que getSystemResources predice correctamente OOM, que STT y LLM pueden convivir, ni que la carga secuencial tiene una latencia aceptable. Tampoco convertir mínimos generales del proveedor en requisitos suficientes para Oira.
 
 ## 7. Decisión
 

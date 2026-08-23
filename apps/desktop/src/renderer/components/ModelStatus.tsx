@@ -1,5 +1,5 @@
-import { StatusBadge } from "@notalocal/ui"
-import type { AiEngineState } from "@notalocal/types"
+import { StatusBadge } from "@oira/ui"
+import type { AiEngineState } from "@oira/types"
 
 type Props = {
   state: AiEngineState

@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { SECTION_IDS } from "@notalocal/types"
+import { SECTION_IDS } from "@oira/types"
 
 export const fieldValueSchema = z
   .object({

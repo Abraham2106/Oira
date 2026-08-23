@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Button, Dialog, StatusBadge } from "@notalocal/ui"
+import { Button, Dialog, StatusBadge } from "@oira/ui"
 import { PrivacyStatusPanel } from "../../components/PrivacyStatusPanel"
 import { RecordingTimer } from "../../components/RecordingTimer"
 
@@ -18,11 +18,11 @@ export function RecordingScreen({ startedAtMs, onStop, onDiscard }: Props) {
         <StatusBadge tone="recording" icon="●" label="Grabando — micrófono activo" live />
         <RecordingTimer startedAtMs={startedAtMs} />
       </div>
-      <p>Hable con el paciente. Esta pista es de prototipo: no se envía audio a un servidor.</p>
+      <p>Hable con naturalidad. El audio se procesa en este equipo.</p>
       <PrivacyStatusPanel
         rows={[
-          { label: "Grabación", value: "Activa en este equipo (simulada)" },
-          { label: "Procesamiento", value: "Aún no" },
+          { label: "Grabación", value: "Activa en este equipo" },
+          { label: "Procesamiento", value: "Al detener la grabación" },
           { label: "Proveedor de IA remoto", value: "DESCONOCIDO" },
           { label: "Almacenamiento", value: "DESCONOCIDO" },
           { label: "Red", value: "DESCONOCIDO" },
@@ -40,7 +40,7 @@ export function RecordingScreen({ startedAtMs, onStop, onDiscard }: Props) {
         title="¿Descartar esta grabación?"
         onClose={() => setConfirmDiscard(false)}
       >
-        <p>No se generará nota. En este prototipo no hay audio persistido que borrar.</p>
+        <p>No se generará nota y no queda copia del audio descartado.</p>
         <div className="actions">
           <Button
             variant="danger"

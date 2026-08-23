@@ -1,6 +1,6 @@
 # Entregable frontend — 12 iteraciones medibles
 
-> Plan agile del primer entregable frontend de NotaLocal.
+> Plan agile del primer entregable frontend de Oira.
 > Cada iteración cierra con un criterio pass/fail verificable en minutos.
 > Referencia de producto: [FRONTEND_UIUX_GUIDE.md](FRONTEND_UIUX_GUIDE.md).
 
@@ -59,14 +59,14 @@ flowchart TD
 
 **Medible:**
 
-- [ ] `pnpm --filter @notalocal/types exec tsc --noEmit` exitoso
+- [ ] `pnpm --filter @oira/types exec tsc --noEmit` exitoso
 - [ ] Desktop importa `ProductState` sin error de tipos
 
 ---
 
 ## I03 — Bridge mock
 
-**Hecho:** `bridge/notalocal.ts` + `mock.ts` con `startEncounter`, `stopEncounter`, `generateNote`, `saveNote` y fixtures sintéticos evidentes.
+**Hecho:** `bridge/oira.ts` + `mock.ts` con `startEncounter`, `stopEncounter`, `generateNote`, `saveNote` y fixtures sintéticos evidentes.
 
 **Medible:**
 

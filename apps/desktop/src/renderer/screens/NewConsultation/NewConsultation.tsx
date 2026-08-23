@@ -1,4 +1,4 @@
-import { Button, Card } from "@notalocal/ui"
+import { Button, Card } from "@oira/ui"
 import { ModelStatus } from "../../components/ModelStatus"
 import { PrivacyStatusPanel } from "../../components/PrivacyStatusPanel"
 

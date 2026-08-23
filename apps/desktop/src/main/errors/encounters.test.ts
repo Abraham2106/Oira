@@ -24,7 +24,7 @@ describe("errors/encounters", () => {
     await encounters.start()
     await expect(encounters.start()).rejects.toMatchObject({
       code: "INVALID_STATE_TRANSITION",
-      name: "NotaLocalAppError",
+      name: "OiraAppError",
     })
     expect(() => assertTransition("completed", "recording")).toThrowError(
       expect.objectContaining({ code: "INVALID_STATE_TRANSITION" }),

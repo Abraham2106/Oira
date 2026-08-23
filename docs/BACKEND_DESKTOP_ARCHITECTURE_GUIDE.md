@@ -1,4 +1,4 @@
-# NotaLocal — Guía de arquitectura backend desktop local
+# Oira — Guía de arquitectura backend desktop local
 
 > Guía interna de ingeniería para el **responsable de backend (Justin)**.
 > No es un curso de Electron: asume Main / Preload / Renderer.
@@ -11,7 +11,7 @@
 
 ## 0. Contexto, alcance y cómo leer este documento
 
-### 0.1 Qué es NotaLocal
+### 0.1 Qué es Oira
 
 Aplicación **desktop 100 % local** para médicos, construida para el **Track QVAC (Tether)** de hackathon.
 
@@ -87,7 +87,7 @@ Este documento etiqueta cada afirmación no trivial:
 - **`CONFIRMED`** Scaffold documentado: `electron-vite` + React + TypeScript, en un comando:
 
   ```bash
-  npm create @quick-start/electron@latest notalocal -- --template react-ts
+  npm create @quick-start/electron@latest oira -- --template react-ts
   ```
 
   El tutorial indica responder **No** a "Add Electron updater plugin?" y a "Enable Electron download mirror
@@ -119,9 +119,9 @@ Este documento etiqueta cada afirmación no trivial:
 │  ELECTRON RENDERER  (Chromium + React)          ← Antonio                   │
 │  · UI, estados visuales, revisión del médico                                │
 │  · Sin Node. Sin fs. Sin @qvac/sdk. Sin SQL.                                │
-│  · Solo habla con: window.notalocal.*                                       │
+│  · Solo habla con: window.oira.*                                       │
 └───────────────────────────────┬─────────────────────────────────────────────┘
-                                │  window.notalocal.startEncounter(...)
+                                │  window.oira.startEncounter(...)
                                 ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │  PRELOAD  (contextBridge)                       ← Justin                    │
@@ -447,7 +447,7 @@ carpeta en cada PR; en cuanto crece sin control, se convierte en deuda.
 
 Ver §10.
 
-**Qué va aquí.** `contextBridge.exposeInMainWorld('notalocal', { ... })` con métodos **explícitos, uno por
+**Qué va aquí.** `contextBridge.exposeInMainWorld('oira', { ... })` con métodos **explícitos, uno por
 uno**, y las declaraciones de tipos (`index.d.ts`) para que el Renderer tenga tipado.
 
 **`CONFIRMED`** El tutorial de QVAC usa exactamente este patrón: `contextBridge.exposeInMainWorld` +
@@ -465,7 +465,7 @@ todo el beneficio del preload.
 - **No importa `@qvac/sdk`.**
 - No importa módulos de `src/main/`.
 - Puede importar de `src/shared/` (tipos, schemas, constantes).
-- Toda interacción con el sistema pasa por `window.notalocal.*`.
+- Toda interacción con el sistema pasa por `window.oira.*`.
 
 ---
 
@@ -1127,8 +1127,8 @@ Motivos técnicos, no de estilo:
 ### 10.2 API conceptual
 
 ```ts
-// window.notalocal — contrato entre Justin y Antonio
-interface NotaLocalAPI {
+// window.oira — contrato entre Justin y Antonio
+interface OiraApi {
   startEncounter(): Promise<Result<{ encounterId: string }>>
   stopEncounter(input: { encounterId: string }): Promise<Result<{ status: EncounterStatus }>>
   generateNote(input: { encounterId: string }): Promise<Result<{ draft: DraftNote }>>
@@ -1178,7 +1178,7 @@ Las operaciones largas (descarga de modelo, transcripción, estructuración) nec
 **`CONFIRMED`** El tutorial usa `win.webContents.send(canal, payload)` en Main y `ipcRenderer.on(...)` en el
 preload, envuelto en un método de callback expuesto por `contextBridge`.
 
-**`ASSUMPTION`** Un solo canal de eventos tipado, `notalocal:event`, con un union discriminado
+**`ASSUMPTION`** Un solo canal de eventos tipado, `oira:event`, con un union discriminado
 (`encounter-status`, `transcription-progress`, `model-download-progress`, `error`), en lugar de un canal por
 tipo de evento. Menos strings sueltos, un solo punto de validación.
 
@@ -1492,7 +1492,7 @@ ACCEDE:   notes · export (único artefacto exportable)
 |---|---|---|
 | **Descarga inicial de modelos** | **Sí** | Primera ejecución, o cuando se añade un modelo nuevo |
 | **Inferencia** (transcribe, completion) | **No** | Siempre local, sobre el modelo ya en caché |
-| Todo lo demás de NotaLocal | **No** | Nunca |
+| Todo lo demás de Oira | **No** | Nunca |
 
 **`CONFIRMED`** La documentación de QVAC es explícita en esto y matizada de una forma que nos importa:
 
@@ -2044,7 +2044,7 @@ seas tú.
 | 1 | **R-1**: reproducir el tutorial Electron de QVAC, incluido `npm run package` | Repo con el scaffold funcionando y versiones fijadas |
 | 2 | Andamiaje de `src/main/*` según §2 + lint de fronteras | La estructura existe y el lint falla si se viola |
 | 3 | `src/shared/schemas` + `src/shared/constants`: contrato IPC v1 y `AppError` | Contrato acordado por escrito con Antonio |
-| 4 | Preload + capa IPC con validación Zod y `Result` para los 4 métodos principales | Antonio puede llamar `window.notalocal.*` y recibe errores tipados |
+| 4 | Preload + capa IPC con validación Zod y `Result` para los 4 métodos principales | Antonio puede llamar `window.oira.*` y recibe errores tipados |
 | 5 | `src/main/qvac`: `qvac.client`, `transcription.adapter`, `structuring.adapter`, `model.config` + **mock** | Un solo lugar importa `@qvac/sdk`; la suite corre sin modelos |
 | 6 | **R-2**: decidir formato de audio y construir `/audio` (chunks, temp, validación, cleanup, `safeJoin`) | Se produce un fichero que `transcribe()` acepta de verdad |
 | 7 | **R-3**: decidir binding de SQLite; `/storage` con migraciones y repositorios | Las 5 tablas de §8.2 existen, con cascadas testeadas |

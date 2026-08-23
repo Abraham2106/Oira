@@ -7,7 +7,7 @@
 
 ## Pregunta y decisiones permitidas
 
-¿La instalación objetivo puede ejecutar `responseFormat: json_schema` con `QWEN3_600M_INST_Q4` y el esquema clínico completo de NotaLocal, obteniendo una salida que pase parseo, Zod, reglas de consistencia y source grounding?
+¿La instalación objetivo puede ejecutar `responseFormat: json_schema` con `QWEN3_600M_INST_Q4` y el esquema clínico completo de Oira, obteniendo una salida que pase parseo, Zod, reglas de consistencia y source grounding?
 
 Al concluir, y sólo con resultados reproducibles, Q3 puede decidir una de tres rutas:
 
@@ -19,7 +19,7 @@ No se permite declarar éxito por tener JSON superficialmente bien formado. Tamp
 
 ## Hipótesis
 
-La hipótesis es que la restricción de esquema puede hacer que la salida de estructuración tenga la forma requerida por NotaLocal. Esa hipótesis no afirma que el modelo sea fiel al transcript: la gramática no prueba negaciones, hechos clínicos ni citas de origen. D3 fija precisamente esa separación. [D3](./D3-structured-output-literature.md)
+La hipótesis es que la restricción de esquema puede hacer que la salida de estructuración tenga la forma requerida por Oira. Esa hipótesis no afirma que el modelo sea fiel al transcript: la gramática no prueba negaciones, hechos clínicos ni citas de origen. D3 fija precisamente esa separación. [D3](./D3-structured-output-literature.md)
 
 El protocolo prueba compatibilidad de formato y validaciones posteriores. La decisión sobre calidad clínica requiere que la evaluación incluya casos de invención, `NOT_STATED`, negaciones y source grounding.
 

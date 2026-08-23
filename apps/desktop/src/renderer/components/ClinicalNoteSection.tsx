@@ -1,5 +1,5 @@
-import type { FieldValue, SectionId, TranscriptSegment } from "@notalocal/types"
-import { SECTION_TITLES } from "@notalocal/types"
+import type { FieldValue, SectionId, TranscriptSegment } from "@oira/types"
+import { SECTION_TITLES } from "@oira/types"
 import { NotStatedBadge } from "./NotStatedBadge"
 import { SourceEvidencePopover } from "./SourceEvidencePopover"
 

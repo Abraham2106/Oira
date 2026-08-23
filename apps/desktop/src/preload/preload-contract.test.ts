@@ -9,7 +9,7 @@ const read = (relative: string) => readFileSync(join(here, relative), "utf8")
 describe("preload wiring", () => {
   /**
    * A sandboxed preload cannot be ESM: with an .mjs preload and sandbox: true
-   * Electron skips the script, window.notalocal never appears, and the
+   * Electron skips the script, window.oira never appears, and the
    * renderer falls back to fixtures without saying so.
    */
   it("builds the preload as CJS and loads that exact file", () => {

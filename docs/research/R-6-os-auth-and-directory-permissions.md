@@ -12,11 +12,11 @@ No se encontró en la superficie oficial de Electron consultada una API equivale
 
 Para directorios, Node permite establecer modos POSIX, pero documenta que en Windows solo puede manipularse el permiso de escritura y no distingue owner, group y others. Windows usa descriptores de seguridad y DACLs; su control correcto requiere ACLs, no una llamada portable a chmod [Node.js, File system](https://nodejs.org/api/fs.html), [Microsoft, File Security and Access Rights](https://learn.microsoft.com/en-us/windows/win32/fileio/file-security-and-access-rights).
 
-**Decisión: P0 = PIN local; no ofrecer desbloqueo biométrico/OS en el MVP.** Crear los directorios de datos desde Main con permisos restrictivos en POSIX, pero no afirmar equivalencia Windows hasta aplicar y verificar una DACL en equipos reales. Touch ID queda como posible trabajo posterior, separado del PIN y nunca como almacenamiento de biometría por NotaLocal.
+**Decisión: P0 = PIN local; no ofrecer desbloqueo biométrico/OS en el MVP.** Crear los directorios de datos desde Main con permisos restrictivos en POSIX, pero no afirmar equivalencia Windows hasta aplicar y verificar una DACL en equipos reales. Touch ID queda como posible trabajo posterior, separado del PIN y nunca como almacenamiento de biometría por Oira.
 
 ## 2. Alcance de seguridad
 
-El PIN local gobierna la sesión de la aplicación; no sustituye cifrado en reposo y no almacena biometría. El sistema operativo es quien realiza cualquier autenticación biométrica. Las credenciales biométricas no se solicitan, transmiten ni persisten por NotaLocal.
+El PIN local gobierna la sesión de la aplicación; no sustituye cifrado en reposo y no almacena biometría. El sistema operativo es quien realiza cualquier autenticación biométrica. Las credenciales biométricas no se solicitan, transmiten ni persisten por Oira.
 
 La autenticación de SO no debe presentarse como protección frente a una sesión de usuario ya comprometida. Si el usuario ya está autenticado en el sistema, una app maliciosa o proceso con los mismos privilegios puede estar fuera del modelo que un simple prompt de UI resuelve. Electron recomienda, además, aislamiento de contexto, no exponer Node a contenido no confiable y validar IPC [Electron, Security](https://www.electronjs.org/docs/latest/tutorial/security).
 
@@ -64,7 +64,7 @@ No se aporta código de ACL ni de Touch ID porque un sketch no verificado podrí
 
 ## 7. Afirmaciones prohibidas
 
-No usar “biometría segura” o “Windows Hello compatible”; no decir que NotaLocal almacena biometría; no indicar que el PIN cifra la base; no llamar a chmod una solución ACL de Windows; ni prometer que otros usuarios del equipo nunca podrán leer archivos hasta ejecutar las pruebas correspondientes.
+No usar “biometría segura” o “Windows Hello compatible”; no decir que Oira almacena biometría; no indicar que el PIN cifra la base; no llamar a chmod una solución ACL de Windows; ni prometer que otros usuarios del equipo nunca podrán leer archivos hasta ejecutar las pruebas correspondientes.
 
 ## 8. Pendientes
 

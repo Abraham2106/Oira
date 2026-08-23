@@ -15,7 +15,7 @@ La recomendación no define el texto jurídico que el médico deba pronunciar. S
 
 ## Alcance y hechos de producto
 
-- NotaLocal genera un **borrador**; el médico revisa, corrige y confirma.
+- Oira genera un **borrador**; el médico revisa, corrige y confirma.
 - El flujo P0 puede procesar audio de la conversación, por lo que la grabación no es un detalle técnico invisible.
 - La pantalla `New Consultation` debe declarar “La grabación no ha comenzado”.
 - No hay teleconsulta, portal del paciente, firma electrónica, verificación de identidad, cuenta ni integración EHR en P0.
@@ -25,7 +25,7 @@ La recomendación no define el texto jurídico que el médico deba pronunciar. S
 
 El General Medical Council del Reino Unido indica que, al realizar o usar grabaciones de pacientes, se debe respetar privacidad, dignidad y la participación del paciente; la guía enumera informar el propósito, contar con consentimiento o autoridad apropiada, no presionar y detener cuando sea practicable si el paciente lo pide [S1]. Para grabaciones que contribuyen al cuidado, la misma entidad pide consentimiento y explicar por qué ayudaría, qué forma tendrá y que se guardará de manera segura; también pide comunicar usos secundarios posibles cuando resulte practicable [S2].
 
-Estas reglas son profesionales y británicas, **no una ley latinoamericana aplicable automáticamente**. Su valor para NotaLocal es de patrón ético de interfaz: la aplicación debe hacer visible la decisión humana antes de capturar audio, sin adueñarse de la decisión legal.
+Estas reglas son profesionales y británicas, **no una ley latinoamericana aplicable automáticamente**. Su valor para Oira es de patrón ético de interfaz: la aplicación debe hacer visible la decisión humana antes de capturar audio, sin adueñarse de la decisión legal.
 
 La Ley chilena 20.584 protege el derecho de las personas a recibir información y participar en decisiones vinculadas a su atención; es relevante como marco de derechos del paciente, pero este informe no extrae de ella una regla específica sobre audio [S5]. Microsoft, como proveedor de una herramienta de documentación ambiental, indica obtener consentimiento antes de grabar y deja la guía sobre el modo de obtenerlo a las leyes y políticas de la organización [S4]. Esto refuerza la separación correcta: producto = recordatorio y controles; profesional/organización = proceso y autoridad aplicables.
 

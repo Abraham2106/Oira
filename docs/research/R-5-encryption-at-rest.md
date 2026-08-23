@@ -3,7 +3,7 @@
 **Estado:** investigación de escritorio completada; validación por sistema operativo, empaquetado y QVAC está **BLOCKED — NEEDS TARGET HARDWARE**.  
 **Fuentes consultadas:** 2026-08-22.  
 **Dependencias:** R-1 debe fijar el stack Electron/QVAC y R-3 debe seleccionar o descartar el binding SQLite empaquetado.  
-**Límite de este documento:** no declara que NotaLocal cifra datos de usuario. Describe qué está documentado, qué falta medir y qué copy es defendible mientras tanto.
+**Límite de este documento:** no declara que Oira cifra datos de usuario. Describe qué está documentado, qué falta medir y qué copy es defendible mientras tanto.
 
 ## 1. Resumen y decisión
 
@@ -30,7 +30,7 @@ El objetivo de un MVP no es transformar una app de escritorio en defensa complet
 
 Electron define safeStorage como cifrado/descifrado de cadenas para almacenamiento local, mediante criptografía provista por el sistema operativo; el módulo se usa desde el proceso Main. Electron recomienda las APIs asíncronas por no bloquear, admitir rotación de claves y manejar indisponibilidad temporal [Electron, safeStorage](https://www.electronjs.org/docs/latest/api/safe-storage).
 
-| Plataforma | Hecho documentado | Consecuencia para NotaLocal | Estado empírico |
+| Plataforma | Hecho documentado | Consecuencia para Oira | Estado empírico |
 |---|---|---|---|
 | macOS | Claves almacenadas en Keychain; la documentación dice que protege frente a otros usuarios y otras apps en el mismo userspace salvo override del usuario. | Puede ser un candidato para proteger una pequeña clave de datos, no una conclusión de cifrado de DB. | BLOCKED — NEEDS TARGET HARDWARE |
 | Windows | Claves generadas mediante DPAPI; Electron indica protección frente a otros usuarios, pero no frente a otras apps en el mismo userspace. | Prohibido afirmar protección contra malware/procesos bajo la misma cuenta. | BLOCKED — NEEDS TARGET HARDWARE |
@@ -86,7 +86,7 @@ Protocolo: registrar versiones fijadas por R-1; ejecutar APIs asíncronas tras a
 
 Texto permitido para README/UI:
 
-> “NotaLocal usa un PIN local para bloquear la aplicación. En esta versión no afirmamos cifrado de los archivos clínicos en reposo; proteja el dispositivo con una cuenta de sistema, bloqueo de pantalla y cifrado de disco cuando esté disponible.”
+> “Oira usa un PIN local para bloquear la aplicación. En esta versión no afirmamos cifrado de los archivos clínicos en reposo; proteja el dispositivo con una cuenta de sistema, bloqueo de pantalla y cifrado de disco cuando esté disponible.”
 
 Texto prohibido:
 

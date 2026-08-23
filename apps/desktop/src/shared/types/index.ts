@@ -1,8 +1,8 @@
 export type { Result, SerializableError } from "./result"
 export type {
   GenerateNoteResult,
-  NotaLocalAPI,
+  OiraApi,
   SaveNoteResult,
   StartEncounterResult,
   StopEncounterResult,
-} from "./notalocal-api"
+} from "./oira-api"

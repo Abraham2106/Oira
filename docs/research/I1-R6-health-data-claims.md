@@ -2,14 +2,14 @@
 
 **Estado:** decisión de producto P0  
 **Fecha de acceso a fuentes:** 22 de agosto de 2026  
-**Ámbito:** website y renderer de NotaLocal; MVP de escritorio, sin cuenta, sin inferencia remota y con un médico por equipo.  
+**Ámbito:** website y renderer de Oira; MVP de escritorio, sin cuenta, sin inferencia remota y con un médico por equipo.  
 **No es asesoría jurídica.** Este documento no determina qué legislación aplica, quién es responsable/controlador en una jurisdicción concreta ni si una implementación cumple una norma.
 
 ## Decisión
 
 **P0: publicar únicamente afirmaciones conductuales, acotadas a la versión y verificables en el producto; no nombrar leyes, certificaciones ni “cumplimiento”.** En especial, *local* no equivale a “anónimo”, “sin tratamiento de datos” ni “fuera de la regulación”. Las fuentes oficiales revisadas tratan los datos de salud como sensibles o especialmente protegidos y regulan operaciones amplias de tratamiento, incluidas recolección, almacenamiento y eliminación [S1–S5].
 
-La interfaz debe expresar los estados reales que entregue el backend. Cuando no exista confirmación técnica, se usa `DESCONOCIDO`; no se rellena con una promesa de privacidad. El médico conserva la decisión clínica y de exportación, pero NotaLocal no debe afirmar que una pantalla por sí sola satisface sus deberes profesionales o legales.
+La interfaz debe expresar los estados reales que entregue el backend. Cuando no exista confirmación técnica, se usa `DESCONOCIDO`; no se rellena con una promesa de privacidad. El médico conserva la decisión clínica y de exportación, pero Oira no debe afirmar que una pantalla por sí sola satisface sus deberes profesionales o legales.
 
 ## Alcance, hechos y método
 
@@ -28,7 +28,7 @@ Se distinguen:
 
 2. **La ubicación local limita una ruta de circulación, no prueba cumplimiento.** La legislación examinada se aplica a operaciones de tratamiento bajo criterios territoriales y de oferta/servicio; no se desprende una exención general para software de escritorio [S1]. Por tanto, “no hay nube” no autoriza “cumplimos la ley X”.
 
-3. **El producto no puede atribuir roles jurídicos sin el despliegue real.** La LGPD distingue controlador —quien toma decisiones sobre el tratamiento— y operador —quien trata por cuenta del controlador— [S1]. El mismo binario puede involucrar decisiones distintas según quién lo distribuya, configure, soporte o use. No publicar “el médico es el único responsable” ni “NotaLocal no trata datos” sin revisión jurídica y operativa específica.
+3. **El producto no puede atribuir roles jurídicos sin el despliegue real.** La LGPD distingue controlador —quien toma decisiones sobre el tratamiento— y operador —quien trata por cuenta del controlador— [S1]. El mismo binario puede involucrar decisiones distintas según quién lo distribuya, configure, soporte o use. No publicar “el médico es el único responsable” ni “Oira no trata datos” sin revisión jurídica y operativa específica.
 
 4. **La privacidad debe hablar de observables.** La vía defendible es describir qué hace esta versión: si se inició la grabación, dónde se procesa, si existe proveedor de IA remoto, qué se guarda, qué se puede borrar y qué ocurre al exportar. Las afirmaciones de almacenamiento/borrado/cifrado requieren confirmación del backend; una política comercial de no venta o no entrenamiento requiere dueño, alcance y cumplimiento operativo.
 
@@ -48,7 +48,7 @@ Las frases en inglés se incluyen porque el prompt las exige; el copy de product
 | C-08 | Privacy | **ES:** “No usamos el contenido de tus consultas para entrenar modelos.” **EN:** “We do not use your consultation content to train models.” | CONDICIONAL — titular de política/IA | Es una política, no una inferencia de “local”. | Hecho de producto declarado; [S1] sobre tratamiento. | Requiere política publicada, alcance de telemetría/soporte y control operativo verificable. |
 | C-09 | Privacy | **ES:** “No vendemos datos de consultas.” **EN:** “We do not sell consultation data.” | CONDICIONAL — titular de política | Es una promesa comercial verificable, no una garantía legal. | Hecho de producto declarado. | Definir “venta”, subsidiarias, analítica, soporte y cambios de versión en política. |
 | C-10 | Security | **ES:** “La seguridad del equipo, sus copias de respaldo y los sistemas a los que exportes siguen requiriendo tus propias medidas.” **EN:** “Device security, backups, and systems you export to still require your own safeguards.” | CONFIRMADO | Evita atribuir protección absoluta al producto. | [S1–S5] reconocen tratamiento/seguridad; flujo de exportación. | No desplaza responsabilidades legales: es una advertencia operativa. |
-| C-11 | Privacy | **ES:** “NotaLocal no tiene cuenta ni inicio de sesión en este MVP.” **EN:** “NotaLocal has no account or sign-in in this MVP.” | CONDICIONAL — Justin | Hecho de producto específico. | SYSTEM.md. | No afirmar si se añade activación, crash reporting identificable o soporte con cuenta. |
+| C-11 | Privacy | **ES:** “Oira no tiene cuenta ni inicio de sesión en este MVP.” **EN:** “Oira has no account or sign-in in this MVP.” | CONDICIONAL — Justin | Hecho de producto específico. | SYSTEM.md. | No afirmar si se añade activación, crash reporting identificable o soporte con cuenta. |
 | C-12 | Recording | **ES:** “La grabación no ha comenzado.” **EN:** “Recording has not started.” | CONFIRMADO / estado | Es un estado observable, útil para consentimiento. | Flujo del producto; [S7]. | Debe cambiar únicamente al entrar en `RECORDING`. |
 | F-01 | Website / app | “Cumple HIPAA / LGPD / Ley 1581 / Ley 8968.” | NO PUBLICAR | Cada régimen y despliegue exige análisis propio; una referencia legal no es evidencia de cumplimiento. | [S1–S5]. | No sustituir por una lista de leyes. |
 | F-02 | Website / app | “Tus datos nunca salen del dispositivo.” | NO PUBLICAR | El médico puede copiar, guardar o exportar contenido. | Flujo del producto. | Usar C-03 y C-05, si se verifican. |
