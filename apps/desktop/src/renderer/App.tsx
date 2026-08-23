@@ -54,6 +54,7 @@ export function App() {
     authenticated: false,
     profile: null,
   })
+  const [copyError, setCopyError] = useState<string | null>(null)
   const recordedExportRef = useRef<string | null>(null)
 
   useEffect(() => {
@@ -74,7 +75,14 @@ export function App() {
 
   const copyPreview = async (text?: string) => {
     if (!encounter.note) return
-    await navigator.clipboard.writeText(text ?? formatNoteAsText(encounter.note))
+    setCopyError(null)
+    try {
+      const bridge = await getBridge()
+      await bridge.writeClipboard(text ?? formatNoteAsText(encounter.note))
+    } catch {
+      setCopyError(t("export.copyFailed"))
+      return
+    }
     await encounter.exportNote()
   }
 
@@ -92,6 +100,7 @@ export function App() {
     setReviewConfirmed(false)
     setActiveSectionId(null)
     setHighlightedIds([])
+    setCopyError(null)
   }, [])
 
   const startNewConsult = useCallback(() => {
@@ -267,6 +276,12 @@ export function App() {
             >
               {t("app.backToStart")}
             </button>
+          </div>
+        ) : null}
+
+        {copyError ? (
+          <div className="error" role="alert">
+            <p>{copyError}</p>
           </div>
         ) : null}
 

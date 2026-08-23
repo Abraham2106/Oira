@@ -1,6 +1,7 @@
 import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
 import { App } from "./App"
+import { ErrorBoundary } from "./components/ErrorBoundary"
 import { I18nProvider } from "./i18n/I18nProvider"
 import "@oira/ui/styles.css"
 import "./styles/index.css"
@@ -13,7 +14,9 @@ if (!root) {
 createRoot(root).render(
   <StrictMode>
     <I18nProvider>
-      <App />
+      <ErrorBoundary>
+        <App />
+      </ErrorBoundary>
     </I18nProvider>
   </StrictMode>,
 )

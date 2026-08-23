@@ -60,6 +60,12 @@ export const exportNoteInputSchema = z
   })
   .strict()
 
+export const clipboardWriteInputSchema = z
+  .object({
+    text: z.string().min(1).max(20_000),
+  })
+  .strict()
+
 export const unlockInputSchema = z
   .object({
     pin: z.string().min(1),
@@ -74,5 +80,6 @@ export type StopEncounterInput = z.infer<typeof stopEncounterInputSchema>
 export type GenerateNoteInput = z.infer<typeof generateNoteInputSchema>
 export type SaveNoteInput = z.infer<typeof saveNoteInputSchema>
 export type ExportNoteInput = z.infer<typeof exportNoteInputSchema>
+export type ClipboardWriteInput = z.infer<typeof clipboardWriteInputSchema>
 export type UnlockInput = z.infer<typeof unlockInputSchema>
 export type LockInput = z.infer<typeof lockInputSchema>

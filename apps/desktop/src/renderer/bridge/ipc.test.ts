@@ -25,6 +25,7 @@ describe("adaptOiraApi", () => {
         ok: true,
         data: { noteId: "00000000-0000-4000-8000-000000000002" },
       }),
+      writeClipboard: async () => ({ ok: true, data: { written: true } }),
       appendAudio: async () => ({ ok: true, data: { accepted: true } }),
       getSettings: async () => ({
         ok: true,
@@ -70,6 +71,7 @@ describe("adaptOiraApi", () => {
     const generated = await bridge.generateNote(encounterId)
     expect(Object.keys(generated.note.sections).sort()).toEqual([...SECTION_IDS].sort())
     await bridge.saveNote(encounterId, generated.note)
+    await bridge.writeClipboard("preview")
     await bridge.appendAudio({ encounterId, sequence: 0, pcm: [0, 0] })
     expect((await bridge.getSettings()).uiLocale).toBe("en")
     expect((await bridge.saveSettings({ uiLocale: "es" })).uiLocale).toBe("es")
@@ -100,6 +102,10 @@ describe("adaptOiraApi", () => {
         error: { code: "INVALID_INPUT", message: "x", retryable: false },
       }),
       saveNote: async () => ({
+        ok: false,
+        error: { code: "INVALID_INPUT", message: "x", retryable: false },
+      }),
+      writeClipboard: async () => ({
         ok: false,
         error: { code: "INVALID_INPUT", message: "x", retryable: false },
       }),

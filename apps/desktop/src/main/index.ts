@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, session, shell } from "electron"
+import { app, BrowserWindow, clipboard, ipcMain, session, shell } from "electron"
 import { join } from "node:path"
 import { IPC_EVENTS } from "../shared/constants/ipc-channels"
 import { createAudioTempStore, defaultAudioTempDir } from "./audio"
@@ -67,12 +67,14 @@ app.whenReady().then(() => {
 
   session.defaultSession.setPermissionRequestHandler(
     (_contents, permission, callback) => {
-      callback(permission === "media")
+      callback(permission === "media" || permission === "clipboard-sanitized-write")
     },
   )
   session.defaultSession.setPermissionCheckHandler(
     (_contents, permission) =>
-      permission === "media" || permission === "mediaKeySystem",
+      permission === "media" ||
+      permission === "mediaKeySystem" ||
+      permission === "clipboard-sanitized-write",
   )
 
   const env = resolveAppEnv({
@@ -103,6 +105,7 @@ app.whenReady().then(() => {
       audio,
       inferenceAdapter,
       settingsFile,
+      clipboard: { writeText: (text) => clipboard.writeText(text) },
       onProgress: (event) => {
         for (const window of BrowserWindow.getAllWindows()) {
           window.webContents.send(IPC_EVENTS.INFERENCE_PROGRESS, event)

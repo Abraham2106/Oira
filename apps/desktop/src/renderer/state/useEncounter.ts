@@ -3,6 +3,7 @@ import type { ClinicalNote, Encounter, ProductState, TranscriptSegment } from "@
 import { getBridge } from "../bridge/oira"
 import { startMicCapture, type MicCapture } from "../lib/micCapture"
 import {
+  canTransition,
   createMachine,
   reduceMachine,
   type MachineSnapshot,
@@ -46,7 +47,10 @@ export function useEncounter(): EncounterView {
   const captureRef = useRef<MicCapture | null>(null)
 
   const apply = useCallback((event: Parameters<typeof reduceMachine>[1]) => {
-    setMachine((current) => reduceMachine(current, event))
+    setMachine((current) => {
+      if (!canTransition(current.state, event)) return current
+      return reduceMachine(current, event)
+    })
   }, [])
 
   const fail = useCallback((message: string) => {

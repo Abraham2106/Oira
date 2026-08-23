@@ -2,6 +2,7 @@ import type { ClinicalNote, TranscriptSegment } from "@oira/types"
 import type { EncounterStatus } from "../constants/encounter-status"
 import type {
   AppendAudioInput,
+  ClipboardWriteInput,
   GenerateNoteInput,
   SaveNoteInput,
   StartEncounterInput,
@@ -33,6 +34,10 @@ export type SaveNoteResult = {
   noteId: string
 }
 
+export type WriteClipboardResult = {
+  written: true
+}
+
 export type AppendAudioResult = {
   accepted: true
 }
@@ -57,6 +62,9 @@ export type OiraApi = {
     input: GenerateNoteInput,
   ) => Promise<Result<GenerateNoteResult>>
   saveNote: (input: SaveNoteInput) => Promise<Result<SaveNoteResult>>
+  writeClipboard: (
+    input: ClipboardWriteInput,
+  ) => Promise<Result<WriteClipboardResult>>
   getSettings: () => Promise<Result<AppSettings>>
   saveSettings: (input: {
     uiLocale: AppSettings["uiLocale"]

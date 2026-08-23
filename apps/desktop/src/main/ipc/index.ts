@@ -27,6 +27,7 @@ import type { AppSettings } from "../../shared/schemas/settings.schema"
 import type { Language } from "../../shared/constants/language"
 import { registerAudioIpc } from "./audio.ipc"
 import { registerAuthIpc } from "./auth.ipc"
+import { registerClipboardIpc, type ClipboardPort } from "./clipboard.ipc"
 import { registerEncounterIpc } from "./encounters.ipc"
 import { registerExportIpc } from "./export.ipc"
 import { registerNotesIpc } from "./notes.ipc"
@@ -43,6 +44,7 @@ export type IpcDeps = {
   logger: IpcLogger
   audio: AudioTempStore
   settings: SettingsPort
+  clipboard: ClipboardPort
 }
 
 export type SettingsPort = {
@@ -67,6 +69,7 @@ export type StubIpcOptions = {
   inferenceAdapter?: InferenceAdapterName
   settingsFile?: string
   googleAuth?: GoogleAuthPort
+  clipboard?: ClipboardPort
 }
 
 export function createSilentIpcLogger(): IpcLogger {
@@ -117,6 +120,11 @@ export function createStubIpcDeps(
     googleAuth: options.googleAuth ?? createGoogleAuthPortFromEnv(process.env),
     logger,
     audio,
+    clipboard:
+      options.clipboard ??
+      ({
+        writeText: () => undefined,
+      } satisfies ClipboardPort),
     settings:
       options.settingsFile === undefined
         ? createFileSettingsPort(join(tmpdir(), "oira-dev-settings.json"))
@@ -128,6 +136,11 @@ export function registerIpc(handle: IpcHandle, deps: IpcDeps): void {
   registerEncounterIpc(handle, deps)
   registerAudioIpc(handle, deps)
   registerNotesIpc(handle, deps)
+  registerClipboardIpc(handle, {
+    clipboard: deps.clipboard,
+    session: deps.session,
+    logger: deps.logger,
+  })
   registerExportIpc(handle, {
     exportNote: deps.exportNote,
     session: deps.session,

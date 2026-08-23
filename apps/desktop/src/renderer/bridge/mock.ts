@@ -30,6 +30,7 @@ export type DemoBridge = {
     note: ClinicalNote
   }>
   saveNote: (encounterId: string, note: ClinicalNote) => Promise<void>
+  writeClipboard: (text: string) => Promise<void>
   getSettings: () => Promise<AppSettings>
   saveSettings: (input: { uiLocale: AppSettings["uiLocale"] }) => Promise<AppSettings>
   googleSignIn: () => Promise<AuthProfile>
@@ -142,6 +143,9 @@ export function createMockBridge(): DemoBridge {
     },
     async saveNote() {
       await wait(150)
+    },
+    async writeClipboard(text) {
+      await navigator.clipboard.writeText(text)
     },
     async getSettings() {
       return { ...settings }
