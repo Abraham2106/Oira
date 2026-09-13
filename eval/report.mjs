@@ -29,6 +29,9 @@ export function buildArtifacts(run) {
     rawJsonValidRate: s.rawJsonValidRate,
     statedWithoutSource: s.statedWithoutSource,
     sourceIdFailureCases: s.sourceIdFailureCases,
+    extractionFidelity: s.extractionFidelity,
+    mustNotInclude: s.mustNotInclude,
+    unsupportedFact: s.unsupportedFact,
     latency: s.latency,
     stt: s.stt,
     cases: s.cases,
@@ -189,6 +192,7 @@ ${evidence("Medido", "Solo sustituciones token-a-token (ins/del excluidas).")}`
 ${sttRow("WER", `${fmt(s.stt.meanWer * 100, 1)}%`)}
 ${sttRow("CER", `${fmt(s.stt.meanCer * 100, 1)}%`)}
 ${sttRow("Transcribe success", pct(s.stt.cases - s.stt.emptyTranscriptCount, s.stt.cases))}
+${s.stt.transcribeRetryRate !== undefined ? `${sttRow("Transcribe retry rate", `${pct(s.stt.transcribeRetryCases, s.stt.cases)} (${s.stt.transcribeRetries} reintentos)`)}\n${sttRow("Transcribe 1er intento", `${fmt(s.stt.transcribeFirstTryRate * 100, 1)}%`)}` : ""}
 ${sttRow("Negación drop / add (heurística)", `${s.stt.negationDrops} / ${s.stt.negationAdds}`)}
 \n${evidence("Medido", `WER/CER sobre ${sttDenom} casos (WAV). Negación = recuento de tokens 'no', no es juicio clínico.`)}
 ${categoryBlock}
@@ -259,9 +263,59 @@ ${evidence("Medido", `Contadores de esta corrida. F1 = N/A si la clase no tiene 
       ? `pnpm eval -- --with-stt                  # re-ejecutar Nivel 1 STT (requiere GPU + Whisper QVAC)`
       : `pnpm eval                               # re-ejecutar Capa C --e2e (default; requiere GPU + Whisper QVAC + Qwen)`
 
+  // --- Fase 2: fidelity + unsupported fact blocks ---
+  const fidelityQuoteRows =
+    classify && s.extractionFidelity?.quoteTotal > 0
+      ? results
+          .map((r) => {
+            const q = r.evaluation.quoteCoverage
+            if (q.aggregate.total === 0) return null
+            return `| ${r.id} | ${q.aggregate.total} | ${q.aggregate.found} | ${
+              q.aggregate.recall !== null ? `${fmt(q.aggregate.recall * 100, 1)}%` : "N/A"
+            } |`
+          })
+          .filter(Boolean)
+          .join("\n")
+      : ""
+
+  const fidelityBlock =
+    classify && s.extractionFidelity?.quoteTotal > 0
+      ? `\n### Fidelidad de extracción (sourceQuotes)
+
+| Caso | Quotes | Encontradas | Recall |
+| --- | ---: | ---: | ---: |
+${fidelityQuoteRows}
+${evidence("Medido", "Match literal normalizado (no semántico); parafraseo del modelo frente a la cita literal produce falsos negativos.")}`
+      : ""
+
+  const unsupportedRows =
+    classify && s.unsupportedFact?.facts > 0
+      ? results
+          .map((r) => {
+            if (r.evaluation.unsupportedFactCount === 0) return null
+            const kinds = [...new Set(r.evaluation.unsupportedFacts.map((f) => f.kind))].join(", ")
+            const details = r.evaluation.unsupportedFacts
+              .map((f) => (f.term ? `${f.term}` : f.sectionId ?? "—"))
+              .join("; ")
+            return `| ${r.id} | ${r.evaluation.unsupportedFactCount} | ${kinds} | ${details} |`
+          })
+          .filter(Boolean)
+          .join("\n")
+      : ""
+
+  const unsupportedFactBlock =
+    classify && (s.unsupportedFact?.facts ?? 0) > 0
+      ? `\n### Unsupported clinical facts
+
+| Caso | Nº | Tipo(s) | Detalle |
+| --- | ---: | --- | --- |
+${unsupportedRows}
+${evidence("Medido", `§15.1: must_not_contain + mustNotInclude + STATED sin source + fuente sin respaldo literal. La componente 4 (revisión manual) no está medida.`)}`
+      : ""
+
   const notProbedFooter = classify
     ? e2e
-      ? evidence("No probado", `Fidelidad semántica de citas fuera de los ${results.length}/${datasetCases} casos con WAV.`)
+      ? evidence("No probado", `Fidelidad semántica de citas (cualitativa) fuera de los ${results.length}/${datasetCases} casos con WAV. sourceQuotes se puntúan por match literal; la verificación semántica aún falta (NOTE_VERIFIER).`)
       : evidence("No probado", "Fidelidad semántica de citas y pipeline audio→nota no se miden en esta corrida.")
     : evidence("No probado", "Capa B no ejecuta estructuración; clasificación, fidelidad de citas y pipeline audio→nota no se miden.")
 
@@ -295,7 +349,22 @@ ${casesRow}${skippedRow}
         : pct(productOk, s.cases)
       : "no_probado"
   } |
-| Raw JSON valid rate | ${classify && s.rawJsonValidRate !== null ? fmt(s.rawJsonValidRate, 3) : "no_probado"} |
+| Raw JSON valid rate (primer intento) | ${classify && s.rawJsonValidRate !== null ? fmt(s.rawJsonValidRate, 3) : "no_probado"} |
+| Source quote fidelity (recall) | ${
+    classify && s.extractionFidelity?.quoteTotal > 0
+      ? pct(s.extractionFidelity.quoteHits, s.extractionFidelity.quoteTotal)
+      : s.extractionFidelity?.quoteTotal === 0
+        ? "N/A (sin sourceQuotes en el run)"
+        : "no_probado"
+  } |
+| mustNotInclude hits | ${classify && s.mustNotInclude ? s.mustNotInclude.hits : "no_probado"} |
+| Unsupported clinical fact rate | ${
+    classify && s.unsupportedFact
+      ? s.unsupportedFact.casesWithFacts > 0
+        ? `⛔ ${pct(s.unsupportedFact.casesWithFacts, s.cases)}`
+        : pct(0, s.cases)
+      : "no_probado"
+  } |
 | STATED sin sourceSegmentIds | ${classify ? s.statedWithoutSource : "no_probado"} |
 | Casos con source IDs inválidos | ${classify ? s.sourceIdFailureCases : "no_probado"} |
 ${latencyRows}
@@ -320,6 +389,8 @@ ${classify ? evidence("Medido", `Presencia, invención, mustInclude y source IDs
 | max | ${fmt(s.latency.max)} |
 ${evidence("Medido", sttOnly ? "Wall-clock de transcribe() por caso exitoso." : e2e ? "Wall-clock E2E (transcribe + structure) por caso exitoso (p50 E2E)." : "Wall-clock de structure() por caso exitoso.")}
 ${sttBlock}
+${fidelityBlock}
+${unsupportedFactBlock}
 ${classificationBlock}
 ${deltaBlock}
 

@@ -63,6 +63,31 @@
   "rawJsonValidRate": 1,
   "statedWithoutSource": 2,
   "sourceIdFailureCases": 0,
+  "extractionFidelity": {
+    "quoteRecall": 0.22388059701492538,
+    "quoteHits": 15,
+    "quoteTotal": 67,
+    "sourceVerificationRate": 0.3013698630136986,
+    "sourceSegsFound": 73,
+    "sourceSegsSupported": 22,
+    "sourceLiteralMissCases": 14
+  },
+  "mustNotInclude": {
+    "casesWithHits": 0,
+    "hits": 0,
+    "rate": 0
+  },
+  "unsupportedFact": {
+    "casesWithFacts": 15,
+    "facts": 26,
+    "rate": 0.7894736842105263,
+    "kinds": {
+      "must_not_contain": 0,
+      "mustNotInclude": 0,
+      "stated_without_source": 2,
+      "source_not_supported": 24
+    }
+  },
   "latency": {
     "samples": 19,
     "p50": 48967.38639999996,
@@ -288,6 +313,31 @@
     ],
     "negationDrops": 0,
     "negationAdds": 1,
+    "transcribeRetryRate": 0,
+    "transcribeRetryCases": 0,
+    "transcribeFirstTryRate": 1,
+    "transcribeRetries": 0,
+    "transcribeAttempts": {
+      "01-simple": 1,
+      "02-negation": 1,
+      "03-medications": 1,
+      "04-dosage": 1,
+      "05-correction": 1,
+      "06-ambiguous-timeline": 1,
+      "07-no-diagnosis": 1,
+      "08-multiple-symptoms": 1,
+      "09-noisy-text": 1,
+      "10-longer": 1,
+      "11-missing-plan": 1,
+      "12-contradiction": 1,
+      "13-injection": 1,
+      "14-noisy-text-pharma": 1,
+      "15-noisy-text-elderly": 1,
+      "16-no-diagnosis-vague": 1,
+      "17-dosage-complex": 1,
+      "18-medication-list": 1,
+      "19-mixed-languages": 1
+    },
     "evidence": "medido"
   },
   "cases": 19,

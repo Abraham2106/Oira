@@ -316,8 +316,11 @@ async function replay(path) {
       reference: r.stt.reference,
       hypothesis: r.stt.hypothesis,
     }))
+    const transcribeAttemptsMap = Object.fromEntries(
+      run.results.map((r) => [r.id, typeof r.transcribeAttempts === "number" ? r.transcribeAttempts : 1]),
+    )
     run.summary.stt = sttResults.length
-      ? summarizeStt(sttResults, { confusions })
+      ? summarizeStt(sttResults, { confusions, transcribeAttempts: transcribeAttemptsMap })
       : run.summary.stt
   }
   run.metadata.rescoredAt = new Date().toISOString()
@@ -503,6 +506,7 @@ async function main() {
       let rawCompletion = null
       let sttResult = null
       let transcribeMs = null
+      let transcribeAttempts = null
       let structureMs = null
       let baselinePresence = null
       let baselinePresencePairs = []
@@ -531,6 +535,7 @@ async function main() {
             }
           }
           transcribeMs = performance.now() - t0
+          transcribeAttempts = transcribeAttempt + 1 // 0 fallos → 1er intento
           sttResult = {
             reference: transcriptText(fixture.transcript),
             hypothesis: transcriptText(hyp),
@@ -606,6 +611,7 @@ async function main() {
         evaluation,
         stage,
         transcribeMs,
+        transcribeAttempts,
         structureMs,
         baselinePresence,
         baselinePresencePairs,
@@ -637,7 +643,15 @@ async function main() {
       })
       confusions.push({ reference: r.stt.reference, hypothesis: r.stt.hypothesis })
     }
-    const sttSummary = sttResults.length ? summarizeStt(sttResults, { confusions }) : null
+    const transcribeAttemptsMap =
+      run.results.length > 0
+        ? Object.fromEntries(
+            run.results.map((r) => [r.id, typeof r.transcribeAttempts === "number" ? r.transcribeAttempts : 1]),
+          )
+        : null
+    const sttSummary = sttResults.length
+      ? summarizeStt(sttResults, { confusions, transcribeAttempts: transcribeAttemptsMap })
+      : null
 
     run.summary = summarize(
       run.results.map((r) => ({
@@ -710,6 +724,9 @@ async function main() {
           topConfusions: run.summary.stt.topConfusions,
           negationDrops: run.summary.stt.negationDrops,
           negationAdds: run.summary.stt.negationAdds,
+          transcribeRetryRate: run.summary.stt.transcribeRetryRate ?? null,
+          transcribeFirstTryRate: run.summary.stt.transcribeFirstTryRate ?? null,
+          transcribeRetries: run.summary.stt.transcribeRetries ?? null,
           evidence: run.summary.stt.evidence,
         } : null,
       },

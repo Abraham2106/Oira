@@ -247,4 +247,41 @@ Hasta que el usuario apruebe una fase siguiente, **solo se implementa la medici�
 
 ---
 
+## Rediseño — Fase 2 (Ampliación de métricas): fidelity + unsupported facts + reintentos ✅ implementada 2026-09-13
+
+Aprobada (plan `rustling-enchanting-cloud.md`). Cierra los gaps §4.4 del rediseño (items 4/6/9): `sourceQuotes` y `mustNotInclude` se puntúan por primera vez, `unsupported clinical fact rate` tiene su fórmula §15.1, y la tasa de reintentos STT se persiste.
+
+### Cambios (aditivos, backward compatible con runs Fase 5)
+
+- **`eval/scorer/extraction-fidelity.mjs`** (nuevo, puro): `scoreQuoteCoverage` (match literal normalizado de `sourceQuotes` ⊆ texto de la sección), `scoreMustNotInclude` (hits por sección), `scoreSourceSupport` (segmento citado existe **y** su texto respalda la sección). Reusa `containsNormalized`/`ratio`/`SECTION_IDS`.
+- **`index.mjs` `evaluateCase`**: suma `quoteCoverage`, `mustNotIncludeHits`, `sourceSupport`, `unsupportedFacts` (kinds: `must_not_contain` | `mustNotInclude` | `stated_without_source` | `source_not_supported`) y `unsupportedFactCount`. `summarize` agrega `extractionFidelity.{quoteRecall,quoteHits,quoteTotal,sourceVerificationRate}`, `mustNotInclude.{casesWithHits,hits,rate}`, `unsupportedFact.{casesWithFacts,facts,rate,kinds}`. La componente §15.1-4 (revisión manual) queda documentada como `no_probado`.
+- **`stt-metrics.mjs` `summarizeStt`**: opción `transcribeAttempts` (objeto keyed by id o array) → `transcribeRetryRate`, `transcribeRetryCases`, `transcribeRetries`, `transcribeFirstTryRate`, `transcribeAttempts`. Sin la opción, campos ausentes.
+- **`runner.mjs`**: persiste `row.transcribeAttempts` (success = fallos+1) en `run.json`; lo pasa a `summarizeStt` en main y en `--replay`.
+- **`report.mjs`**: fila `Raw JSON valid rate (primer intento)`, nuevas filas `Source quote fidelity (recall)`, `mustNotInclude hits`, `Unsupported clinical fact rate` (⛔ cuando >0), secciones `### Fidelidad de extracción (sourceQuotes)` y `### Unsupported clinical facts` (solo si hay facts), filas STT `Transcribe retry rate` / `Transcribe 1er intento`.
+- **Tests**: 68 → **82/82** (fidelity 6, unsupportedFacts 1, summarize agregado 1, summarizeStt retry 2, render Fase 2 2).
+
+### Resultados del replay retroactivo (sin modelos) — **medido**
+
+`--replay` sobre runs viejos re-deriva todo desde gold+note+transcript+sourceSegmentIds guardados en `run.json`.
+
+**Run 13:00 (19 casos):**
+
+| Métrica (Fase 2, nueva) | Valor |
+| --- | --- |
+| Source quote fidelity (recall) | **22.4% (15/67)** — el modelo parafrasea; el match literal las pierde |
+| mustNotInclude hits | 0/19 |
+| Unsupported clinical fact rate | **⛔ 78.9% (15/19)** |
+| Transcribe retry rate (run viejo) | 0.0% (0/19) — los attempts no se persistían antes de esta fase |
+
+**Run 05-11 (13 casos):** quote fidelity 37.5% (15/40), unsupported 69.2% (9/13), retry 0 (run viejo).
+
+⚠️ **Honestidad del dato nuevo**: `unsupportedFactRate` >0 viene casi todo de `source_not_supported` — una comprobación **literal normalizada** de respaldo (más estricta que el componente 1 del §15.1, que solo exige que el id exista). El parafraseo lo infla; es una cota superior del problema real, no un fallo de verificación semántica (esa sigue `no_probado`, NOTE_VERIFIER). La componente 4 (revisión manual) `no_probado`. Runs viejos sin `transcribeAttempts` reportan retry 0 honestamente (no se inventa).
+
+### Verificación
+1. `pnpm eval:self-check` → 82/82.
+2. `--replay` 13:00 y 05-11 → renderizan las secciones nuevas sin re-inferencia.
+3. (Opcional, GPU) `pnpm eval` → run nuevo con `transcribeAttempts` por caso y `transcribeRetryRate` real.
+
+---
+
 ## Fase 4+ (diseñada, no implementada aún — no implementar sin aprobación)
