@@ -154,10 +154,79 @@ Fix aplicado en `eval/runner.mjs`: retry con backoff exponencial (2s, 4s, 8s + j
 
 Previo (run 04-31, sin fix): 10/13 casos fallaban con `MODEL_LOAD_PENDING` / RPC timeout; solo 3 transcritos.
 
-## Fase 4+ (diseñada, no implementada aún — no implementar sin aprobación)
+## Fase 5 — Corpus 19 WAV + WER/CER por categoría + confusiones léxicas ✅ implementada 2026-09-13
 
-| Fase | Alcance | Nota |
+Aprobada por el usuario (AskUserQuestion): corpus = "6 casos nuevos (~19 total)", análisis = "WER/CER por categoría + confusiones".
+
+### Task 5.1 — 6 nuevos fixtures + audio ✅ (19 WAV)
+
+| id | categoría | justificación |
 | --- | --- | --- |
-| Fase 4 | Crecimiento de corpus: generar WAV para los 13 casos; revisar WER por categoría. | ✅ 13 WAV generados + run E2E completo medido (2026-09-13). WER por categoría: análisis en §"Run 05-11". |
+| `14-noisy-text-pharma` | `noisy-text` | refuerza n=1→3; fármacos con muletillas |
+| `15-noisy-text-elderly` | `noisy-text` | paciente mayor, frases repetidas |
+| `16-no-diagnosis-vague` | `no-diagnosis` | refuerza; médico evade diagnóstico |
+| `17-dosage-complex` | `dosage` | dosis fraccionada 1-0-1 |
+| `18-medication-list` | `medication-list` | **categoría nueva**; 4+ fármacos |
+| `19-mixed-languages` | `mixed-languages` | **categoría nueva**; Spanglish/latino |
 
-Hasta que el usuario apruebe una fase, **solo se implementa la medición de fases aprobadas** (hoy: 1, 2 y 4 completas).
+- `eval/fixtures/cases.json`: **19 entradas** (frozen). `eval/fixtures.test.mjs`: 13→19 asserts.
+- Audio: `python eval/audio/_generate.py <6 ids>` → verified RIFF header 16000/1ch/16-bit (miniaudio decode reporta mal; el header binario es la fuente de verdad).
+- Todos los WAV verificados: duración 19.94s–29.42s, sample-rate correcto.
+
+### Task 5.2 — Alineación token-a-token + `extractConfusions` ✅
+
+- `scorer/index.mjs`: `levenshteinTable(a,b)` (privado, compartido por `editDistance` + `alignTokens`); `alignTokens` retorna ops `[match|sub|ins|del]` con backtracking DP-consistente y tie-break a favor de `sub` (un swap = una confusión, no dos); `extractConfusions(ref, hyp)` filtra solo `sub` y agrupa por par.
+- **Filtro de puntuación de borde** (`BOUNDARY_PUNCT`): `stripBoundaryPunct()` elimina `¿¡?.,;:!…'"“”()` al inicio/final de cada token antes de comparar. Silencia artefactos de Whisper ("dias…→dias,", "¿como→como") sin alterar WER/CER (los cálculos usan `tokenize` sin modificar).
+
+### Task 5.3 — `summarizeStt` con `werPerCategory` + `topConfusions` ✅
+
+- `scorer/stt-metrics.mjs`: `summarizeStt(results, { confusions = [] } = {})`. Cada entrada puede llevar `category?`.
+- Campos nuevos (solo con datos; `{}`/`[]` si faltan → backward compatible):
+  - `werPerCategory: { [category]: { cases, meanWer, meanCer, werPerCase } }`
+  - `topConfusions: [{ ref, hyp, count }]` (top-10).
+
+### Task 5.4 — Runner + report con las dos secciones nuevas ✅
+
+- `eval/runner.mjs`: ambos call sites a `summarizeStt` enriquecen con `category` y `confusions` (del par `{reference, hypothesis}` guardado en `run.results[i].stt`). JSON de consola incluye `werPerCategory`/`topConfusions`.
+- `eval/report.mjs` (`sttBlock`): secciones `### WER/CER por categoría` (tabla ordenada por WER desc) y `### Top confusiones léxicas (Whisper vs gold)` (tabla `Palabra gold | Whisper transcribió | Veces`), ambas omitidas cuando el campo falta → retrocompatible.
+
+### Task 5.5 — Tests ✅ 68/68
+
+`scorer.test.mjs`: Capa C `mkRun` con categorías distintas (`simple`/`negation`) y `02-negation` hypothesis = `"Dolor de rodilla derecha"` (confusión real). Describe blocks nuevos: `alignTokens` (5), `extractConfusions` (2), `summarizeStt` categoría+confusiones (2), render Fase 5 (presente + backward-compat borrado) → **68 tests pasan**.
+
+### Resultado del replay del run 05-11 (13 casos, sin modelos) con la Fase 5
+
+**Medido.** `--replay reports/2026-09-13T05-11-23.432Z-e2e-qvac/run.json` re-renderizó el REPORT.md con las nuevas secciones derivadas determinísticamente de los datos guardados.
+
+**WER/CER por categoría** (13 filas, noisy-text encabeza):
+
+| Categoría | Casos | WER | CER |
+| --- | ---: | ---: | ---: |
+| noisy-text | 1 | 10.8% | 2.5% |
+| longer | 1 | 7.6% | 0.6% |
+| no-diagnosis | 1 | 7.4% | 1.6% |
+| correction | 1 | 4.5% | 1.0% |
+| missing-plan | 1 | 4.0% | 0.9% |
+| dosage | 1 | 3.1% | 5.6% |
+| contradiction | 1 | 3.1% | 0.8% |
+| simple / negation / medications / ambiguous-timeline / multiple-symptoms / injection | 1 cada una | 0.0% | 0.0% |
+
+**Top confusiones léxicas — después del filtro de puntuación**:
+
+| Palabra gold | Whisper transcribió | Veces |
+| --- | --- | ---: |
+| mg | miligramos | 1 |
+| enalapril | april | 1 |
+| disnea | disneya | 1 |
+
+⚠️ **Observación honesta (medida, no optimizada aún)**: el top-10 original sin el filtro estaba dominado por ruido de puntuación (`dias…→dias,`, `hay→¿hay`, `local.→local?`, …). El filtro de `stripBoundaryPunct` los suprime; quedan **3 pares léxicos reales** consistentes con el WER global del 3.1%. Un refino futuro (p. ej. normalizar mayúsculas/minúsculas dentro del par, o agrupar raíces flexivas) queda fuera del alcance de esta fase — se haría solo con autorización (Regla 16).
+
+### Run 19/19 — pendiente en GPU del usuario
+
+`pnpm eval` en la máquina del usuario (GPU Whisper QVAC + Qwen) → run 19/19 con `Casos | 19/19`, tabla por categoría con n≥1, top-10 confusiones, latencia dual, delta gold-fed→STT-fed con los 6 casos nuevos. Luego `--replay` re-renderiza idéntico.
+
+Hasta que el usuario apruebe una fase siguiente, **solo se implementa la medición de fases aprobadas** (hoy: 1, 2, 4 y 5 completas).
+
+---
+
+## Fase 4+ (diseñada, no implementada aún — no implementar sin aprobación)

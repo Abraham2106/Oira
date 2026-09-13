@@ -3,8 +3,10 @@ import { describe, it } from "node:test"
 import {
   PRESENCE_LABELS,
   SECTION_IDS,
+  alignTokens,
   charErrorRate,
   evaluateCase,
+  extractConfusions,
   latencyStats,
   normalizeText,
   presenceMetrics,
@@ -510,7 +512,7 @@ describe("Capa C report artifact (--e2e)", () => {
       })
       return {
         id,
-        category: "simple",
+        category: id === "01-simple" ? "simple" : "negation",
         transcript: hyp,
         gold,
         note: e2eNote(id),
@@ -527,7 +529,10 @@ describe("Capa C report artifact (--e2e)", () => {
         baselineLatencyMs: 190,
         stt: {
           reference: "Dolor de rodilla izquierda",
-          hypothesis: "Dolor de rodilla izquierda",
+          hypothesis:
+            id === "02-negation"
+              ? "Dolor de rodilla derecha"
+              : "Dolor de rodilla izquierda",
         },
       }
     })
@@ -543,11 +548,18 @@ describe("Capa C report artifact (--e2e)", () => {
     summary.stt = summarizeStt(
       rows.map((r) => ({
         id: r.id,
+        category: r.category,
         metrics: computeSttMetrics({
           reference: r.stt.reference,
           hypothesis: r.stt.hypothesis,
         }),
       })),
+      {
+        confusions: rows.map((r) => ({
+          reference: r.stt.reference,
+          hypothesis: r.stt.hypothesis,
+        })),
+      },
     )
     summary.baselinePresence = presenceMetrics(
       rows.flatMap((r) => r.baselinePresencePairs),
@@ -627,5 +639,130 @@ describe("Capa C report artifact (--e2e)", () => {
     assert.equal(metrics.presence.accuracy, 1)
     assert.equal(metrics.layer, "C-e2e")
     assert.ok(metrics.stt)
+  })
+
+  it("renders WER/CER por categoría and top confusiones (Fase 5)", () => {
+    const md = renderReport(mkRun())
+    assert.match(md, /### WER\/CER por categoría/)
+    assert.match(md, /\| simple \| 1 \| 0\.0% \| 0\.0% \|/)
+    assert.match(md, /\| negation \| 1 \| 25\.0% \| \d+\.\d+% \|/) // 1 sub en 4 tokens
+    assert.match(md, /### Top confusiones léxicas \(Whisper vs gold\)/)
+    assert.match(md, /\| izquierda \| derecha \| 1 \|/)
+    assert.match(md, /Solo sustituciones token-a-token/)
+  })
+
+  it("omits the two new sections when the run predates Fase 5", () => {
+    const run = mkRun()
+    delete run.summary.stt.werPerCategory
+    delete run.summary.stt.topConfusions
+    const md = renderReport(run)
+    assert.doesNotMatch(md, /### WER\/CER por categoría/)
+    assert.doesNotMatch(md, /### Top confusiones léxicas/)
+  })
+})
+
+describe("alignTokens (Fase 5)", () => {
+  it("aligns identical token lists as all matches", () => {
+    const ops = alignTokens(["hola", "mundo"], ["hola", "mundo"])
+    assert.deepEqual(ops, [
+      { type: "match", ref: "hola", hyp: "hola" },
+      { type: "match", ref: "mundo", hyp: "mundo" },
+    ])
+  })
+
+  it("reads a one-word swap as one substitution", () => {
+    const ops = alignTokens(["cintura", "espalda"], ["centura", "espalda"])
+    assert.deepEqual(ops, [
+      { type: "sub", ref: "cintura", hyp: "centura" },
+      { type: "match", ref: "espalda", hyp: "espalda" },
+    ])
+  })
+
+  it("labels a word only in the hypothesis as an insertion", () => {
+    const ops = alignTokens(["uno", "tres"], ["uno", "dos", "tres"])
+    assert.deepEqual(ops, [
+      { type: "match", ref: "uno", hyp: "uno" },
+      { type: "ins", hyp: "dos" },
+      { type: "match", ref: "tres", hyp: "tres" },
+    ])
+  })
+
+  it("labels a word only in the reference as a deletion", () => {
+    const ops = alignTokens(["uno", "dos", "tres"], ["uno", "tres"])
+    assert.deepEqual(ops, [
+      { type: "match", ref: "uno", hyp: "uno" },
+      { type: "del", ref: "dos" },
+      { type: "match", ref: "tres", hyp: "tres" },
+    ])
+  })
+
+  it("always counts exactly editDistance ops", () => {
+    const a = ["a", "b", "c"]
+    const b = ["x", "y"]
+    const ops = alignTokens(a, b)
+    assert.equal(ops.filter((o) => o.type !== "match").length, 3)
+  })
+})
+
+describe("extractConfusions (Fase 5)", () => {
+  it("returns gold→hyp substitution pairs, ignoring matches", () => {
+    const confusions = extractConfusions("cintura espalda", "centura espalda")
+    assert.deepEqual(confusions, [{ ref: "cintura", hyp: "centura", count: 1 }])
+  })
+
+  it("repeated pairs across one alignment are aggregated and sorted desc", () => {
+    const confusions = extractConfusions("dolor dolor tos", "dar dolor tus")
+    const byRef = Object.fromEntries(confusions.map((c) => [c.ref, c]))
+    assert.equal(byRef.dolor.count, 1)
+    assert.ok(confusions[0].type === undefined) // flat pair objects, no op type
+    assert.equal(confusions.length, 2)
+  })
+})
+
+describe("summarizeStt por categoría y confusiones (Fase 5)", () => {
+  it("groups WER/CER by category when entries carry category", () => {
+    const s = summarizeStt(
+      [
+        {
+          id: "01",
+          category: "noisy-text",
+          metrics: computeSttMetrics({ referenceText: "a b c", hypothesisText: "a b c" }),
+        },
+        {
+          id: "02",
+          category: "noisy-text",
+          metrics: computeSttMetrics({ referenceText: "a b c d", hypothesisText: "a b c" }),
+        },
+        {
+          id: "03",
+          category: "simple",
+          metrics: computeSttMetrics({ referenceText: "a b", hypothesisText: "a b" }),
+        },
+      ],
+      {
+        confusions: [
+          { reference: "cintura espalda", hypothesis: "centura espalda" },
+          { reference: "cintura otra vez", hypothesis: "centura otra vez" },
+        ],
+      },
+    )
+    assert.equal(s.status, "medido")
+    assert.equal(Object.keys(s.werPerCategory).length, 2)
+    assert.equal(s.werPerCategory["noisy-text"].cases, 2)
+    assert.ok(s.werPerCategory["noisy-text"].meanWer > 0)
+    assert.equal(s.werPerCategory["simple"].cases, 1)
+    assert.equal(s.werPerCategory["simple"].meanWer, 0)
+    assert.deepEqual(s.topConfusions.slice(0, 1), [
+      { ref: "cintura", hyp: "centura", count: 2 },
+    ])
+  })
+
+  it("keeps the previous shape when no category/confusions are provided", () => {
+    const s = summarizeStt([
+      { id: "01", metrics: computeSttMetrics({ referenceText: "a b", hypothesisText: "a b" }) },
+    ])
+    assert.equal(s.status, "medido")
+    assert.deepEqual(s.werPerCategory, {})
+    assert.deepEqual(s.topConfusions, [])
   })
 })

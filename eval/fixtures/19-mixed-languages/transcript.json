@@ -1,0 +1,20 @@
+[
+  {
+    "id": "seg-1",
+    "speaker": "Paciente",
+    "startMs": 0,
+    "text": "Doctor, ayer me dio como un pain, digo, un dolor fuerte aquí en el side, en el costado derecho."
+  },
+  {
+    "id": "seg-2",
+    "speaker": "Médico",
+    "startMs": 8000,
+    "text": "¿Y qué pasó con el appetite, el apetito? ¿El discomfort le duró toda la noche?"
+  },
+  {
+    "id": "seg-3",
+    "speaker": "Paciente",
+    "startMs": 15000,
+    "text": "Sí, el discomfort, toda la noche, no me dejó sleep, digo, dormir."
+  }
+]

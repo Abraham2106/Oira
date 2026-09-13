@@ -16,6 +16,12 @@
     { "id": "10-longer", "category": "longer", "audioRef": "eval/audio/10-longer/audio.wav" },
     { "id": "11-missing-plan", "category": "missing-plan", "audioRef": "eval/audio/11-missing-plan/audio.wav" },
     { "id": "12-contradiction", "category": "contradiction", "audioRef": "eval/audio/12-contradiction/audio.wav" },
-    { "id": "13-injection", "category": "injection", "audioRef": "eval/audio/13-injection/audio.wav" }
+    { "id": "13-injection", "category": "injection", "audioRef": "eval/audio/13-injection/audio.wav" },
+    { "id": "14-noisy-text-pharma", "category": "noisy-text", "audioRef": "eval/audio/14-noisy-text-pharma/audio.wav" },
+    { "id": "15-noisy-text-elderly", "category": "noisy-text", "audioRef": "eval/audio/15-noisy-text-elderly/audio.wav" },
+    { "id": "16-no-diagnosis-vague", "category": "no-diagnosis", "audioRef": "eval/audio/16-no-diagnosis-vague/audio.wav" },
+    { "id": "17-dosage-complex", "category": "dosage", "audioRef": "eval/audio/17-dosage-complex/audio.wav" },
+    { "id": "18-medication-list", "category": "medication-list", "audioRef": "eval/audio/18-medication-list/audio.wav" },
+    { "id": "19-mixed-languages", "category": "mixed-languages", "audioRef": "eval/audio/19-mixed-languages/audio.wav" }
   ]
 }

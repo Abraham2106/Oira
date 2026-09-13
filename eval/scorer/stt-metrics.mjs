@@ -10,6 +10,7 @@
 import {
   charErrorRate,
   editDistance,
+  extractConfusions,
   normalizeText,
   ratio,
   tokenize,
@@ -94,11 +95,15 @@ export function computeSttMetrics(input) {
 }
 
 /**
- * Summarize STT metrics across cases.
+ * Summarize STT metrics across cases. Optional per-result `category` groups
+ * WER/CER by category (`werPerCategory`); `confusions` (reference/hypothesis
+ * text pairs) yields global `topConfusions`. Both are additive — runs without
+ * them keep the previous shape (fields absent, not null).
  *
- * @param {Array<{ id: string, metrics?: ReturnType<typeof computeSttMetrics>, error?: string | null }>} results
+ * @param {Array<{ id: string, category?: string, metrics?: ReturnType<typeof computeSttMetrics>, error?: string | null }>} results
+ * @param {{ confusions?: Array<{ reference: string, hypothesis: string }> }} opts
  */
-export function summarizeStt(results) {
+export function summarizeStt(results, { confusions = [] } = {}) {
   const measured = results.filter((r) => r.metrics && r.metrics.status === "medido")
   const fail = results.filter((r) => !r.metrics || r.metrics.emptyTranscript)
 
@@ -128,6 +133,44 @@ export function summarizeStt(results) {
     }
   }
 
+  // Group measured cases by category (those without one are omitted from the
+  // category table; the global aggregates still cover them).
+  const byCategory = new Map()
+  for (const r of measured) {
+    if (!r.category) continue
+    if (!byCategory.has(r.category)) byCategory.set(r.category, [])
+    byCategory.get(r.category).push(r)
+  }
+  const werPerCategory = Object.fromEntries(
+    [...byCategory.keys()].map((category) => {
+      const group = byCategory.get(category)
+      const wers = group.map((r) => r.metrics.wer).filter((v) => Number.isFinite(v))
+      const cers = group.map((r) => r.metrics.cer).filter((v) => Number.isFinite(v))
+      return [
+        category,
+        {
+          cases: group.length,
+          meanWer: avg(wers),
+          meanCer: avg(cers),
+          werPerCase: Object.fromEntries(group.map((r) => [r.id, r.metrics.wer])),
+        },
+      ]
+    }),
+  )
+
+  const topConfusions = confusions
+    .filter((c) => typeof c.reference === "string" && typeof c.hypothesis === "string")
+    .flatMap((c) => extractConfusions(c.reference, c.hypothesis))
+    .reduce((acc, c) => {
+      const key = `${c.ref}\t${c.hyp}`
+      const existing = acc.find((entry) => `${entry.ref}\t${entry.hyp}` === key)
+      if (existing) existing.count += c.count
+      else acc.push({ ref: c.ref, hyp: c.hyp, count: c.count })
+      return acc
+    }, [])
+    .sort((x, y) => y.count - x.count)
+    .slice(0, 10)
+
   return {
     status: "medido",
     cases: measured.length,
@@ -138,6 +181,8 @@ export function summarizeStt(results) {
     meanWer: avg(werSamples),
     meanCer: avg(cerSamples),
     werPerCase,
+    werPerCategory,
+    topConfusions,
     negationDrops: dropped,
     negationAdds: added,
     evidence: "medido",

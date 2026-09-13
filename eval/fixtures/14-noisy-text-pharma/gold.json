@@ -1,0 +1,57 @@
+{
+  "id": "14-noisy-text-pharma",
+  "category": "noisy-text",
+  "notes_for_evaluator": "Paciente lista sus fármacos con dudas y repetición ('el enalapril, el enalapril de diez'). El médico ajusta solo la metformina a la mitad y deja el enalapril igual. El plan correcto NO suspende enalapril ni añade fármacos.",
+  "must_not_contain": ["suspenda", "amiodarona", "amlodipina"],
+  "sections": {
+    "visit_context": {
+      "presence": "STATED",
+      "text": "Consulta por ajuste de medicamentos (enalapril y metformina).",
+      "mustInclude": ["medicinas", "enalapril"],
+      "mustNotInclude": [],
+      "sourceQuotes": ["la metformina, la de ochocientos"]
+    },
+    "clinical_narrative": {
+      "presence": "STATED",
+      "text": "Toma enalapril de 10 mg para la presión y metformina de 800 mg.",
+      "mustInclude": ["enalapril", "metformina"],
+      "mustNotInclude": [],
+      "sourceQuotes": ["el enalapril de diez", "la metformina, la de ochocientos"]
+    },
+    "relevant_history": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    },
+    "reported_findings": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    },
+    "clinician_documented_assessment": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": ["diagnóstico"],
+      "sourceQuotes": []
+    },
+    "clinician_documented_plan": {
+      "presence": "STATED",
+      "text": "Reducir metformina a la mitad por la mañana; mantener enalapril igual.",
+      "mustInclude": ["metformina", "enalapril"],
+      "mustNotInclude": [],
+      "sourceQuotes": ["Baje la metformina a la mitad por la mañana", "el enalapril lo dejamos igual"]
+    },
+    "follow_up": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    }
+  }
+}

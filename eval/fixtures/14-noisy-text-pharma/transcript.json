@@ -1,0 +1,20 @@
+[
+  {
+    "id": "seg-1",
+    "speaker": "Médico",
+    "startMs": 0,
+    "text": "Vale, pues dígame… qué medicinas, eh, toma usted ahorita."
+  },
+  {
+    "id": "seg-2",
+    "speaker": "Paciente",
+    "startMs": 6000,
+    "text": "Pues… mire, la que tomo para la presión es el enalapril, el enalapril de diez, y luego también… eh, la metformina, la de ochocientos, creo."
+  },
+  {
+    "id": "seg-3",
+    "speaker": "Médico",
+    "startMs": 16000,
+    "text": "Baje la metformina a la mitad por la mañana, y el enalapril lo dejamos igual."
+  }
+]

@@ -135,6 +135,51 @@ ${evidence("No probado", "La corrida no produjo resultados; ningún número de e
     ? `${s.stt.cases}/${m.datasetCases}`
     : `${s.stt.cases}`
 
+  const categoryRows =
+    s.stt.werPerCategory && Object.keys(s.stt.werPerCategory).length
+      ? Object.entries(s.stt.werPerCategory)
+          .map(([category, c]) => ({
+            category,
+            cases: c.cases,
+            wer: Number.isFinite(c.meanWer) ? `${fmt(c.meanWer * 100, 1)}%` : "N/A",
+            cer: Number.isFinite(c.meanCer) ? `${fmt(c.meanCer * 100, 1)}%` : "N/A",
+          }))
+          .sort((a, b) => {
+            const w = (v) => (v === "N/A" ? -Infinity : parseFloat(v))
+            return w(b.wer) - w(a.wer)
+          })
+          .map(
+            (c) =>
+              `| ${c.category} | ${c.cases} | ${c.wer} | ${c.cer} |`,
+          )
+          .join("\n")
+      : ""
+
+  const categoryBlock = categoryRows
+    ? `\n### WER/CER por categoría
+
+| Categoría | Casos | WER | CER |
+| --- | ---: | ---: | ---: |
+${categoryRows}
+${evidence("Medido", "Agregado del WER/CER por caso (run.results[].stt), agrupado por la categoría del fixture.")}`
+    : ""
+
+  const confusionRows =
+    s.stt.topConfusions && s.stt.topConfusions.length
+      ? s.stt.topConfusions
+          .map((c) => `| ${c.ref} | ${c.hyp} | ${c.count} |`)
+          .join("\n")
+      : ""
+
+  const confusionBlock = confusionRows
+    ? `\n### Top confusiones léxicas (Whisper vs gold)
+
+| Palabra gold | Whisper transcribió | Veces |
+| --- | --- | ---: |
+${confusionRows}
+${evidence("Medido", "Solo sustituciones token-a-token (ins/del excluidas).")}`
+    : ""
+
   const sttBlock =
     s.stt.status === "medido"
       ? `\n### Speech-to-text (STT)
@@ -145,7 +190,9 @@ ${sttRow("WER", `${fmt(s.stt.meanWer * 100, 1)}%`)}
 ${sttRow("CER", `${fmt(s.stt.meanCer * 100, 1)}%`)}
 ${sttRow("Transcribe success", pct(s.stt.cases - s.stt.emptyTranscriptCount, s.stt.cases))}
 ${sttRow("Negación drop / add (heurística)", `${s.stt.negationDrops} / ${s.stt.negationAdds}`)}
-\n${evidence("Medido", `WER/CER sobre ${sttDenom} casos (WAV). Negación = recuento de tokens 'no', no es juicio clínico.`)}`
+\n${evidence("Medido", `WER/CER sobre ${sttDenom} casos (WAV). Negación = recuento de tokens 'no', no es juicio clínico.`)}
+${categoryBlock}
+${confusionBlock}`
       : skipStt
         ? `\n${evidence("No probado", "STT no ejecutado (--skip-stt)")}`
         : `\n${evidence("No probado", "Sin transcripción STT medida en esta corrida.")}`

@@ -1,0 +1,20 @@
+[
+  {
+    "id": "seg-1",
+    "speaker": "Médico",
+    "startMs": 0,
+    "text": "Sobre el medicamento para la presión, vamos a ajustar. Lo toma uno cero uno, una pastilla en la mañana y una en la noche."
+  },
+  {
+    "id": "seg-2",
+    "speaker": "Paciente",
+    "startMs": 9000,
+    "text": "Pero el otro doctor me dijo que tomara media en la tarde."
+  },
+  {
+    "id": "seg-3",
+    "speaker": "Médico",
+    "startMs": 15000,
+    "text": "La media de la tarde la quitamos; quédese con una y una, y revisamos en un mes."
+  }
+]

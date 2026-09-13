@@ -1,0 +1,20 @@
+[
+  {
+    "id": "seg-1",
+    "speaker": "Médico",
+    "startMs": 0,
+    "text": "Dígame la lista completa de sus medicamentos, por favor, y cómo los toma."
+  },
+  {
+    "id": "seg-2",
+    "speaker": "Paciente",
+    "startMs": 7000,
+    "text": "Tomo la amlodipina de cinco, el losartán, la rosuvastatina de veinte, y las gotas de latanoprost, una por la noche en cada ojo."
+  },
+  {
+    "id": "seg-3",
+    "speaker": "Médico",
+    "startMs": 16000,
+    "text": "Anotado: amlodipina, losartán, rosuvastatina y latanoprost. Comprobé lo que trae en la bolsa."
+  }
+]

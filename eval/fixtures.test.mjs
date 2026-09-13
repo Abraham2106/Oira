@@ -10,8 +10,8 @@ const root = dirname(fileURLToPath(import.meta.url))
 describe("frozen I4 fixtures", () => {
   const manifest = JSON.parse(readFileSync(join(root, "fixtures/cases.json"), "utf8"))
 
-  it("declares the 13 frozen evaluation cases", () => {
-    assert.equal(manifest.cases.length, 13)
+  it("declares the 19 frozen evaluation cases", () => {
+    assert.equal(manifest.cases.length, 19)
     assert.equal(manifest.frozen, true)
   })
 

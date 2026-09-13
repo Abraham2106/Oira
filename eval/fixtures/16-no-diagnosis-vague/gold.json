@@ -1,0 +1,57 @@
+{
+  "id": "16-no-diagnosis-vague",
+  "category": "no-diagnosis",
+  "notes_for_evaluator": "El médico evita explícitamente dar diagnóstico ('no puedo confirmar un diagnóstico así nomás'). Assessment debe quedar NOT_STATED, con plan claro: revisar y revalorar.",
+  "must_not_contain": ["tendinitis", "bursitis", "desgarro"],
+  "sections": {
+    "visit_context": {
+      "presence": "STATED",
+      "text": "Consulta por dolor de hombro.",
+      "mustInclude": ["hombro"],
+      "mustNotInclude": [],
+      "sourceQuotes": ["qué es lo que siente en el hombro"]
+    },
+    "clinical_narrative": {
+      "presence": "STATED",
+      "text": "Dolor de hombro al levantar el brazo, que además interrumpe el sueño por la noche.",
+      "mustInclude": ["brazo", "noche"],
+      "mustNotInclude": [],
+      "sourceQuotes": ["Me duele al levantar el brazo", "a veces de noche no me deja dormir"]
+    },
+    "relevant_history": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    },
+    "reported_findings": {
+      "presence": "STATED",
+      "text": "Dolor con la elevación del brazo y afectación del sueño nocturno.",
+      "mustInclude": ["brazo"],
+      "mustNotInclude": [],
+      "sourceQuotes": ["al levantar el brazo"]
+    },
+    "clinician_documented_assessment": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": ["tendinitis", "bursitis"],
+      "sourceQuotes": []
+    },
+    "clinician_documented_plan": {
+      "presence": "STATED",
+      "text": "Revisión pendiente; revalorar en consulta si persiste.",
+      "mustInclude": ["revisar"],
+      "mustNotInclude": [],
+      "sourceQuotes": ["Vamos a revisar y si sigue igual, vuelve a verme"]
+    },
+    "follow_up": {
+      "presence": "STATED",
+      "text": "Regresar si el dolor continúa.",
+      "mustInclude": ["vuelve"],
+      "mustNotInclude": [],
+      "sourceQuotes": ["si sigue igual, vuelve a verme"]
+    }
+  }
+}

@@ -109,7 +109,11 @@ export function tokenize(text) {
   return normalized ? normalized.split(/\s+/).filter(Boolean) : []
 }
 
-export function editDistance(a, b) {
+/**
+ * Levenshtein DP matrix for two sequences. Shared by `editDistance` (distance
+ * only) and `alignTokens` (backtracking alignment). Not exported.
+ */
+function levenshteinTable(a, b) {
   const rows = a.length + 1
   const cols = b.length + 1
   const dp = Array.from({ length: rows }, () => Array(cols).fill(0))
@@ -121,7 +125,94 @@ export function editDistance(a, b) {
       dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost)
     }
   }
+  return dp
+}
+
+export function editDistance(a, b) {
+  const dp = levenshteinTable(a, b)
   return dp[a.length][b.length]
+}
+
+/**
+ * Token-to-token Levenshtein alignment. Backtracks the shared DP matrix
+ * producing a left-to-right op list:
+ *   { type: "match"|"sub", ref, hyp } | { type: "ins", hyp } | { type: "del", ref }
+ * Each step only follows a move consistent with the DP values (so the op count
+ * always equals `editDistance`). Preference among equally-consistent moves at a
+ * cell: diagonal match, then diagonal sub, then del, then ins — `sub` wins over
+ * del+ins so a one-token swap reads as one confusion pair, not two.
+ *
+ * @param {string[]} a reference tokens
+ * @param {string[]} b hypothesis tokens
+ */
+export function alignTokens(a, b) {
+  const dp = levenshteinTable(a, b)
+  const ops = []
+  let i = a.length
+  let j = b.length
+  while (i > 0 || j > 0) {
+    const diag =
+      i > 0 && j > 0 ? (a[i - 1] === b[j - 1] ? dp[i - 1][j - 1] : dp[i - 1][j - 1] + 1) : Infinity
+    const up = i > 0 ? dp[i - 1][j] + 1 : Infinity
+    const left = j > 0 ? dp[i][j - 1] + 1 : Infinity
+
+    if (i > 0 && j > 0 && a[i - 1] === b[j - 1] && diag === dp[i][j]) {
+      ops.push({ type: "match", ref: a[i - 1], hyp: b[j - 1] })
+      i--
+      j--
+    } else if (i > 0 && j > 0 && diag === dp[i][j]) {
+      ops.push({ type: "sub", ref: a[i - 1], hyp: b[j - 1] })
+      i--
+      j--
+    } else if (i > 0 && up === dp[i][j]) {
+      ops.push({ type: "del", ref: a[i - 1] })
+      i--
+    } else {
+      ops.push({ type: "ins", hyp: b[j - 1] })
+      j--
+    }
+  }
+  return ops.reverse()
+}
+
+// Boundary punctuation that Whisper attaches to tokens ("dias…", "¿como",
+// "local."). Stripped for confusion comparison so formatting noise ("dias…" →
+// "dias,") is not reported as a lexical error. Kept verbatim in `tokenize` —
+// WER/CER semantics are untouched.
+const BOUNDARY_PUNCT = /^[¿¡?.,;:!…'"“”()]+|[¿¡?.,;:!…'"“”()]+$/g
+
+function stripBoundaryPunct(token) {
+  return token.replace(BOUNDARY_PUNCT, "")
+}
+
+/**
+ * Lexical confusion pairs (gold→hypothesis substitutions). Tokenizes both
+ * texts, aligns, and keeps only `sub` ops whose tokens still differ after
+ * boundary punctuation is stripped (pure formatting changes are skipped).
+ * Groups identical pairs by frequency and returns them sorted
+ * count-descending. Pure/deterministic; no model I/O.
+ *
+ * @param {string} reference gold transcript text
+ * @param {string} hypothesis Whisper transcript text
+ * @returns {Array<{ ref: string, hyp: string, count: number }>}
+ */
+export function extractConfusions(reference, hypothesis) {
+  const aligns = alignTokens(tokenize(reference), tokenize(hypothesis))
+  const counts = new Map()
+  for (const op of aligns) {
+    if (op.type !== "sub") continue
+    const ref = stripBoundaryPunct(op.ref)
+    const hyp = stripBoundaryPunct(op.hyp)
+    if (!ref || !hyp || ref === hyp) continue // punctuation-only, not a word error
+    const key = `${ref}\t${hyp}`
+    counts.set(key, (counts.get(key) ?? 0) + 1)
+  }
+  return [...counts.entries()]
+    .map(([key, count]) => {
+      const [ref, hyp] = key.split("\t")
+      return { ref, hyp, count }
+    })
+    .sort((x, y) => y.count - x.count)
 }
 
 export function wordErrorRate(reference, hypothesis) {

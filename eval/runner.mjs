@@ -301,16 +301,22 @@ async function replay(path) {
   }
   if (isSttRun) {
     const { computeSttMetrics, summarizeStt } = await import("./scorer/stt-metrics.mjs")
-    const sttResults = run.results
-      .filter((r) => r.stt && r.stt.reference && r.stt.hypothesis)
-      .map((r) => ({
-        id: r.id,
-        metrics: computeSttMetrics({
-          reference: r.stt.reference,
-          hypothesis: r.stt.hypothesis,
-        }),
-      }))
-    run.summary.stt = sttResults.length ? summarizeStt(sttResults) : run.summary.stt
+    const sttPairs = run.results.filter((r) => r.stt && r.stt.reference && r.stt.hypothesis)
+    const sttResults = sttPairs.map((r) => ({
+      id: r.id,
+      category: r.category,
+      metrics: computeSttMetrics({
+        reference: r.stt.reference,
+        hypothesis: r.stt.hypothesis,
+      }),
+    }))
+    const confusions = sttPairs.map((r) => ({
+      reference: r.stt.reference,
+      hypothesis: r.stt.hypothesis,
+    }))
+    run.summary.stt = sttResults.length
+      ? summarizeStt(sttResults, { confusions })
+      : run.summary.stt
   }
   run.metadata.rescoredAt = new Date().toISOString()
   run.metadata.rescoredWith = sha256File(join(ROOT, "eval", "scorer", "index.mjs"))
@@ -616,17 +622,20 @@ async function main() {
 
     const { computeSttMetrics, summarizeStt } = await import("./scorer/stt-metrics.mjs")
     const sttResults = []
+    const confusions = []
     for (const r of run.results) {
       if (!r.stt || !r.stt.reference || !r.stt.hypothesis) continue
       sttResults.push({
         id: r.id,
+        category: r.category,
         metrics: computeSttMetrics({
           reference: r.stt.reference,
           hypothesis: r.stt.hypothesis,
         }),
       })
+      confusions.push({ reference: r.stt.reference, hypothesis: r.stt.hypothesis })
     }
-    const sttSummary = sttResults.length ? summarizeStt(sttResults) : null
+    const sttSummary = sttResults.length ? summarizeStt(sttResults, { confusions }) : null
 
     run.summary = summarize(
       run.results.map((r) => ({
@@ -694,6 +703,8 @@ async function main() {
           meanWer: run.summary.stt.meanWer,
           meanCer: run.summary.stt.meanCer,
           werPerCase: run.summary.stt.werPerCase,
+          werPerCategory: run.summary.stt.werPerCategory,
+          topConfusions: run.summary.stt.topConfusions,
           negationDrops: run.summary.stt.negationDrops,
           negationAdds: run.summary.stt.negationAdds,
           evidence: run.summary.stt.evidence,
