@@ -503,7 +503,25 @@ async function main() {
       try {
         if (sttMode) {
           // --- STT real sobre WAV (B) o primero de la cadena (C) ---
-          const hyp = await adapter.transcribe(fixture.audioRef)
+          // Retry/backoff para manejar MODEL_LOAD_PENDING tras handoff Qwen→Whisper
+          let hyp = null
+          let transcribeAttempt = 0
+          const maxAttempts = 3
+          const baseDelay = 2000
+          while (true) {
+            try {
+              hyp = await adapter.transcribe(fixture.audioRef)
+              break
+            } catch (e) {
+              const msg = e?.message ?? String(e)
+              const isModelLoadPending = msg.includes("MODEL_LOAD_PENDING")
+              transcribeAttempt++
+              if (!isModelLoadPending || transcribeAttempt >= maxAttempts) throw e
+              const delay = baseDelay * Math.pow(2, transcribeAttempt - 1) + Math.random() * 500
+              console.log(`  [retry] ${fixture.id} transcribe MODEL_LOAD_PENDING (attempt ${transcribeAttempt}/${maxAttempts}), waiting ${Math.round(delay)}ms…`)
+              await new Promise(r => setTimeout(r, delay))
+            }
+          }
           transcribeMs = performance.now() - t0
           sttResult = {
             reference: transcriptText(fixture.transcript),

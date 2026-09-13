@@ -125,10 +125,39 @@ Aprobada por el usuario (2026-09-12) con las correcciones: default `--e2e`, sin 
 - `--replay` del run C re-renderiza idéntico (delta, baseline, latencia dual preservadas).
 - `pnpm eval:self-check` 51/51 verde.
 
+### Run 2026-09-13T05-11-23 (Fase 4: corpus 13 WAV completo) ✅ 13/13 cases, 0 errores
+
+**Medido.** Run E2E completo sobre los 13 WAV. Fix previo: retry/backoff en transcribe ante `MODEL_LOAD_PENDING` (handoff Qwen→Whisper).
+
+| Métrica | Valor (evidencia: **medido**) |
+| --- | --- |
+| WER | 3.1% (mean) |
+| CER | 1.0% (mean) |
+| Presence accuracy (STT-fed, 13/13 casos) | 89.0% (81/91) |
+| Presence accuracy (gold-fed baseline) | 94.5% |
+| Delta presence (STT-fed − gold-fed) | -5.5 pp |
+| Macro-F1 STT-fed | 0.810 |
+| Macro-F1 gold-fed | 0.640 |
+| Latencia E2E p50 | 51.94 s |
+| Latencia structure p50 | 28.79 s |
+| Transcribe p50 (por caso) | ~15 s |
+| mustInclude cobertura | 70.0% (35/50) |
+| Negación drop/add | 0 / 0 |
+| Transcribe success | 13/13 (100%) |
+| Errores | 0 |
+
+Per-case WER: 01 0%, 02 0%, 03 0%, 04 3.1%, 05 4.5%, 06 0%, 07 7.4%, 08 0%, 09 10.8%, 10 7.6%, 11 4.0%, 12 3.1%, 13 0%.
+
+La presencia por caso destaca dos casos sensibles a ruido de STT: **08-multiple-symptoms** cae 28.6pp (71.4% vs 100%) y **03/06/07/10** caen 14.3pp. WER por categoría: mezclado (07-no-diagnosis 7.4%, 09-noisy-text 10.8%), lo que sugiere el análisis WER-por-categoría que Fase 4 busca.
+
+Fix aplicado en `eval/runner.mjs`: retry con backoff exponencial (2s, 4s, 8s + jitter, máx 3 intentos) solo ante `MODEL_LOAD_PENDING` al transcribir — evita fallo masivo tras handoff Qwen→Whisper del QVAC adapter.
+
+Previo (run 04-31, sin fix): 10/13 casos fallaban con `MODEL_LOAD_PENDING` / RPC timeout; solo 3 transcritos.
+
 ## Fase 4+ (diseñada, no implementada aún — no implementar sin aprobación)
 
 | Fase | Alcance | Nota |
 | --- | --- | --- |
-| Fase 4 | Crecimiento de corpus: generar WAV para los 13 casos; revisar WER por categoría. | `audioRef` en todos. |
+| Fase 4 | Crecimiento de corpus: generar WAV para los 13 casos; revisar WER por categoría. | ✅ 13 WAV generados + run E2E completo medido (2026-09-13). WER por categoría: análisis en §"Run 05-11". |
 
-Hasta que el usuario apruebe una fase, **solo se implementa la medición de fases aprobadas** (hoy: 1 y 2).
+Hasta que el usuario apruebe una fase, **solo se implementa la medición de fases aprobadas** (hoy: 1, 2 y 4 completas).
