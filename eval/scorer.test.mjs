@@ -5,6 +5,7 @@ import {
   SECTION_IDS,
   charErrorRate,
   evaluateCase,
+  latencyStats,
   normalizeText,
   presenceMetrics,
   quantile,
@@ -189,6 +190,23 @@ describe("quantile", () => {
 
   it("interpolates p50 between the two central values when n is even", () => {
     assert.equal(quantile([1, 2, 3, 4], 0.5), 2.5)
+  })
+})
+
+describe("latencyStats", () => {
+  it("exports the same shape summarize uses, empty-safe", () => {
+    const s = latencyStats([])
+    assert.equal(s.samples, 0)
+    assert.equal(s.p50, null)
+    assert.equal(s.mean, null)
+  })
+
+  it("computes percentiles over the given finite samples", () => {
+    const s = latencyStats([10, 20, 30])
+    assert.equal(s.samples, 3)
+    assert.equal(s.p50, 20)
+    assert.equal(s.min, 10)
+    assert.equal(s.max, 30)
   })
 })
 
@@ -445,5 +463,169 @@ describe("Capa B report artifact (--with-stt)", () => {
     assert.equal(metrics.layer, "B-with-stt")
     assert.equal(errors.length, 0)
     assert.equal(cases.length, 1)
+  })
+})
+
+describe("Capa C report artifact (--e2e)", () => {
+  const gold = {
+    must_not_contain: ["faringitis"],
+    sections: Object.fromEntries(
+      SECTION_IDS.map((id) => [id, { presence: "NOT_STATED", mustInclude: [] }]),
+    ),
+  }
+  gold.sections.visit_context = { presence: "STATED", mustInclude: [] }
+
+  const hypSegments = (id) => [
+    { id: `seg-1-${id}`, text: "Dolor de rodilla izquierda", startMs: 0 },
+  ]
+  const e2eNote = (id) => {
+    const note = emptyNote()
+    note.sections.visit_context = {
+      text: "Dolor de rodilla izquierda.",
+      presence: "STATED",
+      sourceSegmentIds: [`seg-1-${id}`],
+      reviewed: false,
+    }
+    return note
+  }
+
+  const mkRun = () => {
+    const rows = ["01-simple", "02-negation"].map((id) => {
+      const hyp = hypSegments(id)
+      const evStt = evaluateCase({
+        gold,
+        transcript: hyp,
+        note: e2eNote(id),
+        error: null,
+        latencyMs: 250,
+        rawSdkText: '{"visit_context":"Dolor de rodilla izquierda"}',
+      })
+      const evGold = evaluateCase({
+        gold,
+        transcript: goldSegments(),
+        note: e2eNote(id),
+        error: null,
+        latencyMs: 190,
+        rawSdkText: '{"visit_context":"Dolor de rodilla izquierda"}',
+      })
+      return {
+        id,
+        category: "simple",
+        transcript: hyp,
+        gold,
+        note: e2eNote(id),
+        error: null,
+        latencyMs: evStt.latencyMs,
+        rawSdkText: evStt.rawSdkText,
+        rawCompletion: null,
+        evaluation: evStt,
+        stage: "e2e",
+        transcribeMs: 60,
+        structureMs: 190,
+        baselinePresence: evGold.presence,
+        baselinePresencePairs: evGold.presencePairs,
+        baselineLatencyMs: 190,
+        stt: {
+          reference: "Dolor de rodilla izquierda",
+          hypothesis: "Dolor de rodilla izquierda",
+        },
+      }
+    })
+    const summary = summarize(
+      rows.map((r) => ({
+        id: r.id,
+        evaluation: r.evaluation,
+        error: r.error,
+        latencyMs: r.latencyMs,
+      })),
+    )
+    summary.skippedNoAudio = 11 // 13 manifest - 2 audio en este sintético
+    summary.stt = summarizeStt(
+      rows.map((r) => ({
+        id: r.id,
+        metrics: computeSttMetrics({
+          reference: r.stt.reference,
+          hypothesis: r.stt.hypothesis,
+        }),
+      })),
+    )
+    summary.baselinePresence = presenceMetrics(
+      rows.flatMap((r) => r.baselinePresencePairs),
+    )
+    summary.structureLatency = latencyStats(rows.map((r) => r.structureMs))
+    return {
+      metadata: {
+        evaluatorVersion: 1,
+        stage: "e2e",
+        layer: "C-e2e",
+        runId: "test-C",
+        startedAt: "2026-09-13T00:00:00.000Z",
+        adapter: "qvac",
+        skipStt: false,
+        datasetCases: 13,
+        node: "v24",
+        electron: null,
+        sdk: "0.18.2",
+        hardware: { platform: "win32", arch: "x64", cpu: "test" },
+        models: { structuring: "QWEN3_4B_Q4_K_M", stt: "WHISPER_QVAC_LOCAL" },
+        gitCommit: null,
+        datasetHash: "abc",
+        sourceHashes: {},
+        evidence_rule: "medido | observado | inferido | no_probado",
+      },
+      summary,
+      results: rows,
+    }
+  }
+
+  const goldSegments = () => [{ id: "gold-1", text: "Dolor de rodilla izquierda", startMs: 0 }]
+
+  it("keeps presence measured (not no_probado) alongside STT", () => {
+    const run = mkRun()
+    assert.equal(run.summary.stt.status, "medido")
+    assert.ok(run.summary.presence.accuracy !== null)
+    const md = renderReport(run)
+    assert.match(md, /Presence accuracy \(I4, sobre hipótesis STT\) \| 100\.0% \(14\/14\)/)
+    assert.doesNotMatch(md, /Presence accuracy \(I4\) \| no_probado/)
+    assert.doesNotMatch(md, /Macro-F1 presencia \| no_probado/)
+  })
+
+  it("renders the STT denominator and both latency rows", () => {
+    const md = renderReport(mkRun())
+    assert.match(md, /WER\/CER sobre 2\/13 casos \(WAV\)/)
+    assert.match(md, /\| Latency structure p50 \(ms\) \| 190\.0 \|/)
+    assert.match(md, /\| Latency E2E p50 \(ms\) \| 250\.0 \|/)
+  })
+
+  it("renders the gold-fed → STT-fed delta table with 0.0pp", () => {
+    const md = renderReport(mkRun())
+    assert.match(md, /Delta presence gold-fed → STT-fed/)
+    assert.match(md, /\| 01-simple \| 100\.0% \(7\/7\) \| 100\.0% \(7\/7\) \| 0\.0pp \|/)
+    assert.match(md, /Agregado: macro-F1 STT-fed 1\.000 · gold-fed 1\.000/)
+  })
+
+  it("shows cases as X/13 and skipped-no-audio row", () => {
+    const md = renderReport(mkRun())
+    assert.match(md, /\| Casos \| 2\/13 \|/)
+    assert.match(md, /\| Sin WAV \(omitidos\) \| 11 \|/)
+    assert.match(md, /pnpm eval\s+# re-ejecutar Capa C --e2e \(default/)
+  })
+
+  it("renders a blocked run as no_probado without inventing numbers", () => {
+    const run = mkRun()
+    run.error = "BLOCKED — --e2e: los casos seleccionados no tienen WAV"
+    const md = renderReport(run)
+    assert.match(md, /\*\*Run bloqueado\*\*/)
+    assert.match(md, /\*\*No probado\.\*\*/)
+    assert.doesNotMatch(md, /Presence accuracy \(I4\) \| 100/)
+  })
+
+  it("builds artifacts without inventing baseline", () => {
+    const run = mkRun()
+    const { metrics } = buildArtifacts(run)
+    assert.equal(metrics.stt.status, "medido")
+    assert.equal(metrics.presence.accuracy, 1)
+    assert.equal(metrics.layer, "C-e2e")
+    assert.ok(metrics.stt)
   })
 })

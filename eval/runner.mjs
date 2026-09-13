@@ -13,8 +13,8 @@ import { cpus, platform, arch } from "node:os"
 import { dirname, join, resolve } from "node:path"
 import { performance } from "node:perf_hooks"
 import { fileURLToPath, pathToFileURL } from "node:url"
-import { evaluateCase, summarize } from "./scorer/index.mjs"
-import { summarizeStt } from "./scorer/stt-metrics.mjs"
+import { evaluateCase, latencyStats, presenceMetrics, summarize } from "./scorer/index.mjs"
+import { summarizeStt, transcriptText } from "./scorer/stt-metrics.mjs"
 import { buildArtifacts } from "./report.mjs"
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..")
@@ -24,9 +24,36 @@ const AUDIO = join(ROOT, "eval", "audio")
 const require = createRequire(join(DESKTOP, "package.json"))
 const SELF = fileURLToPath(import.meta.url)
 
+function helpText() {
+  return `Uso: pnpm eval [flags]
+
+Evaluación Oira por capas (default: --e2e). Etiquetas: medido | observado | inferido | no_probado.
+
+Stages (mutuamente excluyentes):
+  --e2e            (default) Capa C: audio → STT → estructuración sobre la hipótesis de
+                   Whisper → presencia I4 vs gold + delta gold-fed→STT-fed. Solo casos con WAV.
+  --skip-stt       Capa A: estructuración sobre transcripción gold. Todos los casos.
+  --with-stt       Capa B: solo STT (WER/CER), sin estructuración. Solo casos con WAV.
+
+Otros flags:
+  --replay <run.json>  Re-render + re-score determinístico (nunca re-inferencia).
+  --cases "01,05,02"   Subconjunto de casos del manifest.
+  --adapter qvac|heuristic  Adapter de modelos (default qvac; qvac requiere GPU/Whisper local).
+  --output-dir <dir>   Directorio de salida (default reports/).
+  --self-check         Tests sin modelos.
+  --help               Muestra esta ayuda.
+
+Ejemplos:
+  pnpm eval                      # Capa C (e2e, default)
+  pnpm eval -- --skip-stt        # Capa A
+  pnpm eval -- --with-stt        # Capa B
+  pnpm eval -- --replay reports/<run-id>/run.json
+`
+}
+
 function parseArgs(argv) {
   const args = {
-    skipStt: true,
+    stage: "e2e",
     selfCheck: false,
     replay: null,
     cases: null,
@@ -36,13 +63,24 @@ function parseArgs(argv) {
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]
     if (a === "--self-check") args.selfCheck = true
-    else if (a === "--skip-stt") args.skipStt = true
-    else if (a === "--with-stt") args.skipStt = false
+    else if (a === "--skip-stt") args.stage = "off"
+    else if (a === "--with-stt") args.stage = "sttOnly"
+    else if (a === "--e2e") args.stage = "e2e"
     else if (a === "--replay") args.replay = argv[++i]
     else if (a === "--cases") {
       args.cases = argv[++i].split(",").map((s) => s.trim()).filter(Boolean)
     } else if (a === "--adapter") args.adapter = argv[++i]
     else if (a === "--output-dir") args.outputRoot = resolve(ROOT, argv[++i])
+    else if (a === "--help") args.help = true
+  }
+  if (!args.help) {
+    const explicit = new Set(argv)
+    if (explicit.has("--e2e") && (explicit.has("--with-stt") || explicit.has("--skip-stt"))) {
+      throw new Error("--e2e es mutuamente excluyente con --with-stt y --skip-stt.")
+    }
+    if (explicit.has("--with-stt") && explicit.has("--skip-stt")) {
+      throw new Error("--with-stt y --skip-stt son mutuamente excluyentes.")
+    }
   }
   return args
 }
@@ -230,7 +268,8 @@ async function replay(path) {
   const absolute = resolve(path)
   const run = readJson(absolute)
   if (!run.results?.length) throw new Error("Artefacto de replay incompleto.")
-  const isSttRun = run.metadata?.skipStt === false
+  const stage = run.metadata?.stage ?? (run.metadata?.skipStt === false ? "sttOnly" : "off")
+  const isSttRun = stage !== "off"
   for (const r of run.results) {
     r.evaluation = evaluateCase({
       gold: r.gold,
@@ -249,6 +288,16 @@ async function replay(path) {
       latencyMs: r.latencyMs,
     })),
   )
+  if (stage === "e2e") {
+    const { presenceMetrics, latencyStats } = await import("./scorer/index.mjs")
+    const withBaseline = run.results.filter((r) => Array.isArray(r.baselinePresencePairs))
+    run.summary.baselinePresence = presenceMetrics(
+      withBaseline.flatMap((r) => r.baselinePresencePairs),
+    )
+    run.summary.structureLatency = latencyStats(
+      run.results.map((r) => r.structureMs).filter((n) => Number.isFinite(n)),
+    )
+  }
   if (isSttRun) {
     const { computeSttMetrics, summarizeStt } = await import("./scorer/stt-metrics.mjs")
     const sttResults = run.results
@@ -269,7 +318,18 @@ async function replay(path) {
 }
 
 async function main() {
-  const args = parseArgs(process.argv.slice(2))
+  let args
+  try {
+    args = parseArgs(process.argv.slice(2))
+  } catch (error) {
+    console.error(`Error: ${error instanceof Error ? error.message : String(error)}`)
+    process.exit(1)
+  }
+
+  if (args.help) {
+    console.log(helpText())
+    return
+  }
 
   if (args.selfCheck) {
     const status = spawnSync(
@@ -290,8 +350,11 @@ async function main() {
   }
 
   const startedAt = new Date().toISOString()
-  const sttMode = !args.skipStt
-  const runId = `${startedAt.replaceAll(":", "-")}-${sttMode ? "with-stt" : "skip-stt"}-${args.adapter}`
+  const stage = args.stage
+  const sttMode = stage !== "off"
+  const layer = stage === "off" ? "A-skip-stt" : stage === "sttOnly" ? "B-with-stt" : "C-e2e"
+  const suffix = stage === "off" ? "skip-stt" : stage === "sttOnly" ? "with-stt" : "e2e"
+  const runId = `${startedAt.replaceAll(":", "-")}-${suffix}-${args.adapter}`
   const outDir = join(args.outputRoot, runId)
 
   const sourceFiles = [
@@ -304,12 +367,12 @@ async function main() {
 
   const metadata = {
     evaluatorVersion: 1,
-    layer: "A-skip-stt",
+    stage,
+    layer,
     runId,
     startedAt,
     adapter: args.adapter,
-    skipStt: args.skipStt,
-    layer: sttMode ? "B-with-stt" : "A-skip-stt",
+    skipStt: stage === "off",
     node: process.version,
     electron: process.versions.electron ?? null,
     sdk: null,
@@ -329,9 +392,37 @@ async function main() {
     evidence_rule: "medido | observado | inferido | no_probado",
   }
 
+  // Filtro audio/casos antes de tocar modelos: un run STT/E2E sin WAV falla
+  // rápido (sin warmup de GPU) con un reporte bloqueado.
+  const fixtures = loadManifest(args.cases)
+  metadata.datasetCases = fixtures.length
+  const e2e = stage === "e2e"
+  const audioCases = sttMode ? fixtures.filter((f) => f.audioRef) : fixtures
+  if (sttMode && audioCases.length === 0) {
+    const reason = `BLOCKED — --${stage}: los casos seleccionados no tienen WAV (${fixtures.map((f) => f.id).join(", ")}). E2E/STT requieren audio; usar --skip-stt para estructuración sobre texto.`
+    const run = {
+      metadata,
+      warmup: null,
+      results: [],
+      summary: summarize([]),
+      error: reason,
+    }
+    run.summary.skippedNoAudio = fixtures.length
+    writeRunArtifacts(outDir, run)
+    console.error(reason)
+    console.error(`Reporte bloqueado escrito en ${outDir}`)
+    process.exitCode = 1
+    return
+  }
+  const skippedNoAudio = fixtures.length - audioCases.length
+  const work = sttMode ? audioCases : fixtures
+
   let adapter
   try {
     adapter = await createAdapter(args.adapter)
+    if (sttMode && typeof adapter.transcribe !== "function") {
+      throw new Error(`adapter ${args.adapter} no expone transcribe(); --${stage} requiere adapter qvac.`)
+    }
     metadata.models.structuring = adapter.structuringLabel
     metadata.models.stt = sttMode ? adapter.transcribingLabel ?? null : null
     if (args.adapter === "qvac") {
@@ -361,16 +452,25 @@ async function main() {
     return
   }
 
-  const fixtures = loadManifest(args.cases)
-  const run = { metadata, warmup: null, results: [], summary: null, error: null }
+  const run = {
+    metadata,
+    warmup: null,
+    results: [],
+    summary: null,
+    error: null,
+    skippedNoAudio,
+  }
   mkdirSync(outDir, { recursive: true })
 
   try {
-    console.log(`Warmup (${args.adapter}${sttMode ? ", modo STT" : ""})…`)
+    console.log(`Warmup (${args.adapter}${sttMode ? `, modo ${stage}` : ""})…`)
     const warmStart = performance.now()
     try {
-      if (sttMode && typeof adapter.warmTranscribe === "function") {
-        await adapter.warmTranscribe()
+      if (e2e) {
+        if (typeof adapter.warmTranscribe === "function") await adapter.warmTranscribe()
+        if (typeof adapter.warm === "function") await adapter.warm()
+      } else if (sttMode) {
+        if (typeof adapter.warmTranscribe === "function") await adapter.warmTranscribe()
       } else {
         await adapter.warm()
       }
@@ -384,33 +484,63 @@ async function main() {
       throw new Error(`Warmup falló: ${run.warmup.error}`)
     }
 
-    for (const fixture of fixtures) {
-      const start = performance.now()
+    for (const fixture of work) {
+      const t0 = performance.now()
       let note = null
       let error = null
       let rawSdkText = null
       let rawCompletion = null
       let sttResult = null
+      let transcribeMs = null
+      let structureMs = null
+      let baselinePresence = null
+      let baselinePresencePairs = []
+      let baselineLatencyMs = null
+      let transcriptForEval = fixture.transcript
       try {
-        if (sttMode && fixture.audioRef) {
-          // --- Nivel 1: STT real sobre WAV ---
-          const transcriptSegments = await adapter.transcribe(fixture.audioRef)
-          const hypothesisText = transcriptSegments
-            .map((s) => s.text)
-            .join(" ")
-          const referenceText = fixture.transcript
-            .map((s) => s.text)
-            .join(" ")
+        if (sttMode) {
+          // --- STT real sobre WAV (B) o primero de la cadena (C) ---
+          const hyp = await adapter.transcribe(fixture.audioRef)
+          transcribeMs = performance.now() - t0
           sttResult = {
-            reference: referenceText,
-            hypothesis: hypothesisText,
+            reference: transcriptText(fixture.transcript),
+            hypothesis: transcriptText(hyp),
             referenceSegments: fixture.transcript,
-            hypothesisSegments: transcriptSegments,
+            hypothesisSegments: hyp,
           }
-          // Para Capa B, el "note" se deriva del transcript STT (gold) —
-          // estructuración se salta; evaluamos WER/CER sobre la transcripción.
-          note = null
-          rawSdkText = hypothesisText
+          if (e2e) {
+            const structStart = performance.now()
+            const result = await adapter.structure(hyp)
+            structureMs = performance.now() - structStart
+            note = result.note
+            rawSdkText = result.rawSdkText ?? null
+            rawCompletion = result.rawCompletion ?? null
+            transcriptForEval = hyp
+            // Baseline gold-fed: mismo gold, transcripción gold (columna de
+            // comparación del delta). Opcional: si falla, se excluye sin inventar.
+            const baseStart = performance.now()
+            try {
+              const base = await adapter.structure(fixture.transcript)
+              const baseLatency = performance.now() - baseStart
+              const baseEval = evaluateCase({
+                gold: fixture.gold,
+                transcript: fixture.transcript,
+                note: base.note,
+                error: null,
+                latencyMs: baseLatency,
+                rawSdkText: base.rawSdkText ?? null,
+              })
+              baselinePresence = baseEval.presence
+              baselinePresencePairs = baseEval.presencePairs
+              baselineLatencyMs = baseLatency
+            } catch {
+              // Baseline no disponible: no se inventa ni se cuenta como error.
+            }
+          } else {
+            // Capa B: solo STT; no se estructura.
+            note = null
+            rawSdkText = transcriptText(hyp)
+          }
         } else {
           const result = await adapter.structure(fixture.transcript)
           note = result.note
@@ -425,57 +555,42 @@ async function main() {
               ? failure.message
               : String(failure)
       }
-      const latencyMs = performance.now() - start
-      let evaluation
-      if (sttMode && !error) {
-        evaluation = evaluateCase({
-          gold: fixture.gold,
-          transcript: fixture.transcript,
-          note: null,
-          error: null,
-          latencyMs,
-          rawSdkText,
-        })
-        run.results.push({
-          id: fixture.id,
-          category: fixture.category,
-          transcript: fixture.transcript,
-          gold: fixture.gold,
-          note: null,
-          error: null,
-          latencyMs,
-          rawSdkText,
-          rawCompletion: null,
-          evaluation,
-          stt: sttResult,
-        })
-      } else {
-        evaluation = evaluateCase({
-          gold: fixture.gold,
-          transcript: fixture.transcript,
-          note,
-          error,
-          latencyMs,
-          rawSdkText,
-        })
-        run.results.push({
-          id: fixture.id,
-          category: fixture.category,
-          transcript: fixture.transcript,
-          gold: fixture.gold,
-          note,
-          error,
-          latencyMs,
-          rawSdkText,
-          rawCompletion,
-          evaluation,
-        })
+      const latencyMs = performance.now() - t0
+      const evaluation = evaluateCase({
+        gold: fixture.gold,
+        transcript: transcriptForEval,
+        note,
+        error,
+        latencyMs,
+        rawSdkText,
+      })
+      const row = {
+        id: fixture.id,
+        category: fixture.category,
+        transcript: transcriptForEval,
+        gold: fixture.gold,
+        note,
+        error,
+        latencyMs,
+        rawSdkText,
+        rawCompletion,
+        evaluation,
+        stage,
+        transcribeMs,
+        structureMs,
+        baselinePresence,
+        baselinePresencePairs,
+        baselineLatencyMs,
       }
+      if (sttResult) row.stt = sttResult
+      run.results.push(row)
       writeJson(join(outDir, "run.json"), run)
-      const label = sttMode ? "STT" : (error ?? (evaluation.invention ? "invención" : "ok"))
-      console.log(
-        `Caso ${fixture.id}: ${latencyMs.toFixed(1)} ms; ${label}`,
-      )
+      const label = sttMode
+        ? e2e
+          ? `${transcribeMs === null ? "?" : transcribeMs.toFixed(1)}ms stt + ${structureMs === null ? "?" : structureMs.toFixed(1)}ms struct`
+          : "STT"
+        : error ?? (evaluation.invention ? "invención" : "ok")
+      console.log(`Caso ${fixture.id}: ${latencyMs.toFixed(1)} ms; ${label}`)
     }
 
     const { computeSttMetrics, summarizeStt } = await import("./scorer/stt-metrics.mjs")
@@ -500,10 +615,22 @@ async function main() {
         latencyMs: r.latencyMs,
       })),
     )
+    run.summary.skippedNoAudio = skippedNoAudio
     run.summary.stt = sttSummary ?? {
       status: "no_medido",
       reason: "Sin resultados STT medidos en esta corrida.",
       evidence: "no_probado",
+    }
+    if (e2e) {
+      const withBaseline = run.results.filter(
+        (r) => Array.isArray(r.baselinePresencePairs) && r.baselinePresencePairs.length > 0,
+      )
+      run.summary.baselinePresence = presenceMetrics(
+        withBaseline.flatMap((r) => r.baselinePresencePairs),
+      )
+      run.summary.structureLatency = latencyStats(
+        run.results.map((r) => r.structureMs).filter((n) => Number.isFinite(n)),
+      )
     }
   } catch (error) {
     run.error = error instanceof Error ? error.message : String(error)
@@ -515,6 +642,7 @@ async function main() {
         latencyMs: r.latencyMs,
       })),
     )
+    run.summary.skippedNoAudio = skippedNoAudio
     writeRunArtifacts(outDir, run)
     console.error(run.error)
     process.exitCode = 1
@@ -537,6 +665,8 @@ async function main() {
         presenceAccuracy: run.summary.presence.accuracy,
         inventionRate: run.summary.invention.rate,
         latencyP50: run.summary.latency.p50,
+        structureLatencyP50: run.summary.structureLatency?.p50 ?? null,
+        baselinePresenceAccuracy: run.summary.baselinePresence?.accuracy ?? null,
         stt: run.summary.stt.status,
         sttSummary: run.summary.stt.status === "medido" ? {
           cases: run.summary.stt.cases,

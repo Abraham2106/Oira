@@ -70,13 +70,47 @@ Las secciones 1, 3, 4, 5, 6, 7, 8, 9, 10, 12, 13, 14 de `REPORT.md` ahora distin
 
 ---
 
-## Fase 2+ (diseñada, NO aprobada aún — no implementar)
+## Fase 2 — Nivel 2 (clasificación I4 sobre STT real) ✅ implementada 2026-09-12
+
+Aprobada por el usuario (2026-09-12) con las correcciones: default `--e2e`, sin mezcla gold-fed en capas STT, denominador STT explícito, latencia doble. Esta fase **fusiona lo que el borrador llamaba Fase 2 y Fase 3**: la cadena audio→STT→estructura mide a la vez clasificación sobre la hipótesis y latencia E2E.
+
+### Task 2.1 — Modelo de capas por `stage` (un comando = reporte completo)
+
+| Comando | stage | Capa | Alcance | Qué reporta |
+| --- | --- | --- | --- | --- |
+| `pnpm eval` | `e2e` (**default**) | `C-e2e` | solo casos con WAV | WER/CER + presencia I4 sobre hipótesis STT + invención/mustInclude/sourceIds + latencia structure **y** E2E + delta gold-fed→STT-fed |
+| `pnpm eval -- --skip-stt` | `off` | `A-skip-stt` | todos | estructuración sobre gold (presencia/latencia structure) |
+| `pnpm eval -- --with-stt` | `sttOnly` | `B-with-stt` | solo casos con WAV | solo STT (WER/CER/negación), sin estructuración |
+| `pnpm eval -- --replay <run.json>` | — | seg. metadata | seg. run | re-render + re-score determinístico (nunca re-inferencia) |
+
+- `--skip-stt`/`--with-stt` ya no son flags opuestos; son overrides para aislar un stage. `--e2e` mutuamente excluyente con ambos.
+- `metadata.stage` es la fuente única (limpia la doble asignación `layer`); `skipStt` queda derivado para compat de report/replay.
+
+### Task 2.2 — Runner `--e2e` ✅
+
+- Bucle e2e por caso: `transcribe(WAV)` → `structure(hipótesis)` → `evaluateCase(gold, transcript=hyp, note)` + `structureMs`/`transcribeMs`/`latencyMs`(E2E).
+- Baseline gold-fed **en el mismo run**: `structure(gold)` → `baselinePresence` + `baselinePresencePairs` + `baselineLatencyMs` por resultado (columna de comparación; si falla se excluye sin inventar).
+- **Sin mezcla**: B y C corren solo casos con `audioRef`; `summary.skippedNoAudio` cuenta los omitidos; `--e2e --cases <id sin WAV>` falla **antes** de tocar modelos con reporte bloqueado `no_probado`.
+- Warmup e2e = `warmTranscribe()` + `warm()`.
+- Metadata: `datasetCases` (casos seleccionados) para denominadores `X/13`.
+
+### Task 2.3 — Scorer / reporte ✅
+
+- `latencyStats` exportado desde `scorer/index.mjs` (reusa `summarize`); `summary.structureLatency` desde `structureMs`.
+- `summary.baselinePresence` = `presenceMetrics(flatMap(baselinePresencePairs))` solo en e2e.
+- `report.mjs` deriva por `stage`: filas `Latency structure p50` + `Latency E2E p50` en C; denominador `WER/CER sobre X/Y casos (WAV)`; fila `Casos | X/Y` + `Sin WAV (omitidos)`; sección **Delta presence gold-fed → STT-fed**; run bloqueado → `no_probado`.
+- `replay()` re-agrega `baselinePresence` + `structureLatency` desde los campos guardados en run.json (re-score determinístico; `r.transcript` guardado es la hipótesis STT → fiel).
+
+### Task 2.4 — Tests ✅
+
+51 self-check tests (39→51): Capa C artefacto (presencia medida, denominador 2/13, doble fila latencia, delta table, casos X/13, bloqueado, buildArtifacts), regresión A/B, `latencyStats`. Verificado CLI: exclusividad de flags, bloqueo sin WAV, replay de run C sintético (preserva baseline/structureLatency).
+
+⚠️ **Pendiente de ejecutar de verdad:** el run real `--e2e` (== `pnpm eval`) requiere GPU + Whisper QVAC local + Qwen. No hay WER/CER ni delta presencia medido publicado aún.
+
+## Fase 4+ (diseñada, no implementada aún — no implementar sin aprobación)
 
 | Fase | Alcance | Nota |
 | --- | --- | --- |
-| Fase 2 | Nivel 2: clasificación I4 sobre transcripción **STT real** (audio→STT→clasificación; compara presencia vs gold) | Requiere ejecutar estructuración sobre hyp. de Whisper, no sobre gold. |
-| Fase 3 | Nivel 3: E2E audio→nota (latencia total, producto) | Encadena transcribe + structure. |
 | Fase 4 | Crecimiento de corpus: generar WAV para los 13 casos; revisar WER por categoría. | `audioRef` en todos. |
-| Fase 5 | Variabilidad múltiple por caso (voces/ritmos/ruido) y hash de reproducibilidad. | —
 
-Hasta que el usuario apruebe una fase, **solo se implementa la medición de la fase 1**.
+Hasta que el usuario apruebe una fase, **solo se implementa la medición de fases aprobadas** (hoy: 1 y 2).

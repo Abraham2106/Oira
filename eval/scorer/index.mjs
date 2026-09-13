@@ -240,7 +240,7 @@ export function evaluateCase(input) {
   }
 }
 
-function summarizeLatency(samples) {
+export function latencyStats(samples) {
   return {
     samples: samples.length,
     p50: quantile(samples, 0.5),
@@ -301,7 +301,7 @@ export function summarize(results) {
     mustIncludeTotal,
     statedWithoutSource,
     sourceIdFailureCases,
-    latency: summarizeLatency(latencies),
+    latency: latencyStats(latencies),
     stt: sttNotMeasured("Capa A: --skip-stt. No hay WAV de referencia en esta etapa."),
   }
 }
