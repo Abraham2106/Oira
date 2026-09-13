@@ -13,6 +13,7 @@ import { cpus, platform, arch } from "node:os"
 import { dirname, join, resolve } from "node:path"
 import { performance } from "node:perf_hooks"
 import { fileURLToPath, pathToFileURL } from "node:url"
+import { inspect } from "node:util"
 import { evaluateCase, latencyStats, presenceMetrics, summarize } from "./scorer/index.mjs"
 import { summarizeStt, transcriptText } from "./scorer/stt-metrics.mjs"
 import { buildArtifacts } from "./report.mjs"
@@ -476,12 +477,14 @@ async function main() {
       }
       run.warmup = { ok: true, ms: performance.now() - warmStart }
     } catch (error) {
+      const errMsg = inspect(error, { depth: 6, colors: false, getters: true, compact: false })
       run.warmup = {
         ok: false,
         ms: performance.now() - warmStart,
-        error: error instanceof Error ? error.message : String(error),
+        error: errMsg,
+        stack: error instanceof Error ? error.stack : undefined,
       }
-      throw new Error(`Warmup falló: ${run.warmup.error}`)
+      throw new Error(`Warmup falló: ${errMsg}`)
     }
 
     for (const fixture of work) {

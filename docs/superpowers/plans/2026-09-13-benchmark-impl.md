@@ -105,7 +105,25 @@ Aprobada por el usuario (2026-09-12) con las correcciones: default `--e2e`, sin 
 
 51 self-check tests (39→51): Capa C artefacto (presencia medida, denominador 2/13, doble fila latencia, delta table, casos X/13, bloqueado, buildArtifacts), regresión A/B, `latencyStats`. Verificado CLI: exclusividad de flags, bloqueo sin WAV, replay de run C sintético (preserva baseline/structureLatency).
 
-⚠️ **Pendiente de ejecutar de verdad:** el run real `--e2e` (== `pnpm eval`) requiere GPU + Whisper QVAC local + Qwen. No hay WER/CER ni delta presencia medido publicado aún.
+✅ **Ejecutado 2026-09-13** (GPU RTX 2050 4GB, Whisper large-v3-turbo + Qwen3-4B Q4_K_M):
+
+| Métrica | Valor (evidencia: **medido**) |
+| --- | --- |
+| WER | 1.04% (mean) |
+| CER | 0.26% (mean) |
+| Presence accuracy (STT-fed, 3/13 casos WAV) | 85.7% |
+| Presence accuracy (gold-fed baseline) | 81.0% |
+| Delta presence (STT-fed − gold-fed) | +4.8 pp |
+| Macro-F1 STT-fed | 0.788 |
+| Macro-F1 gold-fed | 0.574 |
+| Latencia E2E p50 | 58.98 s |
+| Latencia structure p50 | 31.73 s |
+| Transcribe p50 (por caso) | ~18 s |
+| Negación drop/add | 0 / 0 |
+| Transcribe success | 3/3 (100%) |
+
+- `--replay` del run C re-renderiza idéntico (delta, baseline, latencia dual preservadas).
+- `pnpm eval:self-check` 51/51 verde.
 
 ## Fase 4+ (diseñada, no implementada aún — no implementar sin aprobación)
 

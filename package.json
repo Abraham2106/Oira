@@ -9,7 +9,7 @@
     "typecheck": "pnpm --filter @oira/types typecheck && pnpm --filter oira-desktop typecheck",
     "eval:fixtures": "node eval/fixtures/_write.mjs",
     "eval:self-check": "node --test eval/scorer.test.mjs eval/fixtures.test.mjs",
-    "eval": "node --experimental-strip-types --experimental-transform-types --import ./eval/register-ts.mjs --disable-warning=ExperimentalWarning eval/runner.mjs --skip-stt"
+    "eval": "node --experimental-strip-types --experimental-transform-types --import ./eval/register-ts.mjs --disable-warning=ExperimentalWarning eval/runner.mjs"
   },
   "packageManager": "pnpm@10.33.3",
   "engines": {
