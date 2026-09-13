@@ -243,7 +243,7 @@ Top confusiones (filtro de puntuación validado en datos reales): rosuvastatina�
 
 ⚠️ **Observación del primer intento (fallido, 12:52)**: 18/19 con `TRANSCRIPTION_FAILED` (RPC timeout en 02 + `MODEL_LOAD_PENDING` sin resolver en 03-19) + workers huérfanos. Un segundo `pnpm eval` corrió limpio. Fallo transitorio del worker QVAC, no regresión de Fase 5 — documentado en memoria para no confundir futuras corridas.
 
-Hasta que el usuario apruebe una fase siguiente, **solo se implementa la medición de fases aprobadas** (hoy: 1, 2, 4 y 5 completas).
+Hasta que el usuario apruebe una fase siguiente, **solo se implementa la medición de fases aprobadas** (hoy: 1, 2, 3, 4 y 5 completas).
 
 ---
 
@@ -281,6 +281,34 @@ Aprobada (plan `rustling-enchanting-cloud.md`). Cierra los gaps §4.4 del redise
 1. `pnpm eval:self-check` → 82/82.
 2. `--replay` 13:00 y 05-11 → renderizan las secciones nuevas sin re-inferencia.
 3. (Opcional, GPU) `pnpm eval` → run nuevo con `transcribeAttempts` por caso y `transcribeRetryRate` real.
+
+---
+
+## Rediseño — Fase 3 (Nivel 3 E2E): latencia por fase + breakdown frío/caliente ✅ implementada 2026-09-13
+
+Aprobada (plan `rustling-enchanting-cloud.md`). Cierra §9 Fase 3 del rediseño. La task 3.1 (wire audio→nota `--e2e`) ya existía de las Fases 4/5; esta fase añade lo que faltaba: latencia por fase STT y el breakdown frío/caliente.
+
+### Cambios (aditivos, backward compatible)
+
+- **`eval/scorer/index.mjs`**: `coldHotMetrics(warmupMs, latencies)` — helper puro; null si falta warmup o <2 latencias. `sttLatency` se resume con el `latencyStats` existente.
+- **`eval/runner.mjs`**: `finalizeLatencySummary(run)` compartido entre main y `--replay` → `summary.sttLatency` (p50/p95 de `transcribeMs`) y `summary.coldHot` (warmup, 1er caso, steadyP50, ratio).
+- **`eval/report.mjs`**: fila `Latency STT p50 (ms)`; sección `### Breakdown frío/caliente` (Warmup frío | 1er caso tras warmup | p50 steady-state | Caliente/frío) solo si `coldHot`; `metrics.json` + `sttLatency`/`structureLatency`/`coldHot`.
+- **Tests**: 82 → **86/86** (coldHotMetrics 2, render Fase 3 2).
+
+### Resultados del replay retroactivo (sin modelos) — **medido**
+
+Replay sobre `run.json` (transcribeMs/structureMs/latencyMs/warmup ya persistidos): latencia por fase y breakdown idempotentes en ambos runs.
+
+**Run 13:00 (19 casos):** Latency STT p50 **14065.5 ms** · structure 26930.7 · E2E 48967.4. Warmup frío 33667.8 ms · 1er caso 48095.1 · p50 steady 49332.5 · **Caliente/frío 1.5×**.
+
+**Run 05-11 (13 casos):** STT p50 14631.8 ms. Warmup 41616.9 · 1er caso 51232.6 · Caliente/frío 1.3×.
+
+⚠️ **Honestidad del dato**: "1er caso" es el primer caso procesado tras warmup (no un cold-call real de carga de modelo — el warmup ya lo cargó). El ratio cruza magnitudes distintas (costo de carga puntual × latencia por caso: se presenta como relación, no como ahorro).
+
+### Verificación
+1. `pnpm eval:self-check` → 86/86.
+2. `--replay` 13:00 y 05-11 → secciones nuevas renderizadas; re-render → byte-idéntico (idempotente).
+3. Capa A (`--skip-stt`) no muestra `Latency STT p50` (sin transcribeMs) — correcto.
 
 ---
 

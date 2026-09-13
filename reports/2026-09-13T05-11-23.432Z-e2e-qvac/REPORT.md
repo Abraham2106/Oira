@@ -22,6 +22,7 @@
 | Unsupported clinical fact rate | ⛔ 69.2% (9/13) |
 | STATED sin sourceSegmentIds | 2 |
 | Casos con source IDs inválidos | 0 |
+| Latency STT p50 (ms) | 14631.8 |
 | Latency structure p50 (ms) | 28789.4 |
 | Latency E2E p50 (ms) | 51936.4 |
 | STT WER/CER | 3.1% / 1.0% |
@@ -40,6 +41,16 @@
 | min | 48392.5 |
 | max | 59703.6 |
 **Medido.** Wall-clock E2E (transcribe + structure) por caso exitoso (p50 E2E).
+
+### Breakdown frío/caliente
+
+| Componente | ms |
+| --- | ---: |
+| Warmup (carga modelo) — frío | 41616.9 |
+| 1er caso (tras warmup) | 51232.6 |
+| p50 steady-state (resto) | 52265.6 |
+| Caliente / frío | 1.3× |
+**Medido.** Warmup wall-clock de esta corrida; el modelo ya estaba cargado al medir los casos.
 
 ### Speech-to-text (STT)
 

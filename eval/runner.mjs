@@ -14,7 +14,7 @@ import { dirname, join, resolve } from "node:path"
 import { performance } from "node:perf_hooks"
 import { fileURLToPath, pathToFileURL } from "node:url"
 import { inspect } from "node:util"
-import { evaluateCase, latencyStats, presenceMetrics, summarize } from "./scorer/index.mjs"
+import { coldHotMetrics, evaluateCase, latencyStats, presenceMetrics, summarize } from "./scorer/index.mjs"
 import { summarizeStt, transcriptText } from "./scorer/stt-metrics.mjs"
 import { buildArtifacts } from "./report.mjs"
 import { appendHistory, historyEntry } from "./history.mjs"
@@ -26,6 +26,21 @@ const AUDIO = join(ROOT, "eval", "audio")
 const HISTORY = join(ROOT, "eval", "history.jsonl")
 const require = createRequire(join(DESKTOP, "package.json"))
 const SELF = fileURLToPath(import.meta.url)
+
+/**
+ * Fase 3: resumir latencia por fase + breakdown frío/caliente sobre run.results.
+ * Comparte shape entre el run principal y --replay (ambos derivan de run.json).
+ * sttLatency solo cuando hay transcribeMs numéricos; coldHot requiere warmup.
+ */
+function finalizeLatencySummary(run) {
+  run.summary.sttLatency = latencyStats(
+    run.results.map((r) => r.transcribeMs).filter((n) => Number.isFinite(n)),
+  )
+  run.summary.coldHot = coldHotMetrics(
+    Number.isFinite(run.warmup?.ms) ? run.warmup.ms : null,
+    run.results.map((r) => r.latencyMs),
+  )
+}
 
 function helpText() {
   return `Uso: pnpm eval [flags]
@@ -301,6 +316,7 @@ async function replay(path) {
       run.results.map((r) => r.structureMs).filter((n) => Number.isFinite(n)),
     )
   }
+  finalizeLatencySummary(run)
   if (isSttRun) {
     const { computeSttMetrics, summarizeStt } = await import("./scorer/stt-metrics.mjs")
     const sttPairs = run.results.filter((r) => r.stt && r.stt.reference && r.stt.hypothesis)
@@ -678,6 +694,7 @@ async function main() {
         run.results.map((r) => r.structureMs).filter((n) => Number.isFinite(n)),
       )
     }
+    finalizeLatencySummary(run)
   } catch (error) {
     run.error = error instanceof Error ? error.message : String(error)
     run.summary = summarize(

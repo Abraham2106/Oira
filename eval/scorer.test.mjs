@@ -5,6 +5,7 @@ import {
   SECTION_IDS,
   alignTokens,
   charErrorRate,
+  coldHotMetrics,
   evaluateCase,
   extractConfusions,
   latencyStats,
@@ -1141,5 +1142,85 @@ describe("Report Fase 2: fidelity + unsupported + retry", () => {
     }
     const md = renderReport(run)
     assert.doesNotMatch(md, /### Unsupported clinical facts/)
+  })
+})
+
+describe("coldHotMetrics (Fase 3) — breakdown frío/caliente", () => {
+  it("derives ratio steady / warmup for 2+ latencies", () => {
+    const r = coldHotMetrics(100, [200, 300, 400])
+    assert.equal(r.warmupMs, 100)
+    assert.equal(r.firstLatencyMs, 200)
+    assert.equal(r.steadyP50, latencyStats([300, 400]).p50)
+    assert.equal(r.ratio, r.steadyP50 / 100)
+  })
+  it("guards invalid warmup or <2 latencies", () => {
+    assert.equal(coldHotMetrics(null, [10, 20]), null)
+    assert.equal(coldHotMetrics(0, [10, 20]), null)
+    assert.equal(coldHotMetrics(100, [200]), null)
+    assert.equal(coldHotMetrics(100, []), null)
+  })
+})
+
+describe("Report Fase 3: latencia por fase + frío/caliente", () => {
+  function baseSummary(evs) {
+    const s = summarize(evs)
+    s.skippedNoAudio = 0
+    s.sttLatency = latencyStats([21800, 21200])
+    s.coldHot = { warmupMs: 18420, firstLatencyMs: 57612, steadyP50: 48600, ratio: 48600 / 18420 }
+    s.stt = sttNotMeasured("stub solo clasificación")
+    return s
+  }
+
+  it("renders Breakdown frío/caliente + Latency STT p50 when data is present", () => {
+    const gold = { sections: Object.fromEntries(SECTION_IDS.map((id) => [id, { presence: "NOT_STATED", mustInclude: [], mustNotInclude: [], sourceQuotes: [] }])) }
+    const transcript = [{ id: "seg-1", text: "algo", startMs: 0 }]
+    const note = emptyNote()
+    const ev = evaluateCase({ gold, note, transcript, rawSdkText: '{"a":1}' })
+    const summary = baseSummary([{ id: "a01", evaluation: ev, error: null, latencyMs: 57612 }])
+    const run = {
+      metadata: {
+        evaluatorVersion: 1, stage: "e2e", layer: "C-e2e", runId: "test-F3",
+        startedAt: "2026-09-13T00:00:00.000Z", adapter: "qvac",
+        skipStt: false, datasetCases: 2,
+        node: "v24", electron: null, sdk: "0.18.2",
+        hardware: { platform: "win32", arch: "x64", cpu: "test" },
+        models: { stt: "WHISPER_QVAC_LOCAL", structuring: "QWEN3_4B_Q4_K_M" },
+        gitCommit: null, datasetHash: "abc", sourceHashes: {}, evidence_rule: "medido | observado | inferido | no_probado",
+      },
+      summary,
+      results: [{ id: "a01", category: "simple", gold, note, transcript, evaluation: ev, error: null, latencyMs: 57612, transcribeMs: 21800, structureMs: 35200 }],
+    }
+    const md = renderReport(run)
+    assert.match(md, /Latency STT p50/)
+    assert.match(md, /### Breakdown fr[íi]o\/caliente/)
+    assert.match(md, /Warmup \(carga modelo\)/)
+    assert.match(md, /Caliente \/ fr[íi]o/)
+  })
+
+  it("omits the Breakdown section when coldHot is absent", () => {
+    const gold = { sections: Object.fromEntries(SECTION_IDS.map((id) => [id, { presence: "NOT_STATED", mustInclude: [], mustNotInclude: [], sourceQuotes: [] }])) }
+    const transcript = [{ id: "seg-1", text: "algo", startMs: 0 }]
+    const note = emptyNote()
+    const ev = evaluateCase({ gold, note, transcript, rawSdkText: '{"a":1}' })
+    const summary = summarize([{ id: "a01", evaluation: ev, error: null, latencyMs: 10 }])
+    summary.skippedNoAudio = 0
+    summary.coldHot = null
+    summary.sttLatency = null
+    summary.stt = sttNotMeasured("stub")
+    const run = {
+      metadata: {
+        evaluatorVersion: 1, stage: "e2e", layer: "C-e2e", runId: "test-F3-noop",
+        startedAt: "2026-09-13T00:00:00.000Z", adapter: "qvac",
+        skipStt: false, datasetCases: 1,
+        node: "v24", electron: null, sdk: "0.18.2",
+        hardware: { platform: "win32", arch: "x64", cpu: "test" },
+        models: { stt: "WHISPER_QVAC_LOCAL", structuring: "QWEN3_4B_Q4_K_M" },
+        gitCommit: null, datasetHash: "abc", sourceHashes: {}, evidence_rule: "medido | observado | inferido | no_probado",
+      },
+      summary,
+      results: [{ id: "a01", category: "simple", gold, note, transcript, evaluation: ev, error: null, latencyMs: 10, transcribeMs: 4, structureMs: 6 }],
+    }
+    const md = renderReport(run)
+    assert.doesNotMatch(md, /### Breakdown fr[íi]o\/caliente/)
   })
 })

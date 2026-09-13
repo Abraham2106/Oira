@@ -33,6 +33,9 @@ export function buildArtifacts(run) {
     mustNotInclude: s.mustNotInclude,
     unsupportedFact: s.unsupportedFact,
     latency: s.latency,
+    sttLatency: s.sttLatency,
+    structureLatency: s.structureLatency,
+    coldHot: s.coldHot,
     stt: s.stt,
     cases: s.cases,
     errors: s.errors,
@@ -204,7 +207,7 @@ ${confusionBlock}`
   const presenceLabel = e2e ? "Presence accuracy (I4, sobre hipótesis STT)" : "Presence accuracy (I4)"
 
   const latencyRows = e2e
-    ? `| Latency structure p50 (ms) | ${fmt(s.structureLatency?.p50)} |\n| Latency E2E p50 (ms) | ${fmt(s.latency.p50)} |`
+    ? `| Latency STT p50 (ms) | ${fmt(s.sttLatency?.p50)} |\n| Latency structure p50 (ms) | ${fmt(s.structureLatency?.p50)} |\n| Latency E2E p50 (ms) | ${fmt(s.latency.p50)} |`
     : `| Latencia p50 (ms) | ${fmt(s.latency.p50)} |`
 
   const deltaBlock = e2e
@@ -262,6 +265,19 @@ ${evidence("Medido", `Contadores de esta corrida. F1 = N/A si la clase no tiene 
     : sttOnly
       ? `pnpm eval -- --with-stt                  # re-ejecutar Nivel 1 STT (requiere GPU + Whisper QVAC)`
       : `pnpm eval                               # re-ejecutar Capa C --e2e (default; requiere GPU + Whisper QVAC + Qwen)`
+
+  // --- Fase 3: breakdown frío/caliente (warmup vs steady-state) ---
+  const coldHotBlock = s.coldHot
+    ? `\n### Breakdown frío/caliente
+
+| Componente | ms |
+| --- | ---: |
+| Warmup (carga modelo) — frío | ${fmt(s.coldHot.warmupMs)} |
+| 1er caso (tras warmup) | ${fmt(s.coldHot.firstLatencyMs)} |
+| p50 steady-state (resto) | ${fmt(s.coldHot.steadyP50)} |
+| Caliente / frío | ${fmt(s.coldHot.ratio)}× |
+${evidence("Medido", "Warmup wall-clock de esta corrida; el modelo ya estaba cargado al medir los casos.")}`
+    : ""
 
   // --- Fase 2: fidelity + unsupported fact blocks ---
   const fidelityQuoteRows =
@@ -388,6 +404,7 @@ ${classify ? evidence("Medido", `Presencia, invención, mustInclude y source IDs
 | min | ${fmt(s.latency.min)} |
 | max | ${fmt(s.latency.max)} |
 ${evidence("Medido", sttOnly ? "Wall-clock de transcribe() por caso exitoso." : e2e ? "Wall-clock E2E (transcribe + structure) por caso exitoso (p50 E2E)." : "Wall-clock de structure() por caso exitoso.")}
+${coldHotBlock}
 ${sttBlock}
 ${fidelityBlock}
 ${unsupportedFactBlock}

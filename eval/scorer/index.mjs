@@ -382,6 +382,29 @@ export function latencyStats(samples) {
 }
 
 /**
+ * Fase 3: breakdown frío/caliente. Caliente = warmup (carga del modelo, una vez
+ * por corrida); 1er caso tras warmup; p50 steady-state del resto de casos.
+ * Devuelve null cuando no hay warmup válido o <2 latencias (no inventa).
+ *
+ * @param {number|null} warmupMs run.warmup.ms (wall-clock del warmup)
+ * @param {number[]} latencies latencia E2E por caso (results[].latencyMs)
+ * @returns {{ warmupMs: number, firstLatencyMs: number, steadyP50: number, ratio: number } | null}
+ */
+export function coldHotMetrics(warmupMs, latencies) {
+  const a = latencies.filter((n) => Number.isFinite(n))
+  if (!Number.isFinite(warmupMs) || warmupMs <= 0 || a.length < 2) return null
+  const [first, ...rest] = a
+  const steadyP50 = quantile(rest, 0.5)
+  if (!Number.isFinite(steadyP50)) return null
+  return {
+    warmupMs,
+    firstLatencyMs: first,
+    steadyP50,
+    ratio: steadyP50 / warmupMs, // caliente/frío (pv del usuario: steady / warmup)
+  }
+}
+
+/**
  * @param {Array<{ id: string, evaluation: ReturnType<typeof evaluateCase>, error?: string | null, latencyMs?: number | null }>} results
  */
 export function summarize(results) {
