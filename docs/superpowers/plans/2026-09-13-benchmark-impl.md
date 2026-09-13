@@ -221,9 +221,27 @@ Aprobada por el usuario (AskUserQuestion): corpus = "6 casos nuevos (~19 total)"
 
 ⚠️ **Observación honesta (medida, no optimizada aún)**: el top-10 original sin el filtro estaba dominado por ruido de puntuación (`dias…→dias,`, `hay→¿hay`, `local.→local?`, …). El filtro de `stripBoundaryPunct` los suprime; quedan **3 pares léxicos reales** consistentes con el WER global del 3.1%. Un refino futuro (p. ej. normalizar mayúsculas/minúsculas dentro del par, o agrupar raíces flexivas) queda fuera del alcance de esta fase — se haría solo con autorización (Regla 16).
 
-### Run 19/19 — pendiente en GPU del usuario
+### Run 19/19 — **medido** 2026-09-13 13:00 UTC ✅
 
-`pnpm eval` en la máquina del usuario (GPU Whisper QVAC + Qwen) → run 19/19 con `Casos | 19/19`, tabla por categoría con n≥1, top-10 confusiones, latencia dual, delta gold-fed→STT-fed con los 6 casos nuevos. Luego `--replay` re-renderiza idéntico.
+`reports/2026-09-13T13-00-31.194Z-e2e-qvac/` — 19/19 casos, 0 errores, exit 0.
+
+| Métrica | Valor (evidencia: **medido**) |
+| --- | --- |
+| WER / CER | 5.1% / 1.9% (vs 3.1%/1.0% con 13 — sube por los casos nuevos) |
+| Presence accuracy STT-fed | 83.5% (111/133) |
+| Presence accuracy gold-fed | 89.5% |
+| Delta presence (STT-fed − gold-fed) | −6.0 pp |
+| Macro-F1 STT-fed / gold-fed | 0.769 / 0.601 |
+| mustInclude cobertura | 59.0% (49/83) |
+| E2E p50 / structure p50 | 48.97s / 26.93s |
+| Invención / negación drop-add | 0 / 0-1 |
+| Errores | 0 |
+
+WER por categoría (tabla nueva del reporte): medication-list 20.4% (peor, n=1), noisy-text 10.0% (n=3), longer 7.6%, no-diagnosis 7.0% (n=2), dosage 5.3% (n=2), correction 4.5%, missing-plan 4.0%, contradiction 3.1%, mixed-languages 2.2%, resto 0%.
+
+Top confusiones (filtro de puntuación validado en datos reales): rosuvastatina→rosubastatina ×2, latanoprost→tanoprost ×2, mg→miligramos, enalapril→april, disnea→disneya, diez→10, ochocientos→800, nomas→mas, uno→101, cinco→5.
+
+⚠️ **Observación del primer intento (fallido, 12:52)**: 18/19 con `TRANSCRIPTION_FAILED` (RPC timeout en 02 + `MODEL_LOAD_PENDING` sin resolver en 03-19) + workers huérfanos. Un segundo `pnpm eval` corrió limpio. Fallo transitorio del worker QVAC, no regresión de Fase 5 — documentado en memoria para no confundir futuras corridas.
 
 Hasta que el usuario apruebe una fase siguiente, **solo se implementa la medición de fases aprobadas** (hoy: 1, 2, 4 y 5 completas).
 

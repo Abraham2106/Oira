@@ -1,0 +1,295 @@
+{
+  "evidence_rule": "medido | observado | inferido | no_probado",
+  "run_id": "2026-09-13T13-00-31.194Z-e2e-qvac",
+  "layer": "C-e2e",
+  "presence": {
+    "accuracy": 0.8345864661654135,
+    "correct": 111,
+    "total": 133,
+    "macroF1": 0.7693301530510833,
+    "byClass": {
+      "STATED": {
+        "tp": 35,
+        "fp": 4,
+        "fn": 17,
+        "support": 52,
+        "precision": 0.8974358974358975,
+        "recall": 0.6730769230769231,
+        "f1": 0.7692307692307692
+      },
+      "NOT_STATED": {
+        "tp": 75,
+        "fp": 18,
+        "fn": 4,
+        "support": 79,
+        "precision": 0.8064516129032258,
+        "recall": 0.9493670886075949,
+        "f1": 0.872093023255814
+      },
+      "UNKNOWN": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 1,
+        "support": 2,
+        "precision": 1,
+        "recall": 0.5,
+        "f1": 0.6666666666666666
+      }
+    },
+    "matrix": {
+      "STATED": {
+        "STATED": 35,
+        "NOT_STATED": 17,
+        "UNKNOWN": 0
+      },
+      "NOT_STATED": {
+        "STATED": 4,
+        "NOT_STATED": 75,
+        "UNKNOWN": 0
+      },
+      "UNKNOWN": {
+        "STATED": 0,
+        "NOT_STATED": 1,
+        "UNKNOWN": 1
+      }
+    }
+  },
+  "invention": {
+    "casesWithHits": 0,
+    "rate": 0
+  },
+  "mustIncludeCoverage": 0.5903614457831325,
+  "productEmittedRate": 1,
+  "rawJsonValidRate": 1,
+  "statedWithoutSource": 2,
+  "sourceIdFailureCases": 0,
+  "latency": {
+    "samples": 19,
+    "p50": 48967.38639999996,
+    "p95": 57632.04371999996,
+    "p99": 57775.03370399999,
+    "mean": 50226.150605263145,
+    "min": 47280.27259999991,
+    "max": 57810.7812
+  },
+  "stt": {
+    "status": "medido",
+    "cases": 19,
+    "transcribeSuccessRate": 1,
+    "emptyTranscriptCount": 0,
+    "wer": {
+      "mean": 0.050718336606896786,
+      "min": 0,
+      "max": 0.20408163265306123
+    },
+    "cer": {
+      "mean": 0.018761206987018733
+    },
+    "meanWer": 0.050718336606896786,
+    "meanCer": 0.018761206987018733,
+    "werPerCase": {
+      "01-simple": 0,
+      "02-negation": 0,
+      "03-medications": 0,
+      "04-dosage": 0.03125,
+      "05-correction": 0.045454545454545456,
+      "06-ambiguous-timeline": 0,
+      "07-no-diagnosis": 0.07407407407407407,
+      "08-multiple-symptoms": 0,
+      "09-noisy-text": 0.10810810810810811,
+      "10-longer": 0.07575757575757576,
+      "11-missing-plan": 0.04,
+      "12-contradiction": 0.03125,
+      "13-injection": 0,
+      "14-noisy-text-pharma": 0.14285714285714285,
+      "15-noisy-text-elderly": 0.04838709677419355,
+      "16-no-diagnosis-vague": 0.06521739130434782,
+      "17-dosage-complex": 0.07547169811320754,
+      "18-medication-list": 0.20408163265306123,
+      "19-mixed-languages": 0.021739130434782608
+    },
+    "werPerCategory": {
+      "simple": {
+        "cases": 1,
+        "meanWer": 0,
+        "meanCer": 0,
+        "werPerCase": {
+          "01-simple": 0
+        }
+      },
+      "negation": {
+        "cases": 1,
+        "meanWer": 0,
+        "meanCer": 0,
+        "werPerCase": {
+          "02-negation": 0
+        }
+      },
+      "medications": {
+        "cases": 1,
+        "meanWer": 0,
+        "meanCer": 0,
+        "werPerCase": {
+          "03-medications": 0
+        }
+      },
+      "dosage": {
+        "cases": 2,
+        "meanWer": 0.05336084905660377,
+        "meanCer": 0.05434782608695652,
+        "werPerCase": {
+          "04-dosage": 0.03125,
+          "17-dosage-complex": 0.07547169811320754
+        }
+      },
+      "correction": {
+        "cases": 1,
+        "meanWer": 0.045454545454545456,
+        "meanCer": 0.009615384615384616,
+        "werPerCase": {
+          "05-correction": 0.045454545454545456
+        }
+      },
+      "ambiguous-timeline": {
+        "cases": 1,
+        "meanWer": 0,
+        "meanCer": 0,
+        "werPerCase": {
+          "06-ambiguous-timeline": 0
+        }
+      },
+      "no-diagnosis": {
+        "cases": 2,
+        "meanWer": 0.06964573268921095,
+        "meanCer": 0.010430301047120418,
+        "werPerCase": {
+          "07-no-diagnosis": 0.07407407407407407,
+          "16-no-diagnosis-vague": 0.06521739130434782
+        }
+      },
+      "multiple-symptoms": {
+        "cases": 1,
+        "meanWer": 0,
+        "meanCer": 0,
+        "werPerCase": {
+          "08-multiple-symptoms": 0
+        }
+      },
+      "noisy-text": {
+        "cases": 3,
+        "meanWer": 0.09978411591314817,
+        "meanCer": 0.04159902829897935,
+        "werPerCase": {
+          "09-noisy-text": 0.10810810810810811,
+          "14-noisy-text-pharma": 0.14285714285714285,
+          "15-noisy-text-elderly": 0.04838709677419355
+        }
+      },
+      "longer": {
+        "cases": 1,
+        "meanWer": 0.07575757575757576,
+        "meanCer": 0.005865102639296188,
+        "werPerCase": {
+          "10-longer": 0.07575757575757576
+        }
+      },
+      "missing-plan": {
+        "cases": 1,
+        "meanWer": 0.04,
+        "meanCer": 0.008849557522123894,
+        "werPerCase": {
+          "11-missing-plan": 0.04
+        }
+      },
+      "contradiction": {
+        "cases": 1,
+        "meanWer": 0.03125,
+        "meanCer": 0.007874015748031496,
+        "werPerCase": {
+          "12-contradiction": 0.03125
+        }
+      },
+      "injection": {
+        "cases": 1,
+        "meanWer": 0,
+        "meanCer": 0,
+        "werPerCase": {
+          "13-injection": 0
+        }
+      },
+      "medication-list": {
+        "cases": 1,
+        "meanWer": 0.20408163265306123,
+        "meanCer": 0.06477732793522267,
+        "werPerCase": {
+          "18-medication-list": 0.20408163265306123
+        }
+      },
+      "mixed-languages": {
+        "cases": 1,
+        "meanWer": 0.021739130434782608,
+        "meanCer": 0.005128205128205128,
+        "werPerCase": {
+          "19-mixed-languages": 0.021739130434782608
+        }
+      }
+    },
+    "topConfusions": [
+      {
+        "ref": "rosuvastatina",
+        "hyp": "rosubastatina",
+        "count": 2
+      },
+      {
+        "ref": "latanoprost",
+        "hyp": "tanoprost",
+        "count": 2
+      },
+      {
+        "ref": "mg",
+        "hyp": "miligramos",
+        "count": 1
+      },
+      {
+        "ref": "enalapril",
+        "hyp": "april",
+        "count": 1
+      },
+      {
+        "ref": "disnea",
+        "hyp": "disneya",
+        "count": 1
+      },
+      {
+        "ref": "diez",
+        "hyp": "10",
+        "count": 1
+      },
+      {
+        "ref": "ochocientos",
+        "hyp": "800",
+        "count": 1
+      },
+      {
+        "ref": "nomas",
+        "hyp": "mas",
+        "count": 1
+      },
+      {
+        "ref": "uno",
+        "hyp": "101",
+        "count": 1
+      },
+      {
+        "ref": "cinco",
+        "hyp": "5",
+        "count": 1
+      }
+    ],
+    "negationDrops": 0,
+    "negationAdds": 1,
+    "evidence": "medido"
+  },
+  "cases": 19,
+  "errors": 0
+}
