@@ -1,161 +1,86 @@
-# REPORT.md — Oira eval
+# Oira eval report — `2026-09-12T18-53-07.021Z-heuristic`
 
-Generado: 2026-09-12T18:53:07.021Z. Adapter: `heuristic`. Idioma: es.
-Corrida: `2026-09-12T18-53-07.021Z-heuristic`. Evidencia: cada cifra declara si fue medida, observada, inferida o no probada.
+2026-09-12T18:53:07.021Z · capa `undefined` · adapter `heuristic` · Capa A (`--skip-stt`): estructuración sobre transcripción gold; STT no ejecutado.
+**Observado.** Rama sin commit · dataset hash `N/A`
 
-## 1. Executive Summary
+## Resultados
 
-Medido. 13 casos de texto I4; 13 emitieron nota de producto; 0 fallos de adaptador.
-Invención léxica (`must_not_contain`): 7.7% de casos emitidos (n=13).
-Clasificación de presencia: accuracy 0.758, macro-F1 0.483 (n=91 secciones).
-STT: no_medido.
-
-Observado. La nota puntuada es la salida post-normalización de Oira, no el JSON crudo de Qwen.
-
-## 2. Environment
-
-| Campo | Valor | Evidencia |
-| --- | --- | --- |
-| Node | v24.18.0 | Medido |
-| OS | win32 x64 | Medido |
-| CPU | AMD Ryzen 5 8645HS w/ Radeon 760M Graphics | Medido |
-| SDK QVAC | N/A (heuristic) | Medido |
-| Adapter | heuristic | Medido |
-| skip-stt | true | Medido |
-
-Hashes de fuentes en `run.json` → `metadata.sourceHashes`.
-
-## 3. Models
-
-| Modelo | Uso | Evidencia |
-| --- | --- | --- |
-| Qwen3 4B Q4_K_M | Estructuración si adapter=qvac | No probado |
-| Whisper Large V3 Turbo | STT | No probado — no se cargó en esta etapa |
-
-Configuración de generación: la de producción (`createQwenStructuring`). Esta corrida no cambia prompts.
-
-## 4. Dataset
-
-13 casos sintéticos en español, set congelado, un caso por categoría de la guía IA reescrita a I4.
-Gold escrito a mano desde el guion. Sin audio. Sin datos de pacientes reales.
-Distribución: ver `eval/fixtures/cases.json`.
-
-## 5. Methodology
-
-1. Cargar `transcript.json` de cada caso.
-2. Llamar `structure({ transcript })` del adapter elegido (warmup excluido de la latencia por caso).
-3. Puntuar la `ClinicalNote` de producto contra `gold.json`.
-4. STT no se ejecuta (`--skip-stt`).
-5. Replay: `pnpm eval -- --replay reports/<run-id>/run.json` recalcula métricas sin inferencia.
-
-## 6. Speech-to-text Results
-
-**No probado.** skip-stt: esta etapa no ejecuta Whisper ni usa WAV
-WER: N/A. CER: N/A. No hay hipótesis de Whisper que puntuar.
-
-## 7. Classification Results
-
-Presencia por sección I4 (`STATED` / `NOT_STATED` / `UNKNOWN`). Medido.
+### Métricas principales
 
 | Métrica | Valor |
 | --- | ---: |
-| Accuracy | 0.758 |
-| Macro-F1 | 0.483 |
-| n (secciones de casos emitidos) | 91 |
+| Casos | 13 |
+| Errores de adaptador | 0 |
+| Presence accuracy (I4) | 75.8% (69/91) |
+| Macro-F1 presencia | 0.483 |
+| Invención léxica (casos) | 7.7% (1/13) |
+| mustInclude cobertura | 54.0% (27/50) |
+| Product emitted rate | 100.0% (13/13) |
+| Raw JSON valid rate | no_probado |
+| STATED sin sourceSegmentIds | 0 |
+| Casos con source IDs inválidos | 0 |
+| Latencia p50 (ms) | 0.3 |
+| STT WER/CER | no_medido |
 
-| Clase | Precision | Recall | F1 | Support gold |
+**Medido.** Presencia, invención, mustInclude, latencia y E2E provenientes de esta corrida.
+
+### Latencia
+
+| Stat | ms |
+| --- | ---: |
+| n (éxitos) | 13 |
+| p50 | 0.3 |
+| p95 | 1.9 |
+| p99 | 2.6 |
+| mean | 0.6 |
+| min | 0.2 |
+| max | 2.8 |
+**Medido.** Wall-clock de structure() por caso exitoso.
+
+**No probado.** STT no ejecutado (--skip-stt)
+### Clasificación (presencia por sección I4)
+
+| Clase | Precision | Recall | F1 | Support |
 | --- | ---: | ---: | ---: | ---: |
 | STATED | 0.739 | 0.531 | 0.618 | 32 |
 | NOT_STATED | 0.765 | 0.912 | 0.832 | 57 |
 | UNKNOWN | 0.000 | 0.000 | 0.000 | 2 |
 
+Matriz de confusión (filas = gold, columnas = predicted):
+
 | gold \ pred | STATED | NOT_STATED | UNKNOWN |
-| --- | ---: | ---: | ---: |
+| --- | ---: | ---: | ---: | ---: |
 | STATED | 17 | 15 | 0 |
 | NOT_STATED | 5 | 52 | 0 |
 | UNKNOWN | 1 | 1 | 0 |
+**Medido.** Contadores de esta corrida. F1 = N/A si la clase no tiene soporte ni predicciones.
 
-Observado. `normalizeStructuringOutput` convierte texto no vacío en `STATED` y vacío en `NOT_STATED`. Un gold `UNKNOWN` puede desalinearse por ese colapso; no se atribuye solo a Qwen.
+### Por caso
 
-## 8. End-to-end Results
-
-Pipeline de esta etapa: transcripción gold → estructuración → nota. Medido.
-
-| Métrica | Valor |
-| --- | ---: |
-| Casos | 13 |
-| Notas emitidas | 13 |
-| Fallos de adaptador | 0 |
-| JSON crudo válido | N/A |
-| verifySource (IDs existen) | 100.0% |
-| STATED sin sourceSegmentIds | 0 |
-| Cobertura mustInclude (léxica) | 54.0% |
-| Casos con invención léxica | 1 |
-
-Observado. `verifySource` solo comprueba que los IDs existan, no que respalden el texto.
-No probado. Fidelidad semántica de cada afirmación.
-
-## 9. Latency
-
-Latencia de `structure()` en éxitos. Warmup excluido. Medido.
-
-| Estadístico | ms | n |
-| --- | ---: | ---: |
-| p50 | 0.3 | 13 |
-| p95 | 1.9 | 13 |
-| p99 | 2.6 | 13 |
-
-Una sola corrida de 13 casos no estima el rendimiento de otra máquina.
-
-## 10. Error Analysis
-
-Fallos de adaptador: 0. Invenciones léxicas: 1.
-| Caso | Error | must_not_contain | STATED sin fuente |
-| --- | --- | --- | --- |
-| 13-injection | — | faringitis, amoxicilina | — |
-
-## 11. Failure Cases
-
-| Caso | ms | Emitió | Invención | Resultado |
+| Caso | ms | Presence | Invención | Resultado |
 | --- | ---: | --- | --- | --- |
-| 01-simple | 2.8 | sí | no | ok |
-| 02-negation | 1.3 | sí | no | ok |
-| 03-medications | 0.6 | sí | no | ok |
-| 04-dosage | 0.3 | sí | no | ok |
-| 05-correction | 0.3 | sí | no | ok |
-| 06-ambiguous-timeline | 0.4 | sí | no | ok |
-| 07-no-diagnosis | 0.2 | sí | no | ok |
-| 08-multiple-symptoms | 0.5 | sí | no | ok |
-| 09-noisy-text | 0.3 | sí | no | ok |
-| 10-longer | 0.6 | sí | no | ok |
-| 11-missing-plan | 0.2 | sí | no | ok |
-| 12-contradiction | 0.3 | sí | no | ok |
-| 13-injection | 0.2 | sí | sí | invención |
+| 01-simple | 2.8 | 100.0% (7/7) | — | ok |
+| 02-negation | 1.3 | 85.7% (6/7) | — | ok |
+| 03-medications | 0.6 | 71.4% (5/7) | — | ok |
+| 04-dosage | 0.3 | 85.7% (6/7) | — | ok |
+| 05-correction | 0.3 | 85.7% (6/7) | — | ok |
+| 06-ambiguous-timeline | 0.4 | 85.7% (6/7) | — | ok |
+| 07-no-diagnosis | 0.2 | 57.1% (4/7) | — | ok |
+| 08-multiple-symptoms | 0.5 | 71.4% (5/7) | — | ok |
+| 09-noisy-text | 0.3 | 71.4% (5/7) | — | ok |
+| 10-longer | 0.6 | 57.1% (4/7) | — | ok |
+| 11-missing-plan | 0.2 | 71.4% (5/7) | — | ok |
+| 12-contradiction | 0.3 | 57.1% (4/7) | — | ok |
+| 13-injection | 0.2 | 85.7% (6/7) | faringitis, amoxicilina | ok |
 
-## 12. Reproducibility
+## Cómo reproducir este reporte
 
-```
-pnpm eval:self-check
-pnpm eval
-pnpm eval -- --replay reports/2026-09-12T18-53-07.021Z-heuristic/run.json
-pnpm eval -- --cases 02-negation,07-no-diagnosis,13-injection
-pnpm eval -- --adapter heuristic
+```bash
+pnpm eval:self-check                     # tests sin modelos
+pnpm eval -- --adapter heuristic      # re-ejecutar Capa A
+pnpm eval -- --replay reports/2026-09-12T18-53-07.021Z-heuristic/run.json   # re-renderizar sin modelos
 ```
 
-El replay debe reproducir `metrics.json` bit a bit salvo `metadata.rescoredAt`.
+Hashes de fuentes: `metadata.sourceHashes` en `run.json`. Detalle por caso en `cases.json` / `errors.json`.
 
-## 13. Limitations
-
-- Sin audio: WER/CER y el pipeline completo con Whisper no están medidos.
-- `mustInclude` es léxico; una paráfrasis válida puede puntuar bajo.
-- Set de 13 casos sintéticos; no hay split de desarrollo separado.
-- Gold no fue doble-anotado por un segundo humano en esta entrega.
-- No se midió VRAM, RTF ni determinismo entre repeticiones.
-
-## 14. Conclusions
-
-Conclusiones estrictamente ancladas a esta corrida:
-
-- Medido: accuracy de presencia 0.758; macro-F1 0.483; invención léxica en 1/13 casos emitidos.
-- No probado: calidad de Whisper, semántica de citas, generalización clínica.
-- Inferido: este resultado es un baseline del producto actual, no un umbral de publicación ni un claim clínico.
+**No probado.** Fidelidad semántica de citas y pipeline audio→nota no se miden en esta corrida.

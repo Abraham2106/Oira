@@ -420,13 +420,21 @@ describe("Capa B report artifact (--with-stt)", () => {
     assert.equal(run.summary.stt.meanWer, 0)
   })
 
-  it("renders WER/CER and leaves classification as no probado", () => {
+  it("renders WER/CER followed by reproduce report", () => {
     const run = mkRun()
     const md = renderReport(run)
     assert.match(md, /WER \| 0\.0%/)
     assert.match(md, /Transcribe success \| 100\.0% \(1\/1\)/)
-    assert.match(md, /no probado.*Capa B: solo STT/)
-    assert.match(md, /Structuring \| no usado \(with-stt\)/)
+    assert.match(md, /Presence accuracy \(I4\) \| no_probado/)
+    assert.match(md, /Cómo reproducir este reporte/)
+    assert.match(md, /pnpm eval -- --with-stt/)
+  })
+
+  it("keeps the evidence rule in the compact render", () => {
+    const run = mkRun()
+    const md = renderReport(run)
+    assert.match(md, /\*\*No probado\.\*/)
+    assert.match(md, /\*\*No probado\.\*\* Capa B no ejecuta estructuración/)
   })
 
   it("builds artifacts JSON without inventing presence", () => {
