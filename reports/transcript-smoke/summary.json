@@ -1,0 +1,12 @@
+{
+  "url": "http://127.0.0.1:5173",
+  "started_at": "2026-09-12T08:18:51.958Z",
+  "checks": {
+    "fetch_reachable": true,
+    "html_non_empty": true,
+    "screenshots": "skipped-no-browser-driver"
+  },
+  "errors": [],
+  "status": 200,
+  "html_length": 507
+}

@@ -1,0 +1,61 @@
+{
+  "root": "C:\\Users\\solan\\Documents\\Personal\\Hackathon\\Oira\\apps\\desktop\\src\\renderer",
+  "files_scanned": 56,
+  "passed": false,
+  "states": {
+    "loading": {
+      "present": true,
+      "matched_terms": [
+        "/loading/i"
+      ]
+    },
+    "empty": {
+      "present": true,
+      "matched_terms": [
+        "/empty/i",
+        "/no\\s+results/i"
+      ]
+    },
+    "error": {
+      "present": true,
+      "matched_terms": [
+        "/error/i",
+        "/failed/i",
+        "/catch\\s*\\(/i"
+      ]
+    },
+    "disabled": {
+      "present": true,
+      "matched_terms": [
+        "/disabled/i"
+      ]
+    },
+    "focus": {
+      "present": true,
+      "matched_terms": [
+        "/focus-visible/i",
+        "/:focus/i"
+      ]
+    },
+    "selected": {
+      "present": true,
+      "matched_terms": [
+        "/selected/i"
+      ]
+    },
+    "submitting": {
+      "present": false,
+      "matched_terms": []
+    },
+    "success": {
+      "present": true,
+      "matched_terms": [
+        "/complete/i"
+      ]
+    }
+  },
+  "missing": [
+    "submitting"
+  ],
+  "note": "Missing markers require manual review; absence of a term is not proof the state is absent."
+}
