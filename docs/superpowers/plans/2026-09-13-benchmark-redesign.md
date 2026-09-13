@@ -546,17 +546,19 @@ pnpm eval -- --config <config-id>     # Comparar configuraciones
 
 ---
 
-## 11. DECISIONES PENDIENTES DE CONFIRMACIÓN DEL USUARIO
+## 11. DECISIONES CONFIRMADAS POR EL USUARIO (aprobadas 2026-09-13)
 
-Estas decisiones son ambiguas o de alcance — **no se adivinan, se documentan como pendientes**:
+| # | Decisión | Elección |
+|---|----------|----------|
+| 1 | Corpus de audio | **(A) Sintético primero** — TTS desde guiones de los 13 casos; arranque con 3 casos (`01-simple`, `02-negation`, `12-contradiction`). Real con consentimiento solo después si hace falta. |
+| 2 | Scope de STT | **(A) Whisper local** (mismo `large-v3-turbo` que producción, vía `@xenova/transformers`). No se introduce proveedor externo. |
+| 3 | Nota-verifier | **(A) Excluir** de esta iteración. Se integra cuando exista implementación. |
+| 4 | Escala del dataset | **(A) Mantener 13 casos congelados + expandir gradual.** Arranque Nivel 1 con 3 casos audio. |
+| 5 | Albatross | **(A) Referencia secundaria** — solo patrones (filling rate, hardware probe, política de memoria). Licencia propietaria ⇒ no copiar código. |
+| 6 | Prioridad | **(A) Nivel 1 (WER/CER) primero.** |
+| 7 | Reproducibilidad multi-máquina | **(A) Diferida** — `--replay` + hashes bastan ahora; se suma cuando haya 2+ configuraciones. |
 
-1. **Corpus de audio:** ¿Sintético (guardrail, rápido) o real (consentimiento, más realista)?
-2. **Scope de STT:** ¿Whisper local (más complejo) o STT cloud (más simple)?
-3. **Nota-verifier:** ¿Incluir en esta propuesta o dejar para etapa posterior?
-4. **Escala del dataset:** ¿Mantener 13 casos y expandir gradualmente, o preparar corpus grande desde el inicio?
-5. **Aprobación de Albatross:** ¿Integrar metodología Albatross como referencia principal o secundaria?
-6. **Prioridad:** ¿Empezar por Nivel 1 (STT) o por ampliar métricas de contenido (Nivel 2)?
-7. **Reproducibilidad multi-máquina:** ¿Requerida desde el inicio o posterior?
+**Nota:** estas decisiones cierran el alcance de la Etapa 2 como se describe en el Plan de Implementación (§planes/2026-09-13-benchmark-impl).
 
 ---
 

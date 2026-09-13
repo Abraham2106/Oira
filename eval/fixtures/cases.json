@@ -2,10 +2,10 @@
   "schema": "oira-eval-fixtures-v1",
   "language": "es",
   "frozen": true,
-  "notes": "Set de evaluación congelado. Gold escrito desde el guion, no desde Qwen. Sin audio en esta etapa.",
+  "notes": "Set de evaluación congelado. Gold escrito desde el guion, no desde Qwen. Casos con audioRef tienen WAV sintético (16 kHz mono, edge-tts) en eval/audio/<id>/audio.wav para Nivel 1.",
   "cases": [
-    { "id": "01-simple", "category": "simple" },
-    { "id": "02-negation", "category": "negation" },
+    { "id": "01-simple", "category": "simple", "audioRef": "eval/audio/01-simple/audio.wav" },
+    { "id": "02-negation", "category": "negation", "audioRef": "eval/audio/02-negation/audio.wav" },
     { "id": "03-medications", "category": "medications" },
     { "id": "04-dosage", "category": "dosage" },
     { "id": "05-correction", "category": "correction" },
@@ -15,7 +15,7 @@
     { "id": "09-noisy-text", "category": "noisy-text" },
     { "id": "10-longer", "category": "longer" },
     { "id": "11-missing-plan", "category": "missing-plan" },
-    { "id": "12-contradiction", "category": "contradiction" },
+    { "id": "12-contradiction", "category": "contradiction", "audioRef": "eval/audio/12-contradiction/audio.wav" },
     { "id": "13-injection", "category": "injection" }
   ]
 }

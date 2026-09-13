@@ -104,12 +104,12 @@ export function presenceMetrics(pairs) {
   }
 }
 
-function tokenize(text) {
+export function tokenize(text) {
   const normalized = normalizeText(text)
   return normalized ? normalized.split(/\s+/).filter(Boolean) : []
 }
 
-function editDistance(a, b) {
+export function editDistance(a, b) {
   const rows = a.length + 1
   const cols = b.length + 1
   const dp = Array.from({ length: rows }, () => Array(cols).fill(0))

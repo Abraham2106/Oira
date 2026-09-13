@@ -13,6 +13,13 @@ import {
   summarize,
   wordErrorRate,
 } from "./scorer/index.mjs"
+import {
+  computeSttMetrics,
+  negationDeltas,
+  summarizeStt,
+  transcriptText,
+} from "./scorer/stt-metrics.mjs"
+import { buildArtifacts, renderReport } from "./report.mjs"
 
 const emptyNote = () => ({
   sections: Object.fromEntries(
@@ -232,5 +239,203 @@ describe("stt stubs", () => {
     assert.equal(payload.wer, null)
     assert.equal(payload.cer, null)
     assert.equal(payload.evidence, "no_probado")
+  })
+})
+
+describe("transcriptText (STT nivel 1)", () => {
+  it("joins segment arrays and tolerates empty lists", () => {
+    assert.equal(transcriptText([]), "")
+    assert.equal(
+      transcriptText([
+        { text: "Dolor de rodilla", startMs: 0 },
+        { text: "", startMs: 5 },
+        { text: "izquierda", startMs: 9 },
+      ]),
+      "Dolor de rodilla izquierda",
+    )
+  })
+
+  it("optionally prepends timestamps", () => {
+    assert.equal(
+      transcriptText([{ text: "hola", startMs: 120 }], {
+        preserveTimestamps: true,
+      }),
+      "[120] hola",
+    )
+  })
+})
+
+describe("negationDeltas (STT nivel 1)", () => {
+  it("counts dropped 'no' words reference→hypothesis", () => {
+    const d = negationDeltas("No hay fiebre", "hay fiebre")
+    assert.equal(d.dropped, 1)
+    assert.equal(d.added, 0)
+  })
+
+  it("counts added 'no' words reference→hypothesis", () => {
+    const d = negationDeltas("hay fiebre", "No hay fiebre")
+    assert.equal(d.added, 1)
+    assert.equal(d.dropped, 0)
+  })
+
+  it("is case- and accent-insensitive", () => {
+    const d = negationDeltas("No hay tos", "no hay tos")
+    assert.deepEqual(d, { dropped: 0, added: 0 })
+  })
+})
+
+describe("computeSttMetrics (STT nivel 1)", () => {
+  it("measures WER/CER on equal text as zero", () => {
+    const m = computeSttMetrics({
+      referenceText: "Dolor de rodilla izquierda",
+      hypothesisText: "Dolor de rodilla izquierda",
+    })
+    assert.equal(m.status, "medido")
+    assert.equal(m.wer, 0)
+    assert.equal(m.cer, 0)
+    assert.equal(m.transcribeSuccess, true)
+    assert.equal(m.evidence, "medido")
+  })
+
+  it("reports an empty hypothesis as a failed transcription", () => {
+    const m = computeSttMetrics({
+      referenceText: "Dolor de rodilla",
+      hypothesisText: "",
+    })
+    assert.equal(m.emptyTranscript, true)
+    assert.equal(m.transcribeSuccess, false)
+    assert.equal(m.hypTokens, 0)
+  })
+
+  it("accepts segment arrays as well as plain strings", () => {
+    const m = computeSttMetrics({
+      reference: [{ text: "uno", startMs: 0 }],
+      hypothesis: [{ text: "dos", startMs: 0 }],
+    })
+    assert.equal(m.refTokens, 1)
+    assert.equal(m.hypTokens, 1)
+    assert.ok(m.wer > 0)
+  })
+})
+
+describe("summarizeStt (STT nivel 1)", () => {
+  it("flags no measured rows instead of inventing a number", () => {
+    const s = summarizeStt([])
+    assert.equal(s.status, "no_medido")
+    assert.equal(s.evidence, "no_probado")
+    assert.ok(s.reason)
+  })
+
+  it("aggregates WER/CER means and per-case WER", () => {
+    const s = summarizeStt([
+      { id: "01", metrics: computeSttMetrics({ referenceText: "a b", hypothesisText: "a b" }) },
+      { id: "02", metrics: computeSttMetrics({ referenceText: "a b c", hypothesisText: "a" }) },
+    ])
+    assert.equal(s.status, "medido")
+    assert.equal(s.transcribeSuccessRate, 1)
+    assert.equal(s.werPerCase["01"], 0)
+    assert.ok(s.meanWer > 0)
+    assert.equal(s.evidence, "medido")
+  })
+})
+
+describe("Capa B report artifact (--with-stt)", () => {
+  const gold = {
+    must_not_contain: [],
+    sections: Object.fromEntries(
+      SECTION_IDS.map((id) => [id, { presence: "NOT_STATED", mustInclude: [] }]),
+    ),
+  }
+  const mkRun = () => {
+    const evaluation = evaluateCase({
+      gold,
+      transcript: [],
+      note: null,
+      error: null,
+      latencyMs: 10,
+      rawSdkText: "Dolor de rodilla izquierda",
+    })
+    const results = [
+      {
+        id: "01-simple",
+        category: "simple",
+        transcript: [],
+        gold,
+        note: null,
+        error: null,
+        latencyMs: 10,
+        rawSdkText: "Dolor de rodilla izquierda",
+        rawCompletion: null,
+        evaluation,
+        stt: {
+          reference: "Dolor de rodilla izquierda",
+          hypothesis: "Dolor de rodilla izquierda",
+        },
+      },
+    ]
+    const summary = summarize(
+      results.map((r) => ({
+        id: r.id,
+        evaluation: r.evaluation,
+        error: r.error,
+        latencyMs: r.latencyMs,
+      })),
+    )
+    summary.stt = summarizeStt(
+      results.map((r) => ({
+        id: r.id,
+        metrics: computeSttMetrics({
+          reference: r.stt.reference,
+          hypothesis: r.stt.hypothesis,
+        }),
+      })),
+    )
+    return {
+      metadata: {
+        evaluatorVersion: 1,
+        layer: "B-with-stt",
+        runId: "test-B",
+        startedAt: "2026-09-13T00:00:00.000Z",
+        adapter: "qvac",
+        skipStt: false,
+        node: "v24",
+        electron: null,
+        sdk: "0.18.2",
+        hardware: { platform: "win32", arch: "x64", cpu: "test" },
+        models: { structuring: null, stt: "WHISPER_QVAC_LOCAL" },
+        gitCommit: null,
+        datasetHash: "abc",
+        sourceHashes: {},
+        evidence_rule: "medido | observado | inferido | no_probado",
+      },
+      summary,
+      results,
+    }
+  }
+
+  it("aggregates a measured STT summary with WER 0 on identical gold", () => {
+    const run = mkRun()
+    assert.equal(run.summary.stt.status, "medido")
+    assert.equal(run.summary.stt.werPerCase["01-simple"], 0)
+    assert.equal(run.summary.stt.meanWer, 0)
+  })
+
+  it("renders WER/CER and leaves classification as no probado", () => {
+    const run = mkRun()
+    const md = renderReport(run)
+    assert.match(md, /WER \| 0\.0%/)
+    assert.match(md, /Transcribe success \| 100\.0% \(1\/1\)/)
+    assert.match(md, /no probado.*Capa B: solo STT/)
+    assert.match(md, /Structuring \| no usado \(with-stt\)/)
+  })
+
+  it("builds artifacts JSON without inventing presence", () => {
+    const run = mkRun()
+    const { metrics, cases, errors } = buildArtifacts(run)
+    assert.equal(metrics.stt.status, "medido")
+    assert.equal(metrics.presence.accuracy, null)
+    assert.equal(metrics.layer, "B-with-stt")
+    assert.equal(errors.length, 0)
+    assert.equal(cases.length, 1)
   })
 })

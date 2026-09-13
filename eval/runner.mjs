@@ -14,11 +14,13 @@ import { dirname, join, resolve } from "node:path"
 import { performance } from "node:perf_hooks"
 import { fileURLToPath, pathToFileURL } from "node:url"
 import { evaluateCase, summarize } from "./scorer/index.mjs"
+import { summarizeStt } from "./scorer/stt-metrics.mjs"
 import { buildArtifacts } from "./report.mjs"
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..")
 const DESKTOP = join(ROOT, "apps", "desktop")
 const FIXTURES = join(ROOT, "eval", "fixtures")
+const AUDIO = join(ROOT, "eval", "audio")
 const require = createRequire(join(DESKTOP, "package.json"))
 const SELF = fileURLToPath(import.meta.url)
 
@@ -76,33 +78,39 @@ function loadManifest(caseFilter) {
   }
   return cases.map((entry) => {
     const dir = join(FIXTURES, entry.id)
+    const audioPath = join(AUDIO, entry.id, "audio.wav")
     return {
       id: entry.id,
       category: entry.category,
       script: readFileSync(join(dir, "script.txt"), "utf8"),
       transcript: readJson(join(dir, "transcript.json")),
       gold: readJson(join(dir, "gold.json")),
+      audioRef: existsSync(audioPath) ? audioPath : undefined,
     }
   })
 }
 
 function datasetHash() {
   const hash = createHash("sha256")
-  const walk = (dir, prefix = "") => {
+  const walk = (dir, prefix = "", opts = {}) => {
     for (const name of readdirSync(dir).sort()) {
       if (name.startsWith("_")) continue
       const path = join(dir, name)
       const rel = `${prefix}${name}`
       if (statSync(path).isDirectory()) {
-        walk(path, `${rel}/`)
+        walk(path, `${rel}/`, opts)
         continue
       }
-      if (!name.endsWith(".json") && !name.endsWith(".txt")) continue
+      const ok = opts.audio
+        ? name.endsWith(".wav")
+        : name.endsWith(".json") || name.endsWith(".txt")
+      if (!ok) continue
       hash.update(rel)
       hash.update(readFileSync(path))
     }
   }
   walk(FIXTURES)
+  walk(AUDIO, "audio/", { audio: true })
   return hash.digest("hex")
 }
 
@@ -177,8 +185,20 @@ async function createAdapter(name) {
   return {
     name: "qvac",
     structuringLabel: "QWEN3_4B_Q4_K_M",
+    transcribingLabel: "WHISPER_QVAC_LOCAL",
     async warm() {
       await runtime.handoffToStructuring()
+    },
+    async warmTranscribe() {
+      await runtime.warmTranscription()
+    },
+    async transcribe(filePath) {
+      const raw = await runtime.transcribe({ filePath })
+      return raw.map((segment) => ({
+        id: String(segment.id ?? `seg-${segment.startMs}`),
+        text: segment.text,
+        startMs: segment.startMs,
+      }))
     },
     async structure(transcript) {
       lastRaw = null
@@ -210,6 +230,7 @@ async function replay(path) {
   const absolute = resolve(path)
   const run = readJson(absolute)
   if (!run.results?.length) throw new Error("Artefacto de replay incompleto.")
+  const isSttRun = run.metadata?.skipStt === false
   for (const r of run.results) {
     r.evaluation = evaluateCase({
       gold: r.gold,
@@ -228,6 +249,19 @@ async function replay(path) {
       latencyMs: r.latencyMs,
     })),
   )
+  if (isSttRun) {
+    const { computeSttMetrics, summarizeStt } = await import("./scorer/stt-metrics.mjs")
+    const sttResults = run.results
+      .filter((r) => r.stt && r.stt.reference && r.stt.hypothesis)
+      .map((r) => ({
+        id: r.id,
+        metrics: computeSttMetrics({
+          reference: r.stt.reference,
+          hypothesis: r.stt.hypothesis,
+        }),
+      }))
+    run.summary.stt = sttResults.length ? summarizeStt(sttResults) : run.summary.stt
+  }
   run.metadata.rescoredAt = new Date().toISOString()
   run.metadata.rescoredWith = sha256File(join(ROOT, "eval", "scorer", "index.mjs"))
   writeRunArtifacts(dirname(absolute), run)
@@ -255,18 +289,14 @@ async function main() {
     return
   }
 
-  if (!args.skipStt) {
-    throw new Error(
-      "Capa B (--with-stt) no está implementada en esta etapa. Use --skip-stt.",
-    )
-  }
-
   const startedAt = new Date().toISOString()
-  const runId = `${startedAt.replaceAll(":", "-")}-skip-stt-${args.adapter}`
+  const sttMode = !args.skipStt
+  const runId = `${startedAt.replaceAll(":", "-")}-${sttMode ? "with-stt" : "skip-stt"}-${args.adapter}`
   const outDir = join(args.outputRoot, runId)
 
   const sourceFiles = [
     "eval/scorer/index.mjs",
+    "eval/scorer/stt-metrics.mjs",
     "eval/runner.mjs",
     "eval/report.mjs",
     "eval/fixtures/cases.json",
@@ -278,7 +308,8 @@ async function main() {
     runId,
     startedAt,
     adapter: args.adapter,
-    skipStt: true,
+    skipStt: args.skipStt,
+    layer: sttMode ? "B-with-stt" : "A-skip-stt",
     node: process.version,
     electron: process.versions.electron ?? null,
     sdk: null,
@@ -302,6 +333,7 @@ async function main() {
   try {
     adapter = await createAdapter(args.adapter)
     metadata.models.structuring = adapter.structuringLabel
+    metadata.models.stt = sttMode ? adapter.transcribingLabel ?? null : null
     if (args.adapter === "qvac") {
       try {
         metadata.sdk = readJson(
@@ -334,10 +366,14 @@ async function main() {
   mkdirSync(outDir, { recursive: true })
 
   try {
-    console.log(`Warmup (${args.adapter})…`)
+    console.log(`Warmup (${args.adapter}${sttMode ? ", modo STT" : ""})…`)
     const warmStart = performance.now()
     try {
-      await adapter.warm()
+      if (sttMode && typeof adapter.warmTranscribe === "function") {
+        await adapter.warmTranscribe()
+      } else {
+        await adapter.warm()
+      }
       run.warmup = { ok: true, ms: performance.now() - warmStart }
     } catch (error) {
       run.warmup = {
@@ -354,11 +390,33 @@ async function main() {
       let error = null
       let rawSdkText = null
       let rawCompletion = null
+      let sttResult = null
       try {
-        const result = await adapter.structure(fixture.transcript)
-        note = result.note
-        rawSdkText = result.rawSdkText ?? null
-        rawCompletion = result.rawCompletion ?? null
+        if (sttMode && fixture.audioRef) {
+          // --- Nivel 1: STT real sobre WAV ---
+          const transcriptSegments = await adapter.transcribe(fixture.audioRef)
+          const hypothesisText = transcriptSegments
+            .map((s) => s.text)
+            .join(" ")
+          const referenceText = fixture.transcript
+            .map((s) => s.text)
+            .join(" ")
+          sttResult = {
+            reference: referenceText,
+            hypothesis: hypothesisText,
+            referenceSegments: fixture.transcript,
+            hypothesisSegments: transcriptSegments,
+          }
+          // Para Capa B, el "note" se deriva del transcript STT (gold) —
+          // estructuración se salta; evaluamos WER/CER sobre la transcripción.
+          note = null
+          rawSdkText = hypothesisText
+        } else {
+          const result = await adapter.structure(fixture.transcript)
+          note = result.note
+          rawSdkText = result.rawSdkText ?? null
+          rawCompletion = result.rawCompletion ?? null
+        }
       } catch (failure) {
         error =
           failure && typeof failure === "object" && "code" in failure
@@ -368,33 +426,71 @@ async function main() {
               : String(failure)
       }
       const latencyMs = performance.now() - start
-      const evaluation = evaluateCase({
-        gold: fixture.gold,
-        transcript: fixture.transcript,
-        note,
-        error,
-        latencyMs,
-        rawSdkText,
-      })
-      run.results.push({
-        id: fixture.id,
-        category: fixture.category,
-        transcript: fixture.transcript,
-        gold: fixture.gold,
-        note,
-        error,
-        latencyMs,
-        rawSdkText,
-        rawCompletion,
-        evaluation,
-      })
+      let evaluation
+      if (sttMode && !error) {
+        evaluation = evaluateCase({
+          gold: fixture.gold,
+          transcript: fixture.transcript,
+          note: null,
+          error: null,
+          latencyMs,
+          rawSdkText,
+        })
+        run.results.push({
+          id: fixture.id,
+          category: fixture.category,
+          transcript: fixture.transcript,
+          gold: fixture.gold,
+          note: null,
+          error: null,
+          latencyMs,
+          rawSdkText,
+          rawCompletion: null,
+          evaluation,
+          stt: sttResult,
+        })
+      } else {
+        evaluation = evaluateCase({
+          gold: fixture.gold,
+          transcript: fixture.transcript,
+          note,
+          error,
+          latencyMs,
+          rawSdkText,
+        })
+        run.results.push({
+          id: fixture.id,
+          category: fixture.category,
+          transcript: fixture.transcript,
+          gold: fixture.gold,
+          note,
+          error,
+          latencyMs,
+          rawSdkText,
+          rawCompletion,
+          evaluation,
+        })
+      }
       writeJson(join(outDir, "run.json"), run)
+      const label = sttMode ? "STT" : (error ?? (evaluation.invention ? "invención" : "ok"))
       console.log(
-        `Caso ${fixture.id}: ${latencyMs.toFixed(1)} ms; ${
-          error ?? (evaluation.invention ? "invención" : "ok")
-        }`,
+        `Caso ${fixture.id}: ${latencyMs.toFixed(1)} ms; ${label}`,
       )
     }
+
+    const { computeSttMetrics, summarizeStt } = await import("./scorer/stt-metrics.mjs")
+    const sttResults = []
+    for (const r of run.results) {
+      if (!r.stt || !r.stt.reference || !r.stt.hypothesis) continue
+      sttResults.push({
+        id: r.id,
+        metrics: computeSttMetrics({
+          reference: r.stt.reference,
+          hypothesis: r.stt.hypothesis,
+        }),
+      })
+    }
+    const sttSummary = sttResults.length ? summarizeStt(sttResults) : null
 
     run.summary = summarize(
       run.results.map((r) => ({
@@ -404,6 +500,11 @@ async function main() {
         latencyMs: r.latencyMs,
       })),
     )
+    run.summary.stt = sttSummary ?? {
+      status: "no_medido",
+      reason: "Sin resultados STT medidos en esta corrida.",
+      evidence: "no_probado",
+    }
   } catch (error) {
     run.error = error instanceof Error ? error.message : String(error)
     run.summary = summarize(
@@ -437,6 +538,15 @@ async function main() {
         inventionRate: run.summary.invention.rate,
         latencyP50: run.summary.latency.p50,
         stt: run.summary.stt.status,
+        sttSummary: run.summary.stt.status === "medido" ? {
+          cases: run.summary.stt.cases,
+          meanWer: run.summary.stt.meanWer,
+          meanCer: run.summary.stt.meanCer,
+          werPerCase: run.summary.stt.werPerCase,
+          negationDrops: run.summary.stt.negationDrops,
+          negationAdds: run.summary.stt.negationAdds,
+          evidence: run.summary.stt.evidence,
+        } : null,
       },
       null,
       2,

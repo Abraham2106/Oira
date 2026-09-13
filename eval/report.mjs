@@ -107,19 +107,37 @@ export function renderReport(run) {
 
 Generated: ${m.startedAt}. Run: \`${m.runId}\`.
 
-${evidence("Observado", "Capa A = estructuración sobre transcripción gold (\`--skip-stt\`). STT no se ejecutó.")}
+${evidence("Observado", m.skipStt ? "Capa A = estructuración sobre transcripción gold (\`--skip-stt\`). STT no se ejecutó." : "Capa B = solo STT (\`--with-stt\`). Estructuración no se ejecutó.")}
 
 ## 1. Executive Summary
 
 - Casos: **${s.cases}** (errores de adaptador: **${s.errors}**).
-- Presence accuracy (secciones I4): **${pct(s.presence.correct, s.presence.total)}**.
-- Macro-F1 presencia: **${fmt(s.presence.macroF1, 3)}**.
-- Casos con \`must_not_contain\` (invención léxica): **${pct(s.invention.casesWithHits, s.cases)}**.
-- Cobertura \`mustInclude\` (léxica): **${
-    s.mustIncludeCoverage === null ? "N/A" : pct(s.mustIncludeHits, s.mustIncludeTotal)
-  }**.
-- Latencia de estructuración p50 / p95 / p99 (ms, éxitos n=${s.latency.samples}): **${fmt(s.latency.p50)} / ${fmt(s.latency.p95)} / ${fmt(s.latency.p99)}**.
-- STT WER/CER: **no medido**.
+- Presence accuracy (secciones I4): ${
+    m.skipStt ? `**${pct(s.presence.correct, s.presence.total)}**` : "**no probado** (Capa B: solo STT)"
+  }.
+- Macro-F1 presencia: ${
+    m.skipStt ? `**${fmt(s.presence.macroF1, 3)}**` : "**no probado** (Capa B: solo STT)"
+  }.
+- Casos con \`must_not_contain\` (invención léxica): ${
+    m.skipStt ? `**${pct(s.invention.casesWithHits, s.cases)}**` : "**no probado** (Capa B: solo STT)"
+  }.
+- Cobertura \`mustInclude\` (léxica): ${
+    m.skipStt
+      ? s.mustIncludeCoverage === null
+        ? "N/A"
+        : `**${pct(s.mustIncludeHits, s.mustIncludeTotal)}**`
+      : "**no probado** (Capa B: solo STT)"
+  }.
+- Latencia de estructuración p50 / p95 / p99 (ms, éxitos n=${s.latency.samples}): ${
+    m.skipStt
+      ? `**${fmt(s.latency.p50)} / ${fmt(s.latency.p95)} / ${fmt(s.latency.p99)}**`
+      : "**no probado** (Capa B: solo STT)"
+  }.
+- STT WER/CER: ${
+    s.stt.status === "medido" && Number.isFinite(s.stt.meanWer)
+      ? `**${fmt(s.stt.meanWer * 100, 1)}% / ${fmt(s.stt.meanCer * 100, 1)}%** (media, ${s.stt.cases} casos)`
+      : "**no medido**"
+  }.
 
 ${evidence("Medido", "Las cifras de presencia, invención léxica, mustInclude y latencia provienen de esta corrida (o de replay del artefacto).")}
 
@@ -142,8 +160,8 @@ ${evidence("Medido", "Valores leídos del proceso y manifiestos en la máquina d
 
 | Rol | Constante / modo |
 | --- | --- |
-| STT | no usado (skip-stt) |
-| Structuring | ${m.models?.structuring ?? "N/A"} |
+| STT | ${m.skipStt ? "no usado (skip-stt)" : (m.models?.stt ?? "WHISPER_QVAC_LOCAL")} |
+| Structuring | ${m.skipStt ? (m.models?.structuring ?? "N/A") : "no usado (with-stt)"} |
 | Prompt / schema | versiones de producto sin modificar para esta corrida |
 
 ${evidence("Observado", "El runner importa los puertos de producción; no cambia prompts.")}
@@ -153,16 +171,28 @@ ${evidence("Observado", "El runner importa los puertos de producción; no cambia
 - Idioma: español sintético.
 - Casos: ${s.cases} (categorías en \`eval/fixtures/cases.json\`).
 - Gold: I4 (\`STATED\` / \`NOT_STATED\` / \`UNKNOWN\`), escrito desde el guion.
-- Sin audio WAV en esta etapa.
+- Audio: ${
+    s.stt.status === "medido"
+      ? `${s.stt.cases} WAV sintéticos (16 kHz mono, edge-tts) en \`eval/audio/<case>/audio.wav\`.`
+      : "Sin audio WAV en esta etapa."
+  }
 
-${evidence("Observado", "Contenido de \`eval/fixtures/\`; no hay pacientes reales.")}
+${evidence("Observado", "Contenido de \`eval/fixtures/\`; audio sintético TTS, no hay pacientes reales.")}
 
 ## 5. Methodology
 
 1. Cargar fixtures de texto.
 2. Warmup del adaptador (si QVAC).
-3. Por caso: \`structure({ transcript })\` con la transcripción gold.
-4. Puntuar presencia, invención léxica (\`must_not_contain\`), \`mustInclude\`, IDs de fuente, latencia.
+3. ${
+    m.skipStt
+      ? "Por caso: \`structure({ transcript })\` con la transcripción gold."
+      : "Por caso: \`transcribe({ filePath })\` sobre \`audio.wav\`; WER/CER contra transcripción gold."
+  }
+4. ${
+    m.skipStt
+      ? "Puntuar presencia, invención léxica (\`must_not_contain\`), \`mustInclude\`, IDs de fuente, latencia."
+      : "Puntuar WER/CER, negación (heurística), éxito/fallo de transcripción, latencia STT."
+  }
 5. Escribir \`run.json\` + derivados; permitir \`--replay\` sin GPU.
 
 ${evidence("Observado", "Flujo del runner. No es un ensayo clínico.")}
@@ -171,15 +201,34 @@ ${evidence("Observado", "Flujo del runner. No es un ensayo clínico.")}
 
 | Métrica | Valor |
 | --- | ---: |
-| WER | N/A |
-| CER | N/A |
+| WER | ${s.stt.status === "medido" && Number.isFinite(s.stt.meanWer) ? fmt(s.stt.meanWer * 100, 1).concat("%") : "N/A"} |
+| CER | ${s.stt.status === "medido" && Number.isFinite(s.stt.meanCer) ? fmt(s.stt.meanCer * 100, 1).concat("%") : "N/A"} |
+| Transcribe success | ${
+    s.stt.status === "medido"
+      ? pct(s.stt.cases - s.stt.emptyTranscriptCount, s.stt.cases)
+      : "N/A"
+  } |
+| Negación drop / add | ${
+    s.stt.status === "medido"
+      ? `${s.stt.negationDrops} / ${s.stt.negationAdds}`
+      : "N/A"
+  } |
 | Estado | ${s.stt.status} |
 
-${evidence("No probado", s.stt.reason)}
+${
+  s.stt.status === "medido"
+    ? evidence(
+        "Medido",
+        "WER/CER medios sobre WAV sintéticos contra transcripción gold. Negación = heurística (recuento de tokens 'no'); no es juicio clínico.",
+      )
+    : evidence("No probado", s.stt.reason)
+}
 
 ## 7. Classification Results
 
-Clasificación = **presencia por sección I4** (gold vs nota de producto post-normalización).
+${
+  m.skipStt
+    ? `Clasificación = **presencia por sección I4** (gold vs nota de producto post-normalización).
 
 | Métrica | Valor |
 | --- | ---: |
@@ -197,11 +246,15 @@ Matriz de confusión (filas = gold, columnas = predicted):
 ${matrixRows}
 
 ${evidence("Medido", "Contadores de esta corrida. F1 = null si la clase no tiene soporte ni predicciones.")}
-${evidence("Observado", "\`normalizeStructuringOutput\` del producto convierte texto en STATED y no preserva UNKNOWN del modelo; la matriz mide el producto.")}
+${evidence("Observado", "\`normalizeStructuringOutput\` del producto convierte texto en STATED y no preserva UNKNOWN del modelo; la matriz mide el producto.")}`
+    : evidence("No probado", "Capa B no ejecuta estructuración; no hay clasificación que medir.")
+}
 
 ## 8. End-to-end Results
 
-E2E de Capa A = texto gold → estructuración → nota.
+${
+  m.skipStt
+    ? `E2E de Capa A = texto gold → estructuración → nota.
 
 | Métrica | Valor |
 | --- | ---: |
@@ -209,13 +262,17 @@ E2E de Capa A = texto gold → estructuración → nota.
 | Raw JSON valid rate | ${s.rawJsonValidRate === null ? "N/A" : fmt(s.rawJsonValidRate, 3)} |
 | Invention case rate | ${pct(s.invention.casesWithHits, s.cases)} |
 | mustInclude coverage | ${
-    s.mustIncludeCoverage === null ? "N/A" : pct(s.mustIncludeHits, s.mustIncludeTotal)
-  } |
+      s.mustIncludeCoverage === null ? "N/A" : pct(s.mustIncludeHits, s.mustIncludeTotal)
+    } |
 | STATED without sourceSegmentIds (count) | ${s.statedWithoutSource} |
 | Cases with invalid source IDs | ${s.sourceIdFailureCases} |
 
 ${evidence("Medido", "Derivado de outputs y gold. mustInclude es léxico; paráfrasis válidas pueden fallar.")}
-${evidence("No probado", "Fidelidad semántica de citas y pipeline audio→nota.")}
+${evidence("No probado", "Fidelidad semántica de citas y pipeline audio→nota.")}`
+    : `E2E de Capa B = Nivel 1 solo. Estructuración no ejecutada.
+
+${evidence("No probado", "Esta corrida solo mide STT (WER/CER). No hay nota estructurada que puntuar.")}`
+}
 
 ## 9. Latency
 
@@ -231,11 +288,20 @@ ${evidence("No probado", "Fidelidad semántica de citas y pipeline audio→nota.
 
 Warmup excluido. Percentiles con interpolación lineal.
 
-${evidence("Medido", "Wall-clock de \`structure()\` por caso exitoso.")}
+${evidence(
+  "Medido",
+  m.skipStt
+    ? "Wall-clock de \`structure()\` por caso exitoso."
+    : "Wall-clock de \`transcribe()\` por caso exitoso.",
+)}
 
 ## 10. Error Analysis
 
-Fallos de adaptador: **${s.errors}**. Casos con invención léxica: **${s.invention.casesWithHits}**. Fallos de IDs de fuente: **${s.sourceIdFailureCases}**.
+${
+  m.skipStt
+    ? `Fallos de adaptador: **${s.errors}**. Casos con invención léxica: **${s.invention.casesWithHits}**. Fallos de IDs de fuente: **${s.sourceIdFailureCases}**.`
+    : `Fallos de adaptador (transcripción): **${s.errors}**. Transcripts vacías: **${s.stt.status === "medido" ? s.stt.emptyTranscriptCount : "N/A"}**; negación perdida (drop): **${s.stt.status === "medido" ? s.stt.negationDrops : "N/A"}**.`
+}
 
 ${evidence("Medido", "Conteos del agregador. Sin atribución causal inventada.")}
 
@@ -252,6 +318,7 @@ Detalle en \`errors.json\` / \`cases.json\`.
 \`\`\`bash
 pnpm eval:self-check
 pnpm eval -- --skip-stt
+pnpm eval -- --with-stt          # Nivel 1: STT sobre WAV (requiere audio + Whisper QVAC)
 pnpm eval -- --adapter heuristic
 pnpm eval -- --replay reports/${m.runId}/run.json
 \`\`\`
@@ -262,7 +329,11 @@ ${evidence("Observado", "Comandos del package.json raíz.")}
 
 ## 13. Limitations
 
-- Sin audio: WER/CER no medidos.
+${
+  m.skipStt
+    ? "- Sin audio: WER/CER no medidos."
+    : `- STT sobre ${s.stt.status === "medido" ? s.stt.cases : 0} WAV sintéticos; extensible a más casos con \`--with-stt\` cuando exista audio.`
+}
 - \`mustInclude\` / \`must_not_contain\` son léxicos.
 - Gold de un solo anotador en esta etapa.
 - Una corrida no estima estabilidad multi-máquina.
@@ -273,12 +344,17 @@ ${evidence("Observado", "Límites del diseño de Capa A.")}
 ## 14. Conclusions
 
 ${
-  s.cases === 0 || (s.errors === s.cases && s.latency.samples === 0)
-    ? evidence("No probado", "No hay baseline numérico utilizable (corrida vacía o bloqueada).")
-    : evidence(
-        "Inferido",
-        "Las cifras anteriores describen solo esta configuración, dataset y máquina. No justifican claims clínicos de producto ni optimizaciones.",
+  !m.skipStt
+    ? evidence(
+        "No probado",
+        "Corrida Capa B: solo STT (WER/CER). No mide clasificación, invención ni latencia de estructuración.",
       )
+    : s.cases === 0 || (s.errors === s.cases && s.latency.samples === 0)
+      ? evidence("No probado", "No hay baseline numérico utilizable (corrida vacía o bloqueada).")
+      : evidence(
+          "Inferido",
+          "Las cifras anteriores describen solo esta configuración, dataset y máquina. No justifican claims clínicos de producto ni optimizaciones.",
+        )
 }
 
 No optimizar a partir de este informe sin autorización explícita.
