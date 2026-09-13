@@ -9,9 +9,9 @@ Harness de **medición** separado del producto. No cambia prompts, IPC ni UI.
 | `scorer/index.mjs` | Métricas puras (presencia I4, invención léxica, latencia, `latencyStats`, WER/CER helpers) |
 | `scorer/stt-metrics.mjs` | Métricas STT: `computeSttMetrics`, `summarizeStt`, negación heurística |
 | `scorer.test.mjs` / `fixtures.test.mjs` | Self-check sin modelos (render Capas A/B/C) |
-| `fixtures/` | 13 casos sintéticos congelados (script + transcript + gold I4 + `audioRef`) |
+| `fixtures/` | 19 casos sintéticos congelados (script + transcript + gold I4 + `audioRef`) |
 | `audio/_generate.py` | Generador TTS del corpus (edge-tts → 16 kHz mono WAV) |
-| `audio/<id>/audio.wav` | Audio sintético por caso (01, 02, 12 por ahora) |
+| `audio/<id>/audio.wav` | Audio sintético por cada uno de los 19 casos |
 | `runner.mjs` | CLI: `--skip-stt`, `--with-stt`, `--e2e` (default), `--adapter qvac\|heuristic`, `--replay`, `--cases` |
 | `register-ts.mjs` | Resuelve imports TS de Main / `@oira/types` |
 | `report.mjs` | `REPORT.md` + `metrics.json` / `cases.json` / `errors.json` |
@@ -36,7 +36,7 @@ En PowerShell, cita `--cases` para no romper las comas. `--e2e` es mutuamente ex
 
 Cadena completa por caso: `transcribe(WAV)` → `estructuración sobre la hipótesis de Whisper` → presencia vs gold. Mide a la vez WER/CER, presencia I4 sobre la hipótesis, invención/mustInclude/source IDs, latencia **structure** y **E2E** (percentiles sobre E2E), y el **delta presence gold-fed → STT-fed** (mismos casos, mismo gold; columna de comparación computada en el mismo run).
 
-- Solo se evalúan casos con `audioRef` (hoy 3/13); los demás se omiten (`Sin WAV (omitidos)`), nunca se mezclan con noticias gold-fed.
+- Solo se evalúan casos con `audioRef` (hoy 19/19); los demás se omiten (`Sin WAV (omitidos)`), nunca se mezclan con noticias gold-fed.
 - Si ningún caso seleccionado tiene WAV → reporte **bloqueado** (`no_probado`), sin tocar modelos.
 
 ## Nivel 1 — Speech-to-text (WER/CER)
@@ -67,6 +67,24 @@ Etiquetas obligatorias en reportes: **medido** / **observado** / **inferido** / 
 - Nivel 1 (`--with-stt`): WER/CER sobre WAV sintéticos; clasificación `no_probado`.
 - Nivel 2 (`--e2e`, default): clasificación I4 sobre la hipótesis STT + delta gold-fed→STT-fed; solo casos con WAV.
 - Sin pesos QVAC (o sin WAV en `--e2e`/`--with-stt`): el runner escribe un reporte `BLOCKED` (`no_probado`) y no inventa cifras.
+
+## Historial de métricas
+
+`history.jsonl` es el registro liviano, versionado y append-only de las
+corridas. Cada línea es un objeto JSON independiente con timestamp, commit,
+adapter/capa y las métricas agregadas; se conserva aunque el reporte completo
+viva como artifact de CI. El runner agrega una línea al final de cada corrida
+exitosa.
+
+Para inspeccionar una tendencia simple sin dependencias adicionales:
+
+```bash
+node -e "const fs=require('fs'); for (const l of fs.readFileSync('eval/history.jsonl','utf8').trim().split('\\n')) { const r=JSON.parse(l); console.log(r.timestamp, r.presence_accuracy, r.wer) }"
+```
+
+Importá esas columnas en una hoja de cálculo o graficá `timestamp` contra
+`presence_accuracy`, `wer` o `latencia_p50`; compará solamente corridas con
+la misma capa y adapter.
 
 ## Origen del patrón
 

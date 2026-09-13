@@ -1,9 +1,11 @@
 import assert from "node:assert/strict"
-import { readFileSync } from "node:fs"
+import { appendFileSync, mkdtempSync, readFileSync, rmSync } from "node:fs"
+import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
 import { describe, it } from "node:test"
 import { fileURLToPath } from "node:url"
 import { SECTION_IDS } from "./scorer/index.mjs"
+import { appendHistory, historyEntry, isHistoryEntry } from "./history.mjs"
 
 const root = dirname(fileURLToPath(import.meta.url))
 
@@ -13,6 +15,30 @@ describe("frozen I4 fixtures", () => {
   it("declares the 19 frozen evaluation cases", () => {
     assert.equal(manifest.cases.length, 19)
     assert.equal(manifest.frozen, true)
+  })
+
+  it("keeps parseable history entries and appends without rewriting previous lines", () => {
+    const historyPath = join(root, "history.jsonl")
+    const priorLines = readFileSync(historyPath, "utf8").trim().split("\n")
+    assert.equal(priorLines.length, 7)
+    for (const line of priorLines) assert.ok(isHistoryEntry(JSON.parse(line)))
+
+    const dir = mkdtempSync(join(tmpdir(), "oira-eval-history-"))
+    const tempHistory = join(dir, "history.jsonl")
+    try {
+      appendFileSync(tempHistory, `${priorLines[0]}\n`, "utf8")
+      const entry = historyEntry(
+        { startedAt: "2026-09-14T00:00:00.000Z", gitCommit: null, adapter: "heuristic", layer: "A-skip-stt" },
+        { stt: { meanWer: null, meanCer: null }, presence: { accuracy: 1, macroF1: 1 }, invention: { rate: 0 }, latency: { p50: 1 }, cases: 1, errors: 0 },
+      )
+      appendHistory(tempHistory, entry)
+      const lines = readFileSync(tempHistory, "utf8").trim().split("\n")
+      assert.equal(lines.length, 2)
+      assert.equal(lines[0], priorLines[0])
+      assert.deepEqual(JSON.parse(lines[1]), entry)
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
   })
 
   for (const item of manifest.cases) {

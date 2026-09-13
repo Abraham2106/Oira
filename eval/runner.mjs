@@ -17,11 +17,13 @@ import { inspect } from "node:util"
 import { evaluateCase, latencyStats, presenceMetrics, summarize } from "./scorer/index.mjs"
 import { summarizeStt, transcriptText } from "./scorer/stt-metrics.mjs"
 import { buildArtifacts } from "./report.mjs"
+import { appendHistory, historyEntry } from "./history.mjs"
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..")
 const DESKTOP = join(ROOT, "apps", "desktop")
 const FIXTURES = join(ROOT, "eval", "fixtures")
 const AUDIO = join(ROOT, "eval", "audio")
+const HISTORY = join(ROOT, "eval", "history.jsonl")
 const require = createRequire(join(DESKTOP, "package.json"))
 const SELF = fileURLToPath(import.meta.url)
 
@@ -686,6 +688,7 @@ async function main() {
   }
 
   writeRunArtifacts(outDir, run)
+  appendHistory(HISTORY, historyEntry(metadata, run.summary))
   console.log(
     JSON.stringify(
       {
