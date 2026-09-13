@@ -5,3 +5,8 @@ out/
 apps/desktop/src/models/
 *.tsbuildinfo
 .DS_Store
+# Generated evaluation runs remain local or CI artifacts. The canonical,
+# permanently versioned reference is eval/baseline/ (outside this tree).
+reports/*/
+eval/*.log
+eval/qvac-local.config.mjs

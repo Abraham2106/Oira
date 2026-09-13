@@ -1,0 +1,57 @@
+{
+  "id": "08-multiple-symptoms",
+  "category": "multiple-symptoms",
+  "notes_for_evaluator": "Afirmados: tos seca, cefalea, congestión, cansancio, prurito faríngeo intermitente. Negados: fiebre y dolor de oído.",
+  "must_not_contain": ["covid", "influenza", "otitis", "amoxicilina"],
+  "sections": {
+    "visit_context": {
+      "presence": "STATED",
+      "text": "Consulta por varios síntomas respiratorios y generales.",
+      "mustInclude": ["síntomas"],
+      "mustNotInclude": [],
+      "sourceQuotes": ["Liste lo que nota."]
+    },
+    "clinical_narrative": {
+      "presence": "STATED",
+      "text": "Tos seca, dolor de cabeza, congestión y cansancio. No tiene fiebre. No le duele el oído. A veces le pica la garganta.",
+      "mustInclude": ["tos", "cabeza", "congestión", "cansancio", "no tengo fiebre", "no me duele el oído"],
+      "mustNotInclude": [],
+      "sourceQuotes": ["Tos seca, dolor de cabeza, congestión, cansancio."]
+    },
+    "relevant_history": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    },
+    "reported_findings": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    },
+    "clinician_documented_assessment": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    },
+    "clinician_documented_plan": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    },
+    "follow_up": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    }
+  }
+}

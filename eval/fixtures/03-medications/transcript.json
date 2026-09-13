@@ -1,0 +1,20 @@
+[
+  {
+    "id": "seg-1",
+    "speaker": "Médico",
+    "startMs": 0,
+    "text": "¿Toma algún medicamento habitual?"
+  },
+  {
+    "id": "seg-2",
+    "speaker": "Paciente",
+    "startMs": 3500,
+    "text": "Sí, paracetamol, ibuprofeno y omeprazol. Nada más."
+  },
+  {
+    "id": "seg-3",
+    "speaker": "Médico",
+    "startMs": 11000,
+    "text": "Queda anotado. No agrego otros fármacos."
+  }
+]

@@ -1,0 +1,3 @@
+Médico: Voy a explorar la rodilla. Hay algo de calor local.
+Paciente: Sí, la noto caliente.
+Médico: Exploro y anoto el calor. No verbalizo todavía una evaluación ni un diagnóstico.

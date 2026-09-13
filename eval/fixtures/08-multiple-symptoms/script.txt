@@ -1,0 +1,3 @@
+Médico: Liste lo que nota.
+Paciente: Tos seca, dolor de cabeza, congestión, cansancio. No tengo fiebre. No me duele el oído. A veces me pica la garganta.
+Médico: Quedan esos síntomas. No doy plan hoy.

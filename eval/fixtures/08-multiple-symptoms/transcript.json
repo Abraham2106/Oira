@@ -1,0 +1,20 @@
+[
+  {
+    "id": "seg-1",
+    "speaker": "Médico",
+    "startMs": 0,
+    "text": "Liste lo que nota."
+  },
+  {
+    "id": "seg-2",
+    "speaker": "Paciente",
+    "startMs": 2500,
+    "text": "Tos seca, dolor de cabeza, congestión, cansancio. No tengo fiebre. No me duele el oído. A veces me pica la garganta."
+  },
+  {
+    "id": "seg-3",
+    "speaker": "Médico",
+    "startMs": 14000,
+    "text": "Quedan esos síntomas. No doy plan hoy."
+  }
+]

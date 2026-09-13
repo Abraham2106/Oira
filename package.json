@@ -6,7 +6,10 @@
     "dev:desktop": "pnpm --filter oira-desktop dev",
     "test": "pnpm --filter oira-desktop test",
     "lint:desktop": "pnpm --filter oira-desktop lint",
-    "typecheck": "pnpm --filter @oira/types typecheck && pnpm --filter oira-desktop typecheck"
+    "typecheck": "pnpm --filter @oira/types typecheck && pnpm --filter oira-desktop typecheck",
+    "eval:fixtures": "node eval/fixtures/_write.mjs",
+    "eval:self-check": "node --test eval/scorer.test.mjs eval/fixtures.test.mjs",
+    "eval": "node --experimental-strip-types --experimental-transform-types --import ./eval/register-ts.mjs --disable-warning=ExperimentalWarning eval/runner.mjs"
   },
   "packageManager": "pnpm@10.33.3",
   "engines": {

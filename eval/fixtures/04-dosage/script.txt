@@ -1,0 +1,3 @@
+Médico: ¿Cómo lo está tomando?
+Paciente: Paracetamol 500 mg cada 8 horas. Ayer me tomé un gramo. A veces media pastilla cuando me duele.
+Médico: Conservo esas dosis tal como las dijo. No las convierto.

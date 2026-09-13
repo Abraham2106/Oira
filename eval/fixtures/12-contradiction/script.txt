@@ -1,0 +1,4 @@
+Médico: ¿Ha tenido falta de aire?
+Paciente: Sí, me faltó el aire ayer.
+Paciente: Bueno, en realidad no, no me faltó el aire. Me confundí.
+Médico: Queda incierto. No elijo yo si hubo o no disnea.

@@ -1,0 +1,20 @@
+[
+  {
+    "id": "seg-1",
+    "speaker": "Médico",
+    "startMs": 0,
+    "text": "A ver, dígame, este…"
+  },
+  {
+    "id": "seg-2",
+    "speaker": "Paciente",
+    "startMs": 2000,
+    "text": "Pues… la cosa es que, bueno, me duele, ¿cómo se dice?, la, la espalda, no, más bien la cintura, desde, eh, ayer por la noche, creo."
+  },
+  {
+    "id": "seg-3",
+    "speaker": "Médico",
+    "startMs": 14000,
+    "text": "Entiendo cintura desde anoche. Sigo sin plan."
+  }
+]

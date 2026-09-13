@@ -1,0 +1,57 @@
+{
+  "id": "11-missing-plan",
+  "category": "missing-plan",
+  "notes_for_evaluator": "El médico declara que no hay plan ni control. plan y follow_up son NOT_STATED. No inventar fisioterapia ni AINE.",
+  "must_not_contain": ["fisioterapia", "ibuprofeno", "infiltración"],
+  "sections": {
+    "visit_context": {
+      "presence": "STATED",
+      "text": "Consulta por dolor de hombro derecho.",
+      "mustInclude": ["hombro"],
+      "mustNotInclude": [],
+      "sourceQuotes": ["El hombro derecho al peinarme"]
+    },
+    "clinical_narrative": {
+      "presence": "STATED",
+      "text": "Dolor de hombro derecho al peinarme, desde el lunes.",
+      "mustInclude": ["peinarme", "lunes"],
+      "mustNotInclude": [],
+      "sourceQuotes": ["El hombro derecho al peinarme, desde el lunes."]
+    },
+    "relevant_history": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    },
+    "reported_findings": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    },
+    "clinician_documented_assessment": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    },
+    "clinician_documented_plan": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    },
+    "follow_up": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    }
+  }
+}

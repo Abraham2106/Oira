@@ -1,0 +1,57 @@
+{
+  "id": "18-medication-list",
+  "category": "medication-list",
+  "notes_for_evaluator": "El paciente enumera 4 fármacos con nombres difíciles para Whisper (amlodipina, losartán, rosuvastatina, latanoprost). El médico confirma la lista. Se espera que el STT distorsione alguno; el modelo debe citar los cuatro nombres. mustInclude cubre los cuatro en la nota.",
+  "must_not_contain": ["warfarin", "insulina"],
+  "sections": {
+    "visit_context": {
+      "presence": "STATED",
+      "text": "Consulta para actualizar lista de medicamentos.",
+      "mustInclude": ["medicamentos"],
+      "mustNotInclude": [],
+      "sourceQuotes": ["la lista completa de sus medicamentos"]
+    },
+    "clinical_narrative": {
+      "presence": "STATED",
+      "text": "Medicación actual: amlodipina 5 mg, losartán, rosuvastatina 20 mg y latanoprost (1 gota por ojo por la noche).",
+      "mustInclude": ["amlodipina", "losartán", "rosuvastatina", "latanoprost"],
+      "mustNotInclude": [],
+      "sourceQuotes": ["la amlodipina de cinco, el losartán, la rosuvastatina de veinte", "las gotas de latanoprost, una por la noche en cada ojo"]
+    },
+    "relevant_history": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    },
+    "reported_findings": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    },
+    "clinician_documented_assessment": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    },
+    "clinician_documented_plan": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    },
+    "follow_up": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    }
+  }
+}

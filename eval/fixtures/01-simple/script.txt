@@ -1,0 +1,3 @@
+Médico: Esta es una consulta de demostración. ¿Qué le trae hoy?
+Paciente: Dolor de rodilla izquierda desde hace tres días, sin golpe. Ejemplo ficticio.
+Médico: Queda como borrador para revisión. No hay diagnóstico de este prototipo.

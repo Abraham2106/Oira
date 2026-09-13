@@ -1,0 +1,57 @@
+{
+  "id": "06-ambiguous-timeline",
+  "category": "ambiguous-timeline",
+  "notes_for_evaluator": "Conservar 'hace un tiempo' y 'desde el verano'. Inventar 15 de junio o 2025 es fallo. La fecha exacta es UNKNOWN.",
+  "must_not_contain": ["15 de junio", "2025", "2024-"],
+  "sections": {
+    "visit_context": {
+      "presence": "STATED",
+      "text": "Consulta por dificultad para subir escaleras.",
+      "mustInclude": ["escaleras"],
+      "mustNotInclude": [],
+      "sourceQuotes": ["me cuesta subir escaleras"]
+    },
+    "clinical_narrative": {
+      "presence": "STATED",
+      "text": "Hace un tiempo, desde el verano, le cuesta subir escaleras. No sabe el día exacto.",
+      "mustInclude": ["hace un tiempo", "verano"],
+      "mustNotInclude": [],
+      "sourceQuotes": ["Hace un tiempo.", "Desde el verano"]
+    },
+    "relevant_history": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    },
+    "reported_findings": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    },
+    "clinician_documented_assessment": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    },
+    "clinician_documented_plan": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    },
+    "follow_up": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    }
+  }
+}

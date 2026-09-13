@@ -1,0 +1,57 @@
+{
+  "id": "15-noisy-text-elderly",
+  "category": "noisy-text",
+  "notes_for_evaluator": "Paciente mayor con repeticiones ('mire', 'ya se lo dije', 'cuando subo las escaleras'). Queja principal: opresión torácica con el esfuerzo. El médico no da diagnóstico ni plan.",
+  "must_not_contain": ["infarto", "angina", "nitroglicerina"],
+  "sections": {
+    "visit_context": {
+      "presence": "STATED",
+      "text": "Consulta por opresión en el pecho con el esfuerzo.",
+      "mustInclude": ["pecho"],
+      "mustNotInclude": [],
+      "sourceQuotes": ["una opresión en el pecho"]
+    },
+    "clinical_narrative": {
+      "presence": "STATED",
+      "text": "Sensación de opresión torácica al subir escaleras, de forma repetida.",
+      "mustInclude": ["pecho", "escaleras"],
+      "mustNotInclude": [],
+      "sourceQuotes": ["una opresión en el pecho", "cuando subo, cuando subo las escaleras"]
+    },
+    "relevant_history": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    },
+    "reported_findings": {
+      "presence": "STATED",
+      "text": "Opresión en el pecho desencadenada por el esfuerzo (subir escaleras).",
+      "mustInclude": ["pecho", "escaleras"],
+      "mustNotInclude": ["falta de aire"],
+      "sourceQuotes": ["una opresión en el pecho"]
+    },
+    "clinician_documented_assessment": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": ["angina", "infarto"],
+      "sourceQuotes": []
+    },
+    "clinician_documented_plan": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    },
+    "follow_up": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    }
+  }
+}

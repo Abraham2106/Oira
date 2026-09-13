@@ -1,0 +1,3 @@
+Médico: ¿Desde cuándo nota esto?
+Paciente: Hace un tiempo. Desde el verano me cuesta subir escaleras. No sé el día exacto.
+Médico: Dejamos la expresión vaga. No pongo una fecha.

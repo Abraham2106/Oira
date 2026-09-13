@@ -1,0 +1,3 @@
+Médico: ¿Toma algún medicamento habitual?
+Paciente: Sí, paracetamol, ibuprofeno y omeprazol. Nada más.
+Médico: Queda anotado. No agrego otros fármacos.

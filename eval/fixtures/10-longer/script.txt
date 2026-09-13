@@ -1,0 +1,7 @@
+Médico: Empecemos por el motivo.
+Paciente: Vengo por cansancio de unas dos semanas y a veces mareo al levantarme.
+Médico: ¿Antecedentes que importe mencionar?
+Paciente: Hipertensión desde hace años. Tomo enalapril. Mi padre tuvo un infarto, pero yo no.
+Médico: Tensión hoy en consulta, 138 sobre 82, la digo yo.
+Paciente: También me cuesta dormir.
+Médico: Mi impresión hablada: cansancio a estudio, sin un diagnóstico cerrado. Plan: analítica y control en dos semanas.

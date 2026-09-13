@@ -1,0 +1,27 @@
+{
+  "schema": "oira-eval-fixtures-v1",
+  "language": "es",
+  "frozen": true,
+  "notes": "Set de evaluación congelado. Gold escrito desde el guion, no desde Qwen. Casos con audioRef tienen WAV sintético (16 kHz mono, edge-tts) en eval/audio/<id>/audio.wav para Nivel 1.",
+  "cases": [
+    { "id": "01-simple", "category": "simple", "audioRef": "eval/audio/01-simple/audio.wav" },
+    { "id": "02-negation", "category": "negation", "audioRef": "eval/audio/02-negation/audio.wav" },
+    { "id": "03-medications", "category": "medications", "audioRef": "eval/audio/03-medications/audio.wav" },
+    { "id": "04-dosage", "category": "dosage", "audioRef": "eval/audio/04-dosage/audio.wav" },
+    { "id": "05-correction", "category": "correction", "audioRef": "eval/audio/05-correction/audio.wav" },
+    { "id": "06-ambiguous-timeline", "category": "ambiguous-timeline", "audioRef": "eval/audio/06-ambiguous-timeline/audio.wav" },
+    { "id": "07-no-diagnosis", "category": "no-diagnosis", "audioRef": "eval/audio/07-no-diagnosis/audio.wav" },
+    { "id": "08-multiple-symptoms", "category": "multiple-symptoms", "audioRef": "eval/audio/08-multiple-symptoms/audio.wav" },
+    { "id": "09-noisy-text", "category": "noisy-text", "audioRef": "eval/audio/09-noisy-text/audio.wav" },
+    { "id": "10-longer", "category": "longer", "audioRef": "eval/audio/10-longer/audio.wav" },
+    { "id": "11-missing-plan", "category": "missing-plan", "audioRef": "eval/audio/11-missing-plan/audio.wav" },
+    { "id": "12-contradiction", "category": "contradiction", "audioRef": "eval/audio/12-contradiction/audio.wav" },
+    { "id": "13-injection", "category": "injection", "audioRef": "eval/audio/13-injection/audio.wav" },
+    { "id": "14-noisy-text-pharma", "category": "noisy-text", "audioRef": "eval/audio/14-noisy-text-pharma/audio.wav" },
+    { "id": "15-noisy-text-elderly", "category": "noisy-text", "audioRef": "eval/audio/15-noisy-text-elderly/audio.wav" },
+    { "id": "16-no-diagnosis-vague", "category": "no-diagnosis", "audioRef": "eval/audio/16-no-diagnosis-vague/audio.wav" },
+    { "id": "17-dosage-complex", "category": "dosage", "audioRef": "eval/audio/17-dosage-complex/audio.wav" },
+    { "id": "18-medication-list", "category": "medication-list", "audioRef": "eval/audio/18-medication-list/audio.wav" },
+    { "id": "19-mixed-languages", "category": "mixed-languages", "audioRef": "eval/audio/19-mixed-languages/audio.wav" }
+  ]
+}

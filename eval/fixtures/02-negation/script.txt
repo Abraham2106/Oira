@@ -1,0 +1,3 @@
+Médico: Cuénteme qué le pasa.
+Paciente: Llevo tres días con dolor de garganta y me cuesta tragar. No he tenido fiebre. No me duele el pecho.
+Médico: Voy a mirar la garganta. Todavía no doy una valoración.

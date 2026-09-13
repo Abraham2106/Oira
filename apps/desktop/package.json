@@ -14,7 +14,8 @@
     "qvac:smoke": "node scripts/qvac-smoke.mjs",
     "qvac:whisper": "node scripts/qvac-whisper.mjs",
     "qvac:qwen": "node scripts/qvac-qwen.mjs",
-    "qvac:record": "electron scripts/qvac-record.mjs"
+    "qvac:record": "electron scripts/qvac-record.mjs",
+    "eval": "node --experimental-strip-types --experimental-transform-types --import ../../eval/register-ts.mjs --disable-warning=ExperimentalWarning ../../eval/runner.mjs"
   },
   "dependencies": {
     "@oira/types": "workspace:*",

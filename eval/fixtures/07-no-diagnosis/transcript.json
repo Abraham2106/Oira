@@ -1,0 +1,20 @@
+[
+  {
+    "id": "seg-1",
+    "speaker": "Médico",
+    "startMs": 0,
+    "text": "Voy a explorar la rodilla. Hay algo de calor local."
+  },
+  {
+    "id": "seg-2",
+    "speaker": "Paciente",
+    "startMs": 5000,
+    "text": "Sí, la noto caliente."
+  },
+  {
+    "id": "seg-3",
+    "speaker": "Médico",
+    "startMs": 8000,
+    "text": "Exploro y anoto el calor. No verbalizo todavía una evaluación ni un diagnóstico."
+  }
+]

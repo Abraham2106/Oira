@@ -1,0 +1,3 @@
+Médico: ¿Qué le duele?
+Paciente: El hombro derecho al peinarme, desde el lunes.
+Médico: Lo dejo documentado. Se nos acaba el tiempo; hoy no indico plan ni control.

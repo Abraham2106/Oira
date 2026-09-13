@@ -1,0 +1,57 @@
+{
+  "id": "10-longer",
+  "category": "longer",
+  "notes_for_evaluator": "Varias secciones STATED. El infarto es del padre, no del paciente. No inventar anemia ni metformina.",
+  "must_not_contain": ["anemia", "metformina", "diabetes"],
+  "sections": {
+    "visit_context": {
+      "presence": "STATED",
+      "text": "Consulta por cansancio de unas dos semanas y mareo al levantarse.",
+      "mustInclude": ["cansancio"],
+      "mustNotInclude": [],
+      "sourceQuotes": ["Vengo por cansancio de unas dos semanas"]
+    },
+    "clinical_narrative": {
+      "presence": "STATED",
+      "text": "Cansancio de unas dos semanas, mareo al levantarse e insomnio.",
+      "mustInclude": ["mareo", "dormir"],
+      "mustNotInclude": [],
+      "sourceQuotes": ["a veces mareo al levantarme", "También me cuesta dormir."]
+    },
+    "relevant_history": {
+      "presence": "STATED",
+      "text": "Hipertensión de años en tratamiento con enalapril. Padre con infarto; el paciente no.",
+      "mustInclude": ["hipertensión", "enalapril"],
+      "mustNotInclude": [],
+      "sourceQuotes": ["Hipertensión desde hace años. Tomo enalapril."]
+    },
+    "reported_findings": {
+      "presence": "STATED",
+      "text": "Tensión en consulta 138 sobre 82, dicha por el médico.",
+      "mustInclude": ["138", "82"],
+      "mustNotInclude": [],
+      "sourceQuotes": ["Tensión hoy en consulta, 138 sobre 82"]
+    },
+    "clinician_documented_assessment": {
+      "presence": "STATED",
+      "text": "Cansancio a estudio, sin diagnóstico cerrado.",
+      "mustInclude": ["cansancio a estudio"],
+      "mustNotInclude": [],
+      "sourceQuotes": ["cansancio a estudio, sin un diagnóstico cerrado"]
+    },
+    "clinician_documented_plan": {
+      "presence": "STATED",
+      "text": "Analítica.",
+      "mustInclude": ["analítica"],
+      "mustNotInclude": [],
+      "sourceQuotes": ["Plan: analítica"]
+    },
+    "follow_up": {
+      "presence": "STATED",
+      "text": "Control en dos semanas.",
+      "mustInclude": ["dos semanas"],
+      "mustNotInclude": [],
+      "sourceQuotes": ["control en dos semanas"]
+    }
+  }
+}

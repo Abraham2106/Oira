@@ -1,0 +1,57 @@
+{
+  "id": "12-contradiction",
+  "category": "contradiction",
+  "notes_for_evaluator": "El paciente afirma y niega falta de aire. reported_findings/clinical_narrative sobre disnea es UNKNOWN. No resolver a favor de ninguna versión ni diagnosticar asma.",
+  "must_not_contain": ["asma", "EPOC", "neumonía"],
+  "sections": {
+    "visit_context": {
+      "presence": "STATED",
+      "text": "Consulta para aclarar si hubo falta de aire.",
+      "mustInclude": ["aire"],
+      "mustNotInclude": [],
+      "sourceQuotes": ["¿Ha tenido falta de aire?"]
+    },
+    "clinical_narrative": {
+      "presence": "UNKNOWN",
+      "text": "Primero dijo que le faltó el aire ayer y luego lo negó.",
+      "mustInclude": ["aire"],
+      "mustNotInclude": [],
+      "sourceQuotes": ["Sí, me faltó el aire ayer.", "no me faltó el aire"]
+    },
+    "relevant_history": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    },
+    "reported_findings": {
+      "presence": "UNKNOWN",
+      "text": "Disnea no determinada: afirmación y negación en la misma consulta.",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": ["Queda incierto."]
+    },
+    "clinician_documented_assessment": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    },
+    "clinician_documented_plan": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    },
+    "follow_up": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    }
+  }
+}

@@ -1,0 +1,20 @@
+[
+  {
+    "id": "seg-1",
+    "speaker": "Médico",
+    "startMs": 0,
+    "text": "¿Cómo lo está tomando?"
+  },
+  {
+    "id": "seg-2",
+    "speaker": "Paciente",
+    "startMs": 3000,
+    "text": "Paracetamol 500 mg cada 8 horas. Ayer me tomé un gramo. A veces media pastilla cuando me duele."
+  },
+  {
+    "id": "seg-3",
+    "speaker": "Médico",
+    "startMs": 13000,
+    "text": "Conservo esas dosis tal como las dijo. No las convierto."
+  }
+]

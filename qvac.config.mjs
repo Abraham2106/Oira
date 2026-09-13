@@ -1,9 +1,10 @@
+import os from "node:os"
 import path from "node:path"
-import { fileURLToPath } from "node:url"
 
-const root = path.dirname(fileURLToPath(import.meta.url))
-
-/** Local development weights. Never commit the model artifacts themselves. */
+/**
+ * Local development weights outside OneDrive (avoids sync/file-lock crashes).
+ * Override with QVAC_CONFIG_PATH if needed. Never commit the artifacts.
+ */
 export default {
-  cacheDirectory: path.join(root, "apps", "desktop", "src", "models"),
+  cacheDirectory: path.join(os.homedir(), "AppData", "Local", "Oira", "qvac-models"),
 }

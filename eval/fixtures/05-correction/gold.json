@@ -1,0 +1,57 @@
+{
+  "id": "05-correction",
+  "category": "correction",
+  "notes_for_evaluator": "El valor vigente es cinco días. Conservar solo tres sin la corrección es error.",
+  "must_not_contain": ["fractura", "esguince grado"],
+  "sections": {
+    "visit_context": {
+      "presence": "STATED",
+      "text": "Consulta por dolor de tobillo derecho.",
+      "mustInclude": ["tobillo"],
+      "mustNotInclude": [],
+      "sourceQuotes": ["dolor de tobillo derecho"]
+    },
+    "clinical_narrative": {
+      "presence": "STATED",
+      "text": "Dolor de tobillo derecho de cinco días. Se corrigió de tres a cinco.",
+      "mustInclude": ["cinco"],
+      "mustNotInclude": [],
+      "sourceQuotes": ["Cinco días de dolor de tobillo derecho."]
+    },
+    "relevant_history": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    },
+    "reported_findings": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    },
+    "clinician_documented_assessment": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    },
+    "clinician_documented_plan": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    },
+    "follow_up": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    }
+  }
+}

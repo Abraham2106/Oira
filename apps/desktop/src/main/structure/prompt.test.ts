@@ -7,19 +7,26 @@ function segment(id: string, text: string): TranscriptSegment {
 }
 
 describe("main/structure/prompt", () => {
-  it("pide un JSON plano de las 7 secciones", () => {
-    const { system } = buildStructuringMessages([segment("seg-1", "hola")])
+  it("pide JSON I4 con presence y sourceSegmentIds", () => {
+    const { system, user } = buildStructuringMessages([segment("seg-1", "hola")])
 
     expect(system).toContain("el médico decide")
+    expect(system).toContain("sections")
+    expect(system).toContain("presence")
+    expect(system).toContain("sourceSegmentIds")
+    expect(system).toContain("STATED")
+    expect(system).toContain("NOT_STATED")
+    expect(system).toContain("UNKNOWN")
     expect(system).toContain("visit_context")
     expect(system).toContain("clinical_narrative")
     expect(system).toContain("follow_up")
     expect(system).toContain("clinician_documented_plan")
     expect(system).toContain("No infieras")
-    expect(system).not.toContain("STATED")
-    expect(system).not.toContain("sourceSegmentIds")
+    expect(system).toContain("/no_think")
+    expect(system).not.toContain("cada una un string")
     expect(system).not.toContain("scan con rayos X")
     expect(system).not.toContain("vaya a urgencias")
+    expect(user).toContain("sections")
   })
 
   it("formatea los segmentos con id y hablante", () => {

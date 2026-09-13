@@ -1,0 +1,44 @@
+[
+  {
+    "id": "seg-1",
+    "speaker": "Médico",
+    "startMs": 0,
+    "text": "Empecemos por el motivo."
+  },
+  {
+    "id": "seg-2",
+    "speaker": "Paciente",
+    "startMs": 3000,
+    "text": "Vengo por cansancio de unas dos semanas y a veces mareo al levantarme."
+  },
+  {
+    "id": "seg-3",
+    "speaker": "Médico",
+    "startMs": 10000,
+    "text": "¿Antecedentes que importe mencionar?"
+  },
+  {
+    "id": "seg-4",
+    "speaker": "Paciente",
+    "startMs": 14000,
+    "text": "Hipertensión desde hace años. Tomo enalapril. Mi padre tuvo un infarto, pero yo no."
+  },
+  {
+    "id": "seg-5",
+    "speaker": "Médico",
+    "startMs": 22000,
+    "text": "Tensión hoy en consulta, 138 sobre 82, la digo yo."
+  },
+  {
+    "id": "seg-6",
+    "speaker": "Paciente",
+    "startMs": 28000,
+    "text": "También me cuesta dormir."
+  },
+  {
+    "id": "seg-7",
+    "speaker": "Médico",
+    "startMs": 32000,
+    "text": "Mi impresión hablada: cansancio a estudio, sin un diagnóstico cerrado. Plan: analítica y control en dos semanas."
+  }
+]

@@ -1,0 +1,57 @@
+{
+  "id": "03-medications",
+  "category": "medications",
+  "notes_for_evaluator": "Solo los tres fármacos dichos. Inventar amoxicilina o metformina es fallo bloqueante de interpretación.",
+  "must_not_contain": ["amoxicilina", "metformina", "enalapril", "salbutamol"],
+  "sections": {
+    "visit_context": {
+      "presence": "STATED",
+      "text": "Consulta para revisar medicación habitual.",
+      "mustInclude": ["medicamento"],
+      "mustNotInclude": [],
+      "sourceQuotes": ["¿Toma algún medicamento habitual?"]
+    },
+    "clinical_narrative": {
+      "presence": "STATED",
+      "text": "El paciente refiere paracetamol, ibuprofeno y omeprazol. Nada más.",
+      "mustInclude": ["paracetamol", "ibuprofeno", "omeprazol"],
+      "mustNotInclude": [],
+      "sourceQuotes": ["paracetamol, ibuprofeno y omeprazol"]
+    },
+    "relevant_history": {
+      "presence": "STATED",
+      "text": "Medicación crónica referida: paracetamol, ibuprofeno y omeprazol.",
+      "mustInclude": ["paracetamol"],
+      "mustNotInclude": [],
+      "sourceQuotes": ["paracetamol, ibuprofeno y omeprazol"]
+    },
+    "reported_findings": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    },
+    "clinician_documented_assessment": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    },
+    "clinician_documented_plan": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    },
+    "follow_up": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    }
+  }
+}

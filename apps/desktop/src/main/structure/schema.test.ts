@@ -82,7 +82,7 @@ describe("main/structure/schema", () => {
     }
   })
 
-  it("pega texto aunque el modelo marque NOT_STATED", () => {
+  it("honra NOT_STATED aunque venga texto", () => {
     const result = validateStructuringOutput(
       {
         sections: {
@@ -94,8 +94,46 @@ describe("main/structure/schema", () => {
 
     expect(result.ok).toBe(true)
     if (result.ok) {
-      expect(result.value.sections.follow_up?.presence).toBe("STATED")
-      expect(result.value.sections.follow_up?.text).toBe("algo")
+      expect(result.value.sections.follow_up?.presence).toBe("NOT_STATED")
+      expect(result.value.sections.follow_up?.text).toBe("")
+    }
+  })
+
+  it("preserva UNKNOWN con texto", () => {
+    const result = validateStructuringOutput(
+      {
+        sections: {
+          clinical_narrative: {
+            presence: "UNKNOWN",
+            text: "Afirmó y negó falta de aire.",
+            sourceSegmentIds: ["seg-1"],
+          },
+        },
+      },
+      KNOWN,
+    )
+
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.value.sections.clinical_narrative?.presence).toBe("UNKNOWN")
+      expect(result.value.sections.clinical_narrative?.text).toBe(
+        "Afirmó y negó falta de aire.",
+      )
+      expect(result.value.sections.clinical_narrative?.sourceSegmentIds).toEqual([
+        "seg-1",
+      ])
+    }
+  })
+
+  it("strings planas siguen siendo STATED si hay texto", () => {
+    const result = validateStructuringOutput(
+      { clinical_narrative: "Dolor de rodilla." },
+      KNOWN,
+    )
+
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.value.sections.clinical_narrative?.presence).toBe("STATED")
     }
   })
 

@@ -2,6 +2,7 @@ import type { StructuringPort } from "../inference/port"
 import { invalidStructuredOutputError } from "../errors/notes"
 import { buildStructuringMessages } from "../structure/prompt"
 import { splitTranscriptChunks } from "../structure/chunk"
+import { CLINICAL_NOTE_JSON_SCHEMA } from "../structure/json-schema"
 import {
   normalizeStructuringOutput,
   parseModelJson,
@@ -73,7 +74,7 @@ export function createQwenStructuring({
         for (const chunk of chunks) {
           const completion = await runtime.completeStructuring({
             history: messagesFor(chunk),
-            schema: {},
+            schema: CLINICAL_NOTE_JSON_SCHEMA,
             generation,
           })
           outputs.push(

@@ -1,0 +1,26 @@
+[
+  {
+    "id": "seg-1",
+    "speaker": "Médico",
+    "startMs": 0,
+    "text": "¿Ha tenido falta de aire?"
+  },
+  {
+    "id": "seg-2",
+    "speaker": "Paciente",
+    "startMs": 2500,
+    "text": "Sí, me faltó el aire ayer."
+  },
+  {
+    "id": "seg-3",
+    "speaker": "Paciente",
+    "startMs": 6000,
+    "text": "Bueno, en realidad no, no me faltó el aire. Me confundí."
+  },
+  {
+    "id": "seg-4",
+    "speaker": "Médico",
+    "startMs": 11000,
+    "text": "Queda incierto. No elijo yo si hubo o no disnea."
+  }
+]

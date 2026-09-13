@@ -142,6 +142,50 @@ describe("createQvacInferenceRuntime", () => {
     }
   })
 
+  it("uses json_schema responseFormat when schema is non-empty", async () => {
+    const sdk = await sdkModule()
+    const runtime = createQvacInferenceRuntime({ loadSdk: async () => sdk })
+    await runtime.warmTranscription()
+    await runtime.handoffToStructuring()
+    const generation = runtime.beginGeneration()
+    await runtime.completeStructuring({
+      history: [{ role: "user", content: "consulta" }],
+      schema: { type: "object", properties: {} },
+      generation,
+    })
+    expect(sdk.completion).toHaveBeenCalledWith(
+      expect.objectContaining({
+        responseFormat: {
+          type: "json_schema",
+          json_schema: {
+            name: "clinical_note",
+            schema: { type: "object", properties: {} },
+          },
+        },
+      }),
+    )
+    await runtime.shutdown()
+  })
+
+  it("uses json_object responseFormat when schema is empty", async () => {
+    const sdk = await sdkModule()
+    const runtime = createQvacInferenceRuntime({ loadSdk: async () => sdk })
+    await runtime.warmTranscription()
+    await runtime.handoffToStructuring()
+    const generation = runtime.beginGeneration()
+    await runtime.completeStructuring({
+      history: [{ role: "user", content: "consulta" }],
+      schema: {},
+      generation,
+    })
+    expect(sdk.completion).toHaveBeenCalledWith(
+      expect.objectContaining({
+        responseFormat: { type: "json_object" },
+      }),
+    )
+    await runtime.shutdown()
+  })
+
   it("discards a completion whose generation is stale", async () => {
     const sdk = await sdkModule()
     let finish: (value: { contentText: string; raw: { fullText: string } }) => void = () => undefined

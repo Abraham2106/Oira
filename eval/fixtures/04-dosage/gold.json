@@ -1,0 +1,57 @@
+{
+  "id": "04-dosage",
+  "category": "dosage",
+  "notes_for_evaluator": "Dosis literales. No premiar conversión a 1000 mg. No inventar ibuprofeno.",
+  "must_not_contain": ["ibuprofeno", "1000 mg", "amoxicilina"],
+  "sections": {
+    "visit_context": {
+      "presence": "STATED",
+      "text": "Consulta para revisar cómo toma el paracetamol.",
+      "mustInclude": ["tomando"],
+      "mustNotInclude": [],
+      "sourceQuotes": ["¿Cómo lo está tomando?"]
+    },
+    "clinical_narrative": {
+      "presence": "STATED",
+      "text": "Paracetamol 500 mg cada 8 horas. Ayer un gramo. A veces media pastilla cuando le duele.",
+      "mustInclude": ["500 mg", "cada 8 horas", "un gramo", "media pastilla"],
+      "mustNotInclude": [],
+      "sourceQuotes": ["Paracetamol 500 mg cada 8 horas"]
+    },
+    "relevant_history": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    },
+    "reported_findings": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    },
+    "clinician_documented_assessment": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    },
+    "clinician_documented_plan": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    },
+    "follow_up": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    }
+  }
+}

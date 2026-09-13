@@ -1,4 +1,4 @@
-import { SECTION_IDS, SECTION_TITLES, type SectionId } from "@oira/types"
+import { SECTION_IDS, SECTION_TITLES, type FieldPresence, type SectionId } from "@oira/types"
 import { z } from "zod"
 
 export const structuringSectionSchema = z.object({
@@ -26,6 +26,13 @@ function emptySection(): StructuringSection {
 
 function statedSection(text: string, sourceSegmentIds: string[] = []): StructuringSection {
   return { presence: "STATED", text, sourceSegmentIds }
+}
+
+function unknownSection(
+  text: string,
+  sourceSegmentIds: string[] = [],
+): StructuringSection {
+  return { presence: "UNKNOWN", text, sourceSegmentIds }
 }
 
 function lookupSectionId(key: string): SectionId | undefined {
@@ -56,17 +63,33 @@ function extractText(raw: unknown): string {
   return ""
 }
 
+function readPresence(raw: unknown): FieldPresence | undefined {
+  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) return undefined
+  const value = (raw as { presence?: unknown }).presence
+  if (value === "STATED" || value === "NOT_STATED" || value === "UNKNOWN") return value
+  return undefined
+}
+
 function asSection(raw: unknown, known: Set<string>): StructuringSection {
   const text = extractText(raw)
   let sourceSegmentIds: string[] = []
   if (typeof raw === "object" && raw !== null && !Array.isArray(raw)) {
     const ids = (raw as { sourceSegmentIds?: unknown }).sourceSegmentIds
     if (Array.isArray(ids)) {
-      sourceSegmentIds = ids.filter((id): id is string => typeof id === "string" && known.has(id))
+      sourceSegmentIds = ids.filter(
+        (id): id is string => typeof id === "string" && known.has(id),
+      )
     }
   }
-  if (!text) return emptySection()
-  return statedSection(text, sourceSegmentIds)
+
+  const presence = readPresence(raw)
+  if (presence === "NOT_STATED") return emptySection()
+  if (presence === "UNKNOWN") return unknownSection(text, sourceSegmentIds)
+  if (presence === "STATED" || presence === undefined) {
+    if (!text) return emptySection()
+    return statedSection(text, sourceSegmentIds)
+  }
+  return emptySection()
 }
 
 function emptyNote(): StructuringOutput {

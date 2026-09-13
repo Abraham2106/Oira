@@ -1,0 +1,57 @@
+{
+  "id": "09-noisy-text",
+  "category": "noisy-text",
+  "notes_for_evaluator": "Tras autocorrección, el sitio es cintura, no espalda como destino final. Inicio: ayer por la noche, con incertidumbre ('creo').",
+  "must_not_contain": ["lumbalgia crónica", "hernia"],
+  "sections": {
+    "visit_context": {
+      "presence": "STATED",
+      "text": "Consulta por dolor de cintura.",
+      "mustInclude": ["cintura"],
+      "mustNotInclude": [],
+      "sourceQuotes": ["más bien la cintura"]
+    },
+    "clinical_narrative": {
+      "presence": "STATED",
+      "text": "Dolor de cintura desde ayer por la noche, con duda al precisarlo. Corrigió espalda por cintura.",
+      "mustInclude": ["cintura", "noche"],
+      "mustNotInclude": [],
+      "sourceQuotes": ["más bien la cintura", "ayer por la noche, creo"]
+    },
+    "relevant_history": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    },
+    "reported_findings": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    },
+    "clinician_documented_assessment": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    },
+    "clinician_documented_plan": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    },
+    "follow_up": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    }
+  }
+}

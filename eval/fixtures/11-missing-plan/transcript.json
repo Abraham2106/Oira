@@ -1,0 +1,20 @@
+[
+  {
+    "id": "seg-1",
+    "speaker": "Médico",
+    "startMs": 0,
+    "text": "¿Qué le duele?"
+  },
+  {
+    "id": "seg-2",
+    "speaker": "Paciente",
+    "startMs": 2000,
+    "text": "El hombro derecho al peinarme, desde el lunes."
+  },
+  {
+    "id": "seg-3",
+    "speaker": "Médico",
+    "startMs": 8000,
+    "text": "Lo dejo documentado. Se nos acaba el tiempo; hoy no indico plan ni control."
+  }
+]

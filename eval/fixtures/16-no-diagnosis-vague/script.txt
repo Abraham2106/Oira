@@ -1,0 +1,3 @@
+Médico: Cuénteme qué es lo que siente en el hombro.
+Paciente: Me duele al levantar el brazo, y a veces de noche no me deja dormir.
+Médico: Eso podría ser varias cosas, no puedo confirmar un diagnóstico así nomás. Vamos a revisar y si sigue igual, vuelve a verme.

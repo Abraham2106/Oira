@@ -1,0 +1,57 @@
+{
+  "id": "02-negation",
+  "category": "negation",
+  "notes_for_evaluator": "Las negaciones deben conservarse. Fiebre y dolor de pecho no son síntomas afirmados. assessment es NOT_STATED.",
+  "must_not_contain": ["faringitis", "amigdalitis", "amoxicilina", "neumonía"],
+  "sections": {
+    "visit_context": {
+      "presence": "STATED",
+      "text": "Consulta por dolor de garganta y dificultad para tragar.",
+      "mustInclude": ["garganta"],
+      "mustNotInclude": [],
+      "sourceQuotes": ["dolor de garganta"]
+    },
+    "clinical_narrative": {
+      "presence": "STATED",
+      "text": "Dolor de garganta y odinofagia de tres días. No ha tenido fiebre. No le duele el pecho.",
+      "mustInclude": ["no he tenido fiebre", "no me duele el pecho"],
+      "mustNotInclude": [],
+      "sourceQuotes": ["No he tenido fiebre.", "No me duele el pecho."]
+    },
+    "relevant_history": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    },
+    "reported_findings": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    },
+    "clinician_documented_assessment": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    },
+    "clinician_documented_plan": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    },
+    "follow_up": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    }
+  }
+}

@@ -1,0 +1,57 @@
+{
+  "id": "01-simple",
+  "category": "simple",
+  "notes_for_evaluator": "Caso limpio. El médico no verbaliza evaluación ni plan. Inventar meniscopatía o AINE es fallo.",
+  "must_not_contain": ["meniscopatía", "ibuprofeno", "artrosis"],
+  "sections": {
+    "visit_context": {
+      "presence": "STATED",
+      "text": "Consulta por dolor de rodilla izquierda.",
+      "mustInclude": ["rodilla"],
+      "mustNotInclude": [],
+      "sourceQuotes": ["¿Qué le trae hoy?", "Dolor de rodilla izquierda"]
+    },
+    "clinical_narrative": {
+      "presence": "STATED",
+      "text": "Dolor de rodilla izquierda desde hace tres días, sin golpe.",
+      "mustInclude": ["tres días"],
+      "mustNotInclude": [],
+      "sourceQuotes": ["Dolor de rodilla izquierda desde hace tres días, sin golpe."]
+    },
+    "relevant_history": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    },
+    "reported_findings": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    },
+    "clinician_documented_assessment": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": ["diagnóstico"],
+      "sourceQuotes": []
+    },
+    "clinician_documented_plan": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    },
+    "follow_up": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    }
+  }
+}

@@ -1,0 +1,57 @@
+{
+  "id": "19-mixed-languages",
+  "category": "mixed-languages",
+  "notes_for_evaluator": "Paciente usa códigos de inglés en español (pain→dolor, side→costado, discomfort, sleep→dormir) y términos médicos latinos. Queja: dolor en costado derecho, discomfort que impide dormir. El médico no diagnostica.",
+  "must_not_contain": ["pancreatitis", "colecistitis", "apendicitis"],
+  "sections": {
+    "visit_context": {
+      "presence": "STATED",
+      "text": "Consulta por dolor en el costado derecho.",
+      "mustInclude": ["costado"],
+      "mustNotInclude": [],
+      "sourceQuotes": ["un dolor fuerte aquí en el side, en el costado derecho"]
+    },
+    "clinical_narrative": {
+      "presence": "STATED",
+      "text": "Dolor fuerte en el costado derecho desde ayer; discomfort que duró toda la noche e impidió el sueño.",
+      "mustInclude": ["costado", "noche"],
+      "mustNotInclude": [],
+      "sourceQuotes": ["dolor fuerte aquí en el side, en el costado derecho", "el discomfort, toda la noche"]
+    },
+    "relevant_history": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    },
+    "reported_findings": {
+      "presence": "STATED",
+      "text": "Dolor en el costado derecho; discomfort persistente durante la noche que impide dormir.",
+      "mustInclude": ["costado", "noche"],
+      "mustNotInclude": [],
+      "sourceQuotes": ["el discomfort, toda la noche"]
+    },
+    "clinician_documented_assessment": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": ["pancreatitis", "colecistitis"],
+      "sourceQuotes": []
+    },
+    "clinician_documented_plan": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    },
+    "follow_up": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    }
+  }
+}

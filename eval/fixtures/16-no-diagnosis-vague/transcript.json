@@ -1,0 +1,20 @@
+[
+  {
+    "id": "seg-1",
+    "speaker": "Médico",
+    "startMs": 0,
+    "text": "Cuénteme qué es lo que siente en el hombro."
+  },
+  {
+    "id": "seg-2",
+    "speaker": "Paciente",
+    "startMs": 5000,
+    "text": "Me duele al levantar el brazo, y a veces de noche no me deja dormir."
+  },
+  {
+    "id": "seg-3",
+    "speaker": "Médico",
+    "startMs": 13000,
+    "text": "Eso podría ser varias cosas, no puedo confirmar un diagnóstico así nomás. Vamos a revisar y si sigue igual, vuelve a verme."
+  }
+]

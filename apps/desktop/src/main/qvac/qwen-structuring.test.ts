@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
 import { SECTION_IDS, type TranscriptSegment } from "@oira/types"
+import { CLINICAL_NOTE_JSON_SCHEMA } from "../structure/json-schema"
 import { createQwenStructuring } from "./qwen-structuring"
 import type { QvacInferenceRuntime } from "./inference-runtime"
 
@@ -129,5 +130,17 @@ describe("createQwenStructuring", () => {
     expect(note.sections.visit_context.text).toBe("Control de rodilla.")
     expect(note.sections.clinical_narrative.text).toBe("Dolor de rodilla recurrente.")
     expect(note.sections.follow_up.presence).toBe("NOT_STATED")
+  })
+
+  it("forwards CLINICAL_NOTE_JSON_SCHEMA to completeStructuring", async () => {
+    const runtime = runtimeFor([JSON.stringify(output())])
+    await createQwenStructuring({ runtime: runtime as QvacInferenceRuntime }).structure({
+      transcript: [segment("s1", "Dolor de rodilla.")],
+    })
+    expect(runtime.completeStructuring).toHaveBeenCalledWith(
+      expect.objectContaining({
+        schema: CLINICAL_NOTE_JSON_SCHEMA,
+      }),
+    )
   })
 })

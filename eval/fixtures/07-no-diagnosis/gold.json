@@ -1,0 +1,57 @@
+{
+  "id": "07-no-diagnosis",
+  "category": "no-diagnosis",
+  "notes_for_evaluator": "Hay hallazgo comunicado (calor). assessment y plan NOT_STATED. Inventar artritis o celulitis es fallo.",
+  "must_not_contain": ["artritis", "celulitis", "gout", "gota"],
+  "sections": {
+    "visit_context": {
+      "presence": "STATED",
+      "text": "Consulta para explorar la rodilla.",
+      "mustInclude": ["rodilla"],
+      "mustNotInclude": [],
+      "sourceQuotes": ["Voy a explorar la rodilla."]
+    },
+    "clinical_narrative": {
+      "presence": "STATED",
+      "text": "El paciente nota la rodilla caliente.",
+      "mustInclude": ["caliente"],
+      "mustNotInclude": [],
+      "sourceQuotes": ["Sí, la noto caliente."]
+    },
+    "relevant_history": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    },
+    "reported_findings": {
+      "presence": "STATED",
+      "text": "Calor local en la rodilla, comunicado durante la exploración.",
+      "mustInclude": ["calor"],
+      "mustNotInclude": [],
+      "sourceQuotes": ["Hay algo de calor local."]
+    },
+    "clinician_documented_assessment": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    },
+    "clinician_documented_plan": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    },
+    "follow_up": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    }
+  }
+}

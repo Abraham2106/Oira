@@ -1,0 +1,3 @@
+Médico: ¿Desde cuándo le duele?
+Paciente: Tres días… no, cinco. Cinco días de dolor de tobillo derecho.
+Médico: Anoto cinco días, que es la corrección.

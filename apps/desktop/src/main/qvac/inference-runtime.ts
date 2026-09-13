@@ -298,7 +298,16 @@ export function createQvacInferenceRuntime(deps: QvacInferenceRuntimeDeps = {}):
       stream: true,
       captureThinking: true,
       generationParams: createQwenGenerationParams(),
-      responseFormat: { type: "json_object" },
+      responseFormat:
+        Object.keys(input.schema).length > 0
+          ? {
+              type: "json_schema",
+              json_schema: {
+                name: "clinical_note",
+                schema: input.schema,
+              },
+            }
+          : { type: "json_object" },
     })
     completionRequestId = run.requestId
     const pending = run.final.then((final) => {

@@ -1,0 +1,20 @@
+[
+  {
+    "id": "seg-1",
+    "speaker": "Médico",
+    "startMs": 0,
+    "text": "¿Desde cuándo nota esto?"
+  },
+  {
+    "id": "seg-2",
+    "speaker": "Paciente",
+    "startMs": 2800,
+    "text": "Hace un tiempo. Desde el verano me cuesta subir escaleras. No sé el día exacto."
+  },
+  {
+    "id": "seg-3",
+    "speaker": "Médico",
+    "startMs": 11000,
+    "text": "Dejamos la expresión vaga. No pongo una fecha."
+  }
+]

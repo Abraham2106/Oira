@@ -1,0 +1,57 @@
+{
+  "id": "17-dosage-complex",
+  "category": "dosage",
+  "notes_for_evaluator": "Plan cancela la dosis de la tarde (que el paciente atribuye a otro médico). Dosis final: 1-0-1 (1 mañana, 0 tarde, 1 noche). mustNotInclude: 'media' — en la sección plan la dosis fue eliminada.",
+  "must_not_contain": ["suspenda el medicamento"],
+  "sections": {
+    "visit_context": {
+      "presence": "STATED",
+      "text": "Consulta de ajuste de dosis de antihipertensivo.",
+      "mustInclude": ["presión"],
+      "mustNotInclude": [],
+      "sourceQuotes": ["el medicamento para la presión"]
+    },
+    "clinical_narrative": {
+      "presence": "STATED",
+      "text": "Paciente menciona instrucción previa de otro médico de tomar media pastilla en la tarde. Se ajusta el esquema.",
+      "mustInclude": ["otro doctor"],
+      "mustNotInclude": [],
+      "sourceQuotes": ["el otro doctor me dijo que tomara media en la tarde"]
+    },
+    "relevant_history": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    },
+    "reported_findings": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    },
+    "clinician_documented_assessment": {
+      "presence": "NOT_STATED",
+      "text": "",
+      "mustInclude": [],
+      "mustNotInclude": [],
+      "sourceQuotes": []
+    },
+    "clinician_documented_plan": {
+      "presence": "STATED",
+      "text": "Regimen: 1-0-1 (una pastilla en la mañana y una en la noche); retirar dosis de la tarde. Revisión en un mes.",
+      "mustInclude": ["una", "noche", "mes"],
+      "mustNotInclude": ["media"],
+      "sourceQuotes": ["La media de la tarde la quitamos", "revisamos en un mes"]
+    },
+    "follow_up": {
+      "presence": "STATED",
+      "text": "Revisión en un mes.",
+      "mustInclude": ["mes"],
+      "mustNotInclude": [],
+      "sourceQuotes": ["revisamos en un mes"]
+    }
+  }
+}

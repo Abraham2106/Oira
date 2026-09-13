@@ -1,0 +1,20 @@
+[
+  {
+    "id": "seg-1",
+    "speaker": "Médico",
+    "startMs": 0,
+    "text": "Cuénteme qué le pasa."
+  },
+  {
+    "id": "seg-2",
+    "speaker": "Paciente",
+    "startMs": 3000,
+    "text": "Llevo tres días con dolor de garganta y me cuesta tragar. No he tenido fiebre. No me duele el pecho."
+  },
+  {
+    "id": "seg-3",
+    "speaker": "Médico",
+    "startMs": 14000,
+    "text": "Voy a mirar la garganta. Todavía no doy una valoración."
+  }
+]

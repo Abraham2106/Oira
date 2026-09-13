@@ -1,0 +1,26 @@
+[
+  {
+    "id": "seg-1",
+    "speaker": "Médico",
+    "startMs": 0,
+    "text": "Buenos días, don José. ¿Qué le ha estado pasando, eh?"
+  },
+  {
+    "id": "seg-2",
+    "speaker": "Paciente",
+    "startMs": 5000,
+    "text": "Mire, doctor, mire, yo ya se lo he dicho, ya se lo dije, que me da como… como una cosa en el pecho, ¿cómo se dice?, una presión, una opresión en el pecho."
+  },
+  {
+    "id": "seg-3",
+    "speaker": "Médico",
+    "startMs": 18000,
+    "text": "¿Y eso cuándo pasa, más o menos?"
+  },
+  {
+    "id": "seg-4",
+    "speaker": "Paciente",
+    "startMs": 23000,
+    "text": "Cuando subo, cuando subo las escaleras de mi casa, sí, las escaleras."
+  }
+]

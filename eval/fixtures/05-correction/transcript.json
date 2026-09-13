@@ -1,0 +1,20 @@
+[
+  {
+    "id": "seg-1",
+    "speaker": "Médico",
+    "startMs": 0,
+    "text": "¿Desde cuándo le duele?"
+  },
+  {
+    "id": "seg-2",
+    "speaker": "Paciente",
+    "startMs": 2500,
+    "text": "Tres días… no, cinco. Cinco días de dolor de tobillo derecho."
+  },
+  {
+    "id": "seg-3",
+    "speaker": "Médico",
+    "startMs": 9000,
+    "text": "Anoto cinco días, que es la corrección."
+  }
+]
