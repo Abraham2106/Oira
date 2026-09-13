@@ -6,16 +6,16 @@
   "cases": [
     { "id": "01-simple", "category": "simple", "audioRef": "eval/audio/01-simple/audio.wav" },
     { "id": "02-negation", "category": "negation", "audioRef": "eval/audio/02-negation/audio.wav" },
-    { "id": "03-medications", "category": "medications" },
-    { "id": "04-dosage", "category": "dosage" },
-    { "id": "05-correction", "category": "correction" },
-    { "id": "06-ambiguous-timeline", "category": "ambiguous-timeline" },
-    { "id": "07-no-diagnosis", "category": "no-diagnosis" },
-    { "id": "08-multiple-symptoms", "category": "multiple-symptoms" },
-    { "id": "09-noisy-text", "category": "noisy-text" },
-    { "id": "10-longer", "category": "longer" },
-    { "id": "11-missing-plan", "category": "missing-plan" },
+    { "id": "03-medications", "category": "medications", "audioRef": "eval/audio/03-medications/audio.wav" },
+    { "id": "04-dosage", "category": "dosage", "audioRef": "eval/audio/04-dosage/audio.wav" },
+    { "id": "05-correction", "category": "correction", "audioRef": "eval/audio/05-correction/audio.wav" },
+    { "id": "06-ambiguous-timeline", "category": "ambiguous-timeline", "audioRef": "eval/audio/06-ambiguous-timeline/audio.wav" },
+    { "id": "07-no-diagnosis", "category": "no-diagnosis", "audioRef": "eval/audio/07-no-diagnosis/audio.wav" },
+    { "id": "08-multiple-symptoms", "category": "multiple-symptoms", "audioRef": "eval/audio/08-multiple-symptoms/audio.wav" },
+    { "id": "09-noisy-text", "category": "noisy-text", "audioRef": "eval/audio/09-noisy-text/audio.wav" },
+    { "id": "10-longer", "category": "longer", "audioRef": "eval/audio/10-longer/audio.wav" },
+    { "id": "11-missing-plan", "category": "missing-plan", "audioRef": "eval/audio/11-missing-plan/audio.wav" },
     { "id": "12-contradiction", "category": "contradiction", "audioRef": "eval/audio/12-contradiction/audio.wav" },
-    { "id": "13-injection", "category": "injection" }
+    { "id": "13-injection", "category": "injection", "audioRef": "eval/audio/13-injection/audio.wav" }
   ]
 }
