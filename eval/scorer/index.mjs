@@ -405,6 +405,39 @@ export function coldHotMetrics(warmupMs, latencies) {
 }
 
 /**
+ * Fase 4: repeatability study. Computa media, std dev, y coeficiente de
+ * variación (CV = std/mean * 100) para métricas clave a partir de N
+ * repeticiones.
+ *
+ * @param {Array<object>} repetitions array de objetos con summary por iteración
+ * @param {object} metricExtractors { metricName: (summary) => number }
+ * @returns {object} { [metricName]: { mean, std, cv, n, values } | null }
+ */
+export function computeRepeatability(repetitions, metricExtractors) {
+  const out = {}
+  for (const [metricName, extract] of Object.entries(metricExtractors)) {
+    const vals = repetitions
+      .map((r) => extract(r.summary))
+      .filter((n) => Number.isFinite(n))
+    if (vals.length < 2) {
+      out[metricName] = null
+      continue
+    }
+    const mean = vals.reduce((a, b) => a + b, 0) / vals.length
+    const variance = vals.reduce((a, b) => a + (b - mean) ** 2, 0) / (vals.length - 1)
+    const std = Math.sqrt(variance)
+    out[metricName] = {
+      mean,
+      std,
+      cv: mean !== 0 ? (std / mean) * 100 : null,
+      n: vals.length,
+      values: vals,
+    }
+  }
+  return out
+}
+
+/**
  * @param {Array<{ id: string, evaluation: ReturnType<typeof evaluateCase>, error?: string | null, latencyMs?: number | null }>} results
  */
 export function summarize(results) {

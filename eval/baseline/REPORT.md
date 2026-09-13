@@ -2,6 +2,7 @@
 
 2026-09-13T13:00:31.194Z · capa `C-e2e` · adapter `qvac` · Capa C (`--e2e`, default): audio → STT → estructuración sobre la hipótesis de Whisper.
 **Observado.** Rama 4409d9594a0875526dd3e4227f6c9461f5e78d0f · dataset hash `f3b9c37f1ad4251264a5a2b2c6ae56915e6b80f4efc0ec000352bab3308ae587`
+Prompt hash: `N/A` · Schema hash: `N/A`
 
 ## Resultados
 
@@ -51,7 +52,6 @@
 | p50 steady-state (resto) | 49121.4 |
 | Caliente / frío | 1.5× |
 **Medido.** Warmup wall-clock de esta corrida; el modelo ya estaba cargado al medir los casos.
-
 ### Speech-to-text (STT)
 
 | Métrica | Valor |
@@ -101,7 +101,6 @@
 | uno | 101 | 1 |
 | cinco | 5 | 1 |
 **Medido.** Solo sustituciones token-a-token (ins/del excluidas).
-
 ### Fidelidad de extracción (sourceQuotes)
 
 | Caso | Quotes | Encontradas | Recall |
@@ -126,7 +125,6 @@
 | 18-medication-list | 3 | 0 | 0.0% |
 | 19-mixed-languages | 4 | 0 | 0.0% |
 **Medido.** Match literal normalizado (no semántico); parafraseo del modelo frente a la cita literal produce falsos negativos.
-
 ### Unsupported clinical facts
 
 | Caso | Nº | Tipo(s) | Detalle |
@@ -146,8 +144,7 @@
 | 17-dosage-complex | 1 | source_not_supported | clinical_narrative |
 | 18-medication-list | 4 | source_not_supported | visit_context; clinical_narrative; relevant_history; reported_findings |
 | 19-mixed-languages | 2 | source_not_supported | visit_context; clinical_narrative |
-**Medido.** §15.1: must_not_contain + mustNotInclude + STATED sin source + fuente sin respaldo literal. La componente 4 (revisión manual) no está medida.
-### Clasificación (presencia por sección I4)
+**Medido.** §15.1: must_not_contain + mustNotInclude + STATED sin source + fuente sin respaldo literal. La componente 4 (revisión manual) no está medida.### Clasificación (presencia por sección I4)
 
 | Clase | Precision | Recall | F1 | Support |
 | --- | ---: | ---: | ---: | ---: |
@@ -163,7 +160,6 @@ Matriz de confusión (filas = gold, columnas = predicted):
 | NOT_STATED | 4 | 75 | 0 |
 | UNKNOWN | 0 | 1 | 1 |
 **Medido.** Contadores de esta corrida. F1 = N/A si la clase no tiene soporte ni predicciones. Presencia sobre hipótesis STT (19/19 casos con WAV).
-
 ### Delta presence gold-fed → STT-fed
 
 Mismos casos, mismo gold; la única diferencia es si Qwen recibe la transcripción gold o la hipótesis de Whisper.

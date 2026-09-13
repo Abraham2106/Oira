@@ -12,7 +12,7 @@ Harness de **medición** separado del producto. No cambia prompts, IPC ni UI.
 | `fixtures/` | 19 casos sintéticos congelados (script + transcript + gold I4 + `audioRef`) |
 | `audio/_generate.py` | Generador TTS del corpus (edge-tts → 16 kHz mono WAV) |
 | `audio/<id>/audio.wav` | Audio sintético por cada uno de los 19 casos |
-| `runner.mjs` | CLI: `--skip-stt`, `--with-stt`, `--e2e` (default), `--adapter qvac\|heuristic`, `--replay`, `--cases` |
+| `runner.mjs` | CLI: `--skip-stt`, `--with-stt`, `--e2e` (default), `--adapter qvac\|heuristic`, `--replay`, `--cases`, `--repeats`, `--compare` |
 | `register-ts.mjs` | Resuelve imports TS de Main / `@oira/types` |
 | `report.mjs` | `REPORT.md` + `metrics.json` / `cases.json` / `errors.json` |
 
@@ -28,7 +28,17 @@ pnpm eval -- --with-stt                  # Capa B: solo STT (WER/CER), sin estru
 pnpm eval -- --adapter heuristic
 pnpm eval -- --cases "02,07,13"
 pnpm eval -- --replay reports/<run-id>/run.json
+pnpm eval -- --repeats 5                  # repeatability study (N pasadas consecutivas)
+pnpm eval -- --compare reports/<run-1> reports/<run-2>   # tabla side-by-side
 ```
+
+## Fase 4 — Reproducibilidad y comparación
+
+**Versionado de prompt/schema.** Cada run guarda `metadata.promptHash` y `metadata.schemaHash` (SHA-256, 12 hex) del template y schema que el adapter expone (`getPromptTemplate`/`getSchema`). Runs viejos sin estos campos → `N/A` en el reporte (sin romper nada).
+
+**`--repeats N`** (default 1; solo `--e2e`/`--with-stt`). Ejecuta el corpus `N` veces seguidas; el warmup corre **solo la primera iteración** (las siguientes miden steady-state). Cada pasada se guarda en `run.repetitions[]` y el reporte gana la sección `### Repeatability (N runs)` con media, std dev (muestral, n−1), CV (%) y N para presence accuracy, WER, latencias E2E/structure y cold/hot steady p50. Con GPU esto cuesta N× el tiempo de una corrida (N=5 → ~4+ min) — advertido.
+
+**`--compare <path...>`** (mutuamente excluyente con stages/`--replay`/`--cases`). Lee 2+ `run.json` (o directorios que los contengan) y escribe `COMPARISON.md` side-by-side con WER/CER, presence STT-fed, latencias, cold/hot, dataset, adapter, prompt/schema hash, git commit y fecha. No re-inferencia: evidencia `Observado`.
 
 En PowerShell, cita `--cases` para no romper las comas. `--e2e` es mutuamente excluyente con `--skip-stt` / `--with-stt` (overrides de alcance reducido para aislar un stage).
 

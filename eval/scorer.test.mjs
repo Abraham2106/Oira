@@ -6,6 +6,7 @@ import {
   alignTokens,
   charErrorRate,
   coldHotMetrics,
+  computeRepeatability,
   evaluateCase,
   extractConfusions,
   latencyStats,
@@ -1222,5 +1223,111 @@ describe("Report Fase 3: latencia por fase + frío/caliente", () => {
     }
     const md = renderReport(run)
     assert.doesNotMatch(md, /### Breakdown fr[íi]o\/caliente/)
+  })
+})
+
+describe("computeRepeatability (Fase 4)", () => {
+  const extractors = {
+    presenceAccuracy: (s) => s.presence?.accuracy ?? NaN,
+    latencyP50: (s) => s.latency?.p50 ?? NaN,
+  }
+
+  it("computes mean/std/cv over 3+ repetitions", () => {
+    const reps = [{ summary: { presence: { accuracy: 0.8 }, latency: { p50: 100 } } },
+      { summary: { presence: { accuracy: 0.9 }, latency: { p50: 110 } } },
+      { summary: { presence: { accuracy: 0.85 }, latency: { p50: 105 } } }]
+    const result = computeRepeatability(reps, extractors)
+    assert.ok(Math.abs(result.presenceAccuracy.mean - 0.85) < 1e-9)
+    assert.equal(result.presenceAccuracy.n, 3)
+    assert.ok(result.presenceAccuracy.cv > 0)
+    assert.ok(Number.isFinite(result.presenceAccuracy.std))
+    assert.equal(result.latencyP50.mean, 105)
+    assert.deepEqual(result.latencyP50.values, [100, 110, 105])
+  })
+
+  it("returns null when fewer than 2 finite samples", () => {
+    const reps = [{ summary: { presence: { accuracy: 0.8 }, latency: { p50: 100 } } }]
+    const result = computeRepeatability(reps, extractors)
+    assert.equal(result.presenceAccuracy, null)
+    assert.equal(result.latencyP50, null)
+  })
+
+  it("filters out NaN/undefined metric values", () => {
+    const reps = [{ summary: { presence: { accuracy: 0.8 }, latency: { p50: 100 } } },
+      { summary: { presence: { accuracy: NaN }, latency: { p50: 110 } } }]
+    // presence accuracy: only 1 finite sample → null; latency: 2 → computed
+    const result = computeRepeatability(reps, extractors)
+    assert.equal(result.presenceAccuracy, null)
+    assert.equal(result.latencyP50.n, 2)
+  })
+})
+
+describe("Report Fase 4: Repeatability + prompt/schema hash", () => {
+  function baseRun() {
+    const gold = { sections: Object.fromEntries(SECTION_IDS.map((id) => [id, { presence: "NOT_STATED", mustInclude: [], mustNotInclude: [], sourceQuotes: [] }])) }
+    const transcript = [{ id: "seg-1", text: "algo", startMs: 0 }]
+    const note = emptyNote()
+    const ev = evaluateCase({ gold, note, transcript, rawSdkText: '{"a":1}' })
+    const summary = summarize([{ id: "a01", evaluation: ev, error: null, latencyMs: 10 }])
+    summary.skippedNoAudio = 0
+    summary.coldHot = null
+    summary.sttLatency = null
+    summary.stt = sttNotMeasured("stub")
+    summary.repeatability = {
+      presenceAccuracy: { mean: 0.85, std: 0.05, cv: 5.88, n: 3, values: [0.8, 0.9, 0.85] },
+      latencyP50: { mean: 105, std: 5, cv: 4.76, n: 3, values: [100, 110, 105] },
+      sttWer: null,
+      structureLatencyP50: { mean: 60, std: 2, cv: 3.33, n: 3, values: [58, 62, 60] },
+      coldHotSteadyP50: null,
+    }
+    const run = {
+      metadata: {
+        evaluatorVersion: 1, stage: "e2e", layer: "C-e2e", runId: "test-F4",
+        startedAt: "2026-09-13T00:00:00.000Z", adapter: "qvac",
+        skipStt: false, datasetCases: 1,
+        node: "v24", electron: null, sdk: "0.18.2",
+        hardware: { platform: "win32", arch: "x64", cpu: "test" },
+        models: { stt: "WHISPER_QVAC_LOCAL", structuring: "QWEN3_4B_Q4_K_M" },
+        gitCommit: null, datasetHash: "abc", sourceHashes: {},
+        promptHash: "abc123def456", schemaHash: "def456abc123",
+        evidence_rule: "medido | observado | inferido | no_probado",
+      },
+      summary,
+      repetitions: [{}, {}, {}],
+      results: [{ id: "a01", category: "simple", gold, note, transcript, evaluation: ev, error: null, latencyMs: 10 }],
+    }
+    return run
+  }
+
+  it("renders the Repeatability section with a table when data is present", () => {
+    const md = renderReport(baseRun())
+    assert.match(md, /### Repeatability \(3 runs\)/)
+    assert.match(md, /\| Presence accuracy \| 85\.0% \| 5\.00pp \|/)
+    assert.match(md, /\| Latency E2E p50 \(ms\) \| 105\.0 \| 5\.0 \| 4\.8 \|/)
+    assert.match(md, /3 corridas consecutivas sin warmup intermedio/)
+  })
+
+  it("shows null repeatability metrics as N/A", () => {
+    const md = renderReport(baseRun())
+    assert.match(md, /\| WER \| N\/A \| N\/A \| N\/A \| N\/A \|/)
+  })
+
+  it("omits the Repeatability section when repeatability is absent", () => {
+    const run = baseRun()
+    delete run.summary.repeatability
+    const md = renderReport(run)
+    assert.doesNotMatch(md, /### Repeatability/)
+  })
+
+  it("renders prompt/schema hashes in the header", () => {
+    const md = renderReport(baseRun())
+    assert.match(md, /Prompt hash: `abc123def456`/)
+    assert.match(md, /Schema hash: `def456abc123`/)
+  })
+
+  it("includes repeatability in metrics.json", () => {
+    const { metrics } = buildArtifacts(baseRun())
+    assert.ok(metrics.repeatability)
+    assert.equal(metrics.repeatability.presenceAccuracy.n, 3)
   })
 })

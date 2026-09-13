@@ -312,4 +312,27 @@ Replay sobre `run.json` (transcribeMs/structureMs/latencyMs/warmup ya persistido
 
 ---
 
-## Fase 4+ (diseñada, no implementada aún — no implementar sin aprobación)
+## Fase 4 — Reproducibilidad y comparación ✅ implementada 2026-09-13
+
+Aprobada (plan `rustling-enchanting-cloud.md`). Cierra §9 Fase 4 del rediseño: versionado prompt/schema, repeatability study (`--repeats N`) y comparación side-by-side (`--compare`).
+
+### Cambios (aditivos, backward compatible)
+
+- **`eval/runner.mjs`**:
+  - `metadata.promptHash` / `metadata.schemaHash` (SHA-256, 12 hex) desde `adapter.getPromptTemplate?.()` y `adapter.getSchema?.()`; `null` si el adapter no los expone (heuristic).
+  - `--repeats N` (default 1) — solo `--e2e`/`--with-stt` (guard en parseArgs). Warmup **solo en la iteración 1**; cada pasada en `run.repetitions[]`. `runIteration(iteration, isFirstIteration)` desacopla el loop.
+  - `--compare <paths...>` (mutuamente excluyente con stages/`--replay`/`--self-check`/`--cases`) → `compareMode()` lee N `run.json` (o dirs) y escribe `COMPARISON.md` side-by-side (WER/CER, presence STT-fed, latencias E2E/STT/structure, cold/hot, dataset, adapter, prompt/schema hash, git commit, fecha). Evidencia `Observado` — no re-inferencia.
+- **`eval/scorer/index.mjs`**: `computeRepeatability(repetitions, metricExtractors)` — media, std muestral (n−1), CV %, N y values por métrica; `null` con <2 muestras finitas (no inventa).
+- **`eval/report.mjs`**: header `Prompt hash: xxxx · Schema hash: yyyy`; sección `### Repeatability (N runs)` (tabla por métrica con N/A cuando la métrica falta — `fmtUnit` no pega "%"/"pp" sobre N/A); `metrics.json` incluye `repeatability`. Reescrito el template de retorno a concatenación de `parts[]` para evitar anidamiento de backticks que rompía el parse (SyntaxError previo).
+- **Tests**: 86 → **94/94** (computeRepeatability 3, render Fase 4 5). Assert de media con tolerancia de punto flotante (`Math.abs(...) < 1e-9`) y estructura de reps corregida (`latency` dentro de `summary`).
+
+### Verificación (sin GPU)
+
+1. `pnpm eval:self-check` → **94/94**.
+2. `--compare reports/13-00-31 reports/05-11-23` → `COMPARISON.md` side-by-side correcto: WER 5.1% vs 3.1%, presence 83.5% vs 89.0%, cold/hot 1.46× vs 1.26×; prompt/schema hash `N/A` en runs viejos (backward compatible).
+3. `--replay` del run 13:00 → re-render idempotente; header muestra `Prompt hash: N/A · Schema hash: N/A` sin romper nada.
+4. Validación de flags: `--repeats 3 --skip-stt` → error explícito "solo aplica a --e2e/--with-stt".
+
+⚠️ **Pendiente (requiere GPU):** `--repeats N` real sobre QVAC (N=5 → ~4+ min de corrida). La mecánica (loop, warmup-solo-1ª, `repetitions[]`, `computeRepeatability`) está cubierta por tests y por el código compartido; el número medido queda para un run GPU.
+
+Captura: `reports/COMPARISON.md` (generada). El adapter `heuristic` falla al cargar `heuristic-assembler` (issue pre-existente, no de Fase 4).
