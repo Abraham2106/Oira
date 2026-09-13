@@ -18,7 +18,7 @@
 Audio (mic/WAV)
   │
   ▼
-[Transcripción — Whisper large-v3-turbo via @xenva/transformers]
+[Transcripción — Whisper local via QVAC SDK (`@qvac/sdk` Whisper.cpp GPU, `runtime.transcribe`)]
   │  entrada: WAV 16kHz mono
   │  salida: TranscriptSegment[]  {id, speaker, startMs, text}
   │  estado actual: E2E audio→transcripción = NO MEDIDO (Sin WAV en eval/audio/)
@@ -551,7 +551,7 @@ pnpm eval -- --config <config-id>     # Comparar configuraciones
 | # | Decisión | Elección |
 |---|----------|----------|
 | 1 | Corpus de audio | **(A) Sintético primero** — TTS desde guiones de los 13 casos; arranque con 3 casos (`01-simple`, `02-negation`, `12-contradiction`). Real con consentimiento solo después si hace falta. |
-| 2 | Scope de STT | **(A) Whisper local** (mismo `large-v3-turbo` que producción, vía `@xenova/transformers`). No se introduce proveedor externo. |
+| 2 | Scope de STT | **(A) Whisper local** — el mismo de producción (`@qvac/sdk`, `runtime.transcribe({filePath})`, `warmTranscription`) sobre WAV 16 kHz mono. No se introduce proveedor externo ni modelo distinto. |
 | 3 | Nota-verifier | **(A) Excluir** de esta iteración. Se integra cuando exista implementación. |
 | 4 | Escala del dataset | **(A) Mantener 13 casos congelados + expandir gradual.** Arranque Nivel 1 con 3 casos audio. |
 | 5 | Albatross | **(A) Referencia secundaria** — solo patrones (filling rate, hardware probe, política de memoria). Licencia propietaria ⇒ no copiar código. |
