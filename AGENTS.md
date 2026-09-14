@@ -26,6 +26,17 @@ Canonical setup and scripts live in the root `README.md` and root `package.json`
 
 ## Conventions & constraints
 
+### Architecture atlas maintenance (required)
+
+- The canonical interactive architecture map is `docs/codebase-map.html`; the README preview is `docs/assets/codebase-map.png`.
+- Any **major structural change** must update the atlas in the same change/PR: adding, moving, renaming or removing a module/service/port/adapter; changing process boundaries, dependency injection, IPC contracts, inference stages/models, persistence, or shared domain/state models.
+- Use CodeGraph first when an existing `.codegraph/` index is available. Confirm relationships against current source. Do not create an index automatically. The HTML is a curated architecture overview, not an exhaustive generated symbol index.
+- Update `LAYERS`, `NODES`, `EDGES`, node descriptions/source paths, guided tours, and the UML/component/domain diagrams affected by the change. Add new structural components and remove obsolete ones; preserve edge direction and distinguish calls, contract implementation, injection and data flow.
+- A bug fix or styling-only change needs no graph edit unless it changes a represented relationship. Explain the atlas impact in the PR when a structural change is involved.
+- Run `pnpm atlas:check`. For preview/render validation: `npm ci --prefix scripts/architecture/atlas`, `npm --prefix scripts/architecture/atlas exec -- playwright install chromium`, then `pnpm atlas:capture`. Review the generated image. The capture tool is isolated from the Electron/QVAC workspace.
+- GitHub Actions validates/captures on PRs, uploads a preview artifact, and refreshes the tracked PNG after a matching push to `main`. CI renders the curated HTML; it does **not** infer missing architecture changes. Never substitute a screenshot refresh for updating the graph.
+- Keep browser profiles, temporary screenshots and real clinical data out of commits. Only the canonical preview under `docs/assets/` is a generated repository asset.
+
 - Renderer ESLint enforces repo rules: no `console`, no `localStorage`, no `dangerouslySetInnerHTML`, ESM only (`require` banned). Clinical copy is Spanish ("No consta", "Sin determinar"); privacy UI shows `DESCONOCIDO` unless the backend confirmed a fact.
 - Product principle: "the agent documents; the physician decides." Never ship AI-authored content as final without explicit physician review/accept steps.
 - Fixtures are synthetic. Never commit real patient audio, transcripts, or notes; do not make compliance/performance claims from prototype code (see README table of included vs not included).
