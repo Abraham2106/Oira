@@ -1,31 +1,16 @@
-import type { ClinicalNote, TranscriptSegment } from "@oira/types"
+import type {
+  NoteClaimObservation,
+  NoteOmission,
+  NoteVerificationInput,
+  NoteVerificationResult,
+  NoteVerifierPort,
+} from "../../shared/types/note-verification"
 
-/**
- * Future post-processor: compare a candidate note with the original
- * transcript. Phase 3 must not download or load a second model yet.
- */
-export type NoteClaimStatus =
-  | "SUPPORTED"
-  | "CONTRADICTED"
-  | "INSUFFICIENT_EVIDENCE"
-  | "AMBIGUOUS"
-
-export type NoteClaimObservation = {
-  sectionId: keyof ClinicalNote["sections"]
-  status: NoteClaimStatus
-  sourceSegmentIds: string[]
-  explanation: string
-}
-
-export type NoteVerificationInput = {
-  transcript: TranscriptSegment[]
-  note: ClinicalNote
-}
-
-export type NoteVerificationResult = {
-  observations: NoteClaimObservation[]
-}
-
-export type NoteVerifierPort = {
-  verify: (input: NoteVerificationInput) => Promise<NoteVerificationResult>
+// Re-exportar los tipos compartidos para compatibilidad con código existente
+export type {
+  NoteClaimObservation,
+  NoteOmission,
+  NoteVerificationInput,
+  NoteVerificationResult,
+  NoteVerifierPort,
 }

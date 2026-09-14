@@ -37,6 +37,7 @@ function runtimeFor(values: string[]) {
     }) => ({
       text: values[Math.min(index++, values.length - 1)] ?? "",
     })),
+    completeQwen: vi.fn(async () => ""),
     warmTranscription: vi.fn(async () => undefined),
     transcribe: vi.fn(async () => []),
     getState: vi.fn(() => "QWEN_READY" as const),

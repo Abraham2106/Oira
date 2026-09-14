@@ -10,6 +10,7 @@ import type {
   StopEncounterInput,
 } from "../schemas/ipc.schema"
 import type { InferenceProgress } from "./inference-progress"
+import type { NoteVerificationResult } from "./note-verification"
 import type { ModelLifecycleEvent } from "./model-lifecycle"
 import type { Result } from "./result"
 import type { AppSettings } from "../schemas/settings.schema"
@@ -45,7 +46,13 @@ export type GenerateNoteIssue = {
  * validado, nunca como nota.
  */
 export type GenerateNoteResult =
-  | { status: "ok"; transcript: TranscriptSegment[]; note: ClinicalNote }
+  | {
+      status: "ok"
+      transcript: TranscriptSegment[]
+      note: ClinicalNote
+      verificationWarnings?: GenerateNoteIssue[]
+      reviewerResult?: NoteVerificationResult
+    }
   | {
       status: "draft_unvalidated"
       transcript: TranscriptSegment[]

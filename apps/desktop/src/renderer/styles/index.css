@@ -513,6 +513,99 @@
   padding-inline: 24px;
 }
 
+/* Independent verifier findings (F3) */
+.review-findings {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border: 1px solid var(--nl-border);
+  border-radius: 10px;
+  background: rgb(0 0 0 / 0.02);
+}
+
+.review-findings-title {
+  margin: 0 0 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.review-findings-error {
+  margin: 8px 0 0;
+  font-size: 0.85rem;
+  color: var(--nl-text-muted);
+}
+
+.review-findings-note {
+  margin: 8px 0 0;
+  font-size: 0.78rem;
+  color: var(--nl-text-faint);
+}
+
+.review-findings-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.finding {
+  padding: 8px 10px;
+  border: 1px solid var(--nl-border);
+  border-left-width: 3px;
+  border-radius: 8px;
+  background: var(--nl-surface);
+}
+
+.finding-warning {
+  border-left-color: var(--nl-accent);
+}
+
+.finding-blocking {
+  border-left-color: rgb(176 94 45 / 0.8);
+}
+
+.finding-omission {
+  border-left-color: var(--nl-text-faint);
+}
+
+.finding-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.finding-problem {
+  font-family: var(--nl-font-mono);
+  font-size: 0.7rem;
+  color: var(--nl-text-faint);
+}
+
+.finding-claim {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.finding-explanation {
+  margin: 4px 0 0;
+  font-size: 0.8rem;
+  color: var(--nl-text-muted);
+}
+
+.finding-quotes {
+  margin: 6px 0 0;
+  padding: 6px 8px;
+  border-left: 2px solid var(--nl-accent);
+  background: rgb(0 0 0 / 0.03);
+  font-family: var(--nl-font-mono);
+  font-size: 0.75rem;
+  color: var(--nl-text-muted);
+  display: grid;
+  gap: 2px;
+}
+
 /* Clinical note sections */
 .section {
   margin: 0;

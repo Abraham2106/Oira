@@ -29,7 +29,9 @@ import {
   type ExportPort,
 } from "../export"
 import { createInferencePorts } from "../inference"
+import { createQwenVerifier } from "../qvac/qwen-verifier"
 import { createNotesService, type NotesPort } from "../notes"
+import type { NoteVerifierPort } from "../../shared/types/note-verification"
 import type {
   AudioCapturePort,
   ClipboardPort,
@@ -55,6 +57,7 @@ export type ApplicationPorts = {
   settings: SettingsPort
   clipboard: ClipboardPort
   inferenceRuntime?: InferenceRuntimePort
+  reviewer?: NoteVerifierPort
 }
 
 export type ComposeApplicationOptions = {
@@ -73,6 +76,7 @@ export type ComposeApplicationOptions = {
   session?: SessionPort
   exportNote?: ExportPort
   inferenceRuntime?: InferenceRuntimePort
+  reviewer?: NoteVerifierPort
 }
 
 function createFileSettingsPort(settingsFile: string): SettingsPort {
@@ -130,6 +134,12 @@ export function composeApplication(
   const inference = createInferencePorts(inferenceAdapter, {
     onModelLifecycle: options.onModelLifecycle,
   })
+  // El revisor comparte el runtime Qwen del generador: completa una pasada
+  // secuencial (structuring → review) sobre el mismo modelo ya cargado.
+  // En modo mock no hay runtime, así que no hay revisor.
+  const runtime = options.inferenceRuntime ?? inference.runtime
+  const reviewer =
+    options.reviewer ?? (runtime ? createQwenVerifier(runtime) : undefined)
   const notesStore = resolveNoteStore(options)
   const exportDir =
     options.exportDir ??
@@ -148,7 +158,8 @@ export function composeApplication(
       notes: notesStore,
       transcription: options.transcription ?? inference.transcription,
       structuring: options.structuring ?? inference.structuring,
-      inferenceRuntime: options.inferenceRuntime ?? inference.runtime,
+      inferenceRuntime: runtime,
+      reviewer,
     }),
     exportNote:
       options.exportNote ??
@@ -166,7 +177,8 @@ export function composeApplication(
       ({
         writeText: () => undefined,
       } satisfies ClipboardPort),
-    inferenceRuntime: options.inferenceRuntime ?? inference.runtime,
+    inferenceRuntime: runtime,
+    reviewer,
     settings:
       options.settingsFile === undefined
         ? createFileSettingsPort(join(tmpdir(), "oira-dev-settings.json"))

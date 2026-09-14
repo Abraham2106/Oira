@@ -25,6 +25,13 @@ export type InferenceRuntimePort = {
    */
   handoffToStructuring: () => Promise<void>
   shutdown: () => Promise<void>
+  /**
+   * Completion unificada para Qwen (generador | revisor).
+   * role: "generator" | "reviewer"
+   * prompt: prompt completo listo para enviar
+   * schema: opcional, zod schema para validación de salida estructurada
+   */
+  completeQwen: (input: { role: "generator" | "reviewer"; prompt: string; schema?: unknown }) => Promise<string>
 }
 
 export type StructuringInput = {

@@ -117,6 +117,30 @@ export function createMockBridge(): DemoBridge {
         status: "ok",
         transcript: SYNTHETIC_TRANSCRIPT,
         note: syntheticNote(),
+        reviewerResult: {
+          status: "completed",
+          observations: [
+            {
+              sectionId: "clinical_narrative",
+              claim: "El dolor se describe como de tres días de evolución.",
+              status: "SUPPORTED",
+              severity: "warning",
+              problemType: "other",
+              evidence: {
+                segmentIds: ["seg-2"],
+                quotes: ["Dolor de rodilla izquierda desde hace tres días, sin golpe."],
+              },
+              explanation: "La cita literal sustenta la afirmación.",
+            },
+          ],
+          omissions: [
+            {
+              sectionId: "relevant_history",
+              missingClaim: "Alergias del paciente",
+              expectedFromSource: "No se mencionan alergias en esta pista sintética.",
+            },
+          ],
+        },
       }
     },
     async saveNote() {

@@ -2,6 +2,7 @@ import { useCallback, useMemo, useRef, useState } from "react"
 import type { ClinicalNote, Encounter, ProductState, TranscriptSegment } from "@oira/types"
 import { getBridge } from "../bridge/oira"
 import type { GenerateNoteIssue } from "../../shared/types/oira-api"
+import type { NoteVerificationResult } from "../../shared/types/note-verification"
 import { startMicCapture, type MicCapture } from "../lib/micCapture"
 import {
   canTransition,
@@ -27,6 +28,11 @@ type EncounterView = {
   note: ClinicalNote | null
   /** Intento crudo del generador que no pasó el contrato estricto. */
   unvalidatedDraft: UnvalidatedDraft | null
+  /**
+   * Revisión del segundo agente Qwen (F3). Informativa: el borrador NUNCA se
+   * acepta solo por las observaciones; el médico decide (principio invariable).
+   */
+  reviewerResult: NoteVerificationResult | null
   errorMessage: string | null
   copied: boolean
   setLabel: (value: string) => void
@@ -54,6 +60,7 @@ export function useEncounter(): EncounterView {
   const [transcript, setTranscript] = useState<TranscriptSegment[]>([])
   const [note, setNote] = useState<ClinicalNote | null>(null)
   const [unvalidatedDraft, setUnvalidatedDraft] = useState<UnvalidatedDraft | null>(null)
+  const [reviewerResult, setReviewerResult] = useState<NoteVerificationResult | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const captureRef = useRef<MicCapture | null>(null)
@@ -153,12 +160,16 @@ export function useEncounter(): EncounterView {
       if (generated.status === "ok") {
         setUnvalidatedDraft(null)
         setNote(generated.note)
+        // F3: la revisión del segundo Qwen es informativa y nunca bloquea la
+        // nota; el médico la ve al revisar y decide.
+        setReviewerResult(generated.reviewerResult ?? null)
       } else {
         // Borrador no validado visible: la transcripción ya está en pantalla,
         // el intento crudo queda expuesto y la máquina ya está en ERROR por el
         // evento progress "failed" — nunca una nota aparentemente válida.
         setUnvalidatedDraft({ text: generated.draftText, issues: generated.issues })
         setNote(null)
+        setReviewerResult(null)
       }
       setMachine((current) => {
         let next = current
@@ -253,6 +264,7 @@ export function useEncounter(): EncounterView {
     setTranscript([])
     setNote(null)
     setUnvalidatedDraft(null)
+    setReviewerResult(null)
     setErrorMessage(null)
     setCopied(false)
   }, [])
@@ -268,6 +280,7 @@ export function useEncounter(): EncounterView {
     transcript,
     note,
     unvalidatedDraft,
+    reviewerResult,
     errorMessage,
     copied,
     setLabel,

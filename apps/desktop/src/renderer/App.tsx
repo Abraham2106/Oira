@@ -377,6 +377,7 @@ export function App() {
             state={encounter.productState}
             note={encounter.note}
             transcript={encounter.transcript}
+            reviewerResult={encounter.reviewerResult}
             confirmed={reviewConfirmed}
             activeSectionId={activeSectionId}
             highlightedIds={highlightedIds}

@@ -5,6 +5,8 @@ import { isAppError } from "../errors/core"
 import { encounterNotFoundError } from "../errors/encounters"
 import { invalidStructuredOutputError } from "../errors/notes"
 import { verifySource } from "../notes/verify-source"
+import { runVerification } from "../structure/evidence"
+import type { NoteVerifierPort, NoteVerificationResult } from "../../shared/types/note-verification"
 import type { EncounterPort } from "../ports/inbound"
 import type {
   AudioCapturePort,
@@ -24,6 +26,7 @@ export type GenerateNoteWorkflowDeps = {
   progress?: ProgressPort
   structureAttempts?: number
   inferenceRuntime?: InferenceRuntimePort
+  reviewer?: NoteVerifierPort
 }
 
 /** Defensive precondition: callers must pass a real encounter id. */
@@ -105,8 +108,45 @@ export async function runGenerateNote(
         if (!verifySource(parsed.data, segments)) {
           throw invalidStructuredOutputError()
         }
+        // Run heuristic verification on the valid structured output
+        const { warnings: verificationWarnings, blocking } = runVerification(parsed.data, segments)
+
+        // If there are blocking heuristic issues, treat as draft_unvalidated
+        if (blocking.length > 0) {
+          await advanceEncounter(deps.encounters, encounterId, "failed")
+          deps.progress?.emit({
+            encounterId,
+            phase: "failed",
+            stage: "structuring",
+            transcript: segments,
+          })
+          return {
+            status: "draft_unvalidated",
+            transcript: segments,
+            draftText: JSON.stringify(parsed.data, null, 2),
+            issues: blocking.map((b) => ({ code: b.code, sectionId: b.sectionId, message: b.message })),
+          }
+        }
+
+        // Run Qwen reviewer if available (F3)
+        let reviewerResult: NoteVerificationResult | undefined
+        if (deps.reviewer) {
+          deps.progress?.emit({ encounterId, phase: "reviewing" })
+          reviewerResult = await deps.reviewer.verify({ transcript: segments, note: parsed.data })
+        }
+
         await advanceEncounter(deps.encounters, encounterId, "transcribed")
-        return { status: "ok", transcript: segments, note: parsed.data }
+        return {
+          status: "ok",
+          transcript: segments,
+          note: parsed.data,
+          verificationWarnings: verificationWarnings.map((w) => ({
+            code: w.code,
+            sectionId: w.sectionId,
+            message: w.message,
+          })),
+          reviewerResult,
+        }
       } catch (error) {
         lastError = error
         const retryable =

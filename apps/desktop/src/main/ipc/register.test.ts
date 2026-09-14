@@ -58,6 +58,7 @@ describe("I04 registerIpc", () => {
           },
           handoffToStructuring: async () => undefined,
           shutdown: async () => undefined,
+          completeQwen: async () => "",
         },
       }),
     )
@@ -198,6 +199,43 @@ describe("I04 registerIpc", () => {
     expect(generated.ok).toBe(true)
     expect(phases).toEqual(["transcribing", "structuring"])
     expect(existsSync(join(audioTempDir, encounterId))).toBe(false)
+  })
+
+  it("generateNote inyecta la revisión F3 cuando hay runtime Qwen", async () => {
+    const ipc = createMemoryIpc()
+    registerIpc(
+      ipc.handle,
+      createStubIpcDeps(createSilentIpcLogger(), {
+        inferenceRuntime: {
+          warmTranscription: async () => undefined,
+          handoffToStructuring: async () => undefined,
+          shutdown: async () => undefined,
+          completeQwen: async () => "",
+        },
+      }),
+    )
+    const started = (await ipc.invoke(IPC_CHANNELS.START_ENCOUNTER, {})) as {
+      ok: boolean
+      data: { encounterId: string }
+    }
+
+    const result = (await ipc.invoke(IPC_CHANNELS.GENERATE_NOTE, {
+      encounterId: started.data.encounterId,
+    })) as {
+      ok: boolean
+      data?: GenerateNoteResult
+    }
+
+    expect(result.ok).toBe(true)
+    expect(result.data?.status).toBe("ok")
+    // El runtime stub entrega "" al revisor → JSON inválido → not_completed.
+    // Informativo: la nota sigue siendo ok; el revisor nunca la bloquea.
+    if (result.data?.status === "ok") {
+      expect(result.data.reviewerResult).toEqual({
+        status: "not_completed",
+        error: expect.stringContaining("JSON"),
+      })
+    }
   })
 
   it("fails generateNote without a wav instead of passing the encounter id as a path", async () => {
