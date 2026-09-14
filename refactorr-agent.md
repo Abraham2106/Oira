@@ -458,7 +458,7 @@ task_id: WBS-6 / 6.1–6.5
 status_before: in_progress; WBS-5 done, G5 approved
 status_after: done; G6 approved con limitaciones; implementation_verified; publication_pending
 base_head: 3eba308701d5ea76369a8965494d5704f541ec21
-result_head: commit local de cierre en esta sesión (SHA en git log -1 de fix/domain-invariants-and-ipc)
+result_head: 69e5b935cf6ababf27e1d2c7eac5bfbbf882a323
 files_changed: diffs A02–A05 ya presentes; sender-guard; refactor-contracts; preload-contract.test.ts (retryAudioCleanup); docs/research/R-13-domain-invariants-and-ipc.md; docs/research/README.md; README.md; AGENTS.md; docs/QWEN_STRUCTURING_P2.md; docs/NOTE_VERIFIER_P3.md; docs/engineering/refactor-wbs/*; docs/engineering/refactor-wbs/pr-draft.md; este registro.
 changes: verificación integrada S1–S6 y suite completa; write-up R-13; docs alineadas con validación estructural (sin claims semánticos); borrador de PR local sin publicar. Preload contract test ahora exige el método explícito retryAudioCleanup.
 decisions:
