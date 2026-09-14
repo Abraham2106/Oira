@@ -2,7 +2,7 @@ import { SECTION_IDS, type ClinicalNote, type FieldValue, type SectionId } from 
 import type { StructuringOutput } from "./schema"
 
 function emptyField(): FieldValue {
-  return { text: "", presence: "NOT_STATED", sourceSegmentIds: [], reviewed: false }
+  return { text: "", presence: "NOT_STATED", sourceSegmentIds: [], provenance: "EXTRACTED", reviewed: false }
 }
 
 export function noteFromStructuringOutput(output: StructuringOutput): ClinicalNote {
@@ -14,6 +14,7 @@ export function noteFromStructuringOutput(output: StructuringOutput): ClinicalNo
         text: section.text,
         presence: section.presence,
         sourceSegmentIds: [...section.sourceSegmentIds],
+        provenance: "EXTRACTED",
         reviewed: false,
       }
       return [id, field]

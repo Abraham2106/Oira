@@ -66,7 +66,7 @@ function routeSegment(segment: TranscriptSegment): SectionId {
 }
 
 function emptyField(): FieldValue {
-  return { text: "", presence: "NOT_STATED", sourceSegmentIds: [], reviewed: false }
+  return { text: "", presence: "NOT_STATED", sourceSegmentIds: [], provenance: "EXTRACTED", reviewed: false }
 }
 
 export function assembleNote(transcript: readonly TranscriptSegment[]): ClinicalNote {
@@ -88,6 +88,7 @@ export function assembleNote(transcript: readonly TranscriptSegment[]): Clinical
         text: segments.map((segment) => segment.text.trim()).join(" "),
         presence: "STATED",
         sourceSegmentIds: segments.map((segment) => segment.id),
+        provenance: "EXTRACTED",
         reviewed: false,
       }
       return [id, field]

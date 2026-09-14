@@ -52,11 +52,14 @@ export const SECTION_TITLES: Record<SectionId, string> = {
 }
 
 export type FieldPresence = "STATED" | "NOT_STATED" | "UNKNOWN"
+/** `LEGACY_UNVERIFIED` preserves records written before provenance existed. */
+export type FieldProvenance = "EXTRACTED" | "CLINICIAN_EDITED" | "LEGACY_UNVERIFIED"
 
 export type FieldValue = {
   text: string
   presence: FieldPresence
   sourceSegmentIds: string[]
+  provenance: FieldProvenance
   reviewed: boolean
 }
 

@@ -1,6 +1,7 @@
 import { IPC_CHANNELS } from "./channels"
 import {
   generateNoteInputSchema,
+  retryAudioCleanupInputSchema,
   saveNoteInputSchema,
 } from "../../shared/schemas/ipc.schema"
 import type { NotesPort } from "../notes"
@@ -31,6 +32,17 @@ export function registerNotesIpc(
       session: deps.session,
       logger: deps.logger,
       run: (input) => deps.notes.save(input),
+    })(raw),
+  )
+
+  handle(IPC_CHANNELS.RETRY_AUDIO_CLEANUP, (_event, raw) =>
+    withValidation({
+      channel: IPC_CHANNELS.RETRY_AUDIO_CLEANUP,
+      schema: retryAudioCleanupInputSchema,
+      requiresSession: true,
+      session: deps.session,
+      logger: deps.logger,
+      run: (input) => deps.notes.retryAudioCleanup(input.encounterId),
     })(raw),
   )
 }

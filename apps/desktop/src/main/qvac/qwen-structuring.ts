@@ -4,8 +4,8 @@ import { buildStructuringMessages } from "../structure/prompt"
 import { splitTranscriptChunks } from "../structure/chunk"
 import { CLINICAL_NOTE_JSON_SCHEMA } from "../structure/json-schema"
 import {
-  normalizeStructuringOutput,
   parseModelJson,
+  validateStructuringOutput,
   type StructuringOutput,
 } from "../structure/schema"
 import { mergeStructuringOutputs } from "../structure/merge"
@@ -26,27 +26,8 @@ function messagesFor(
 
 function parseCompletionJson(completion: {
   text: string
-  thinkingText?: string
-  rawText?: string
 }): ReturnType<typeof parseModelJson> {
-  const issues: string[] = []
-  for (const candidate of [completion.text, completion.thinkingText, completion.rawText]) {
-    if (!candidate?.trim()) continue
-    const parsed = parseModelJson(candidate)
-    if (parsed.ok) return parsed
-    issues.push(...parsed.issues)
-  }
-  return { ok: false, issues: issues.length > 0 ? issues : ["La salida del modelo está vacía."] }
-}
-
-function rawFallbackText(completion: {
-  text: string
-  thinkingText?: string
-  rawText?: string
-}): string {
-  return [completion.text, completion.thinkingText, completion.rawText]
-    .map((value) => value?.trim() ?? "")
-    .find((value) => value.length > 0) ?? ""
+  return parseModelJson(completion.text)
 }
 
 function draftFromCompletion(
@@ -54,10 +35,10 @@ function draftFromCompletion(
   knownSegmentIds: readonly string[],
 ): StructuringOutput {
   const parsed = parseCompletionJson(completion)
-  if (parsed.ok) {
-    return normalizeStructuringOutput(parsed.value, knownSegmentIds)
-  }
-  return normalizeStructuringOutput(rawFallbackText(completion), knownSegmentIds)
+  if (!parsed.ok) throw invalidStructuredOutputError()
+  const validated = validateStructuringOutput(parsed.value, knownSegmentIds)
+  if (!validated.ok) throw invalidStructuredOutputError()
+  return validated.value
 }
 
 export function createQwenStructuring({

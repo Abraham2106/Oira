@@ -20,12 +20,13 @@ describe("adaptOiraApi", () => {
       }),
       generateNote: async () => ({
         ok: true,
-        data: { transcript: [], note },
+        data: { status: "READY", transcript: [], note },
       }),
       saveNote: async () => ({
         ok: true,
-        data: { noteId: "00000000-0000-4000-8000-000000000002" },
+        data: { status: "SAVED", noteId: "00000000-0000-4000-8000-000000000002" },
       }),
+      retryAudioCleanup: async () => ({ ok: true, data: { cleaned: true } }),
       exportNote: async () => ({ ok: true, data: { exported: true } }),
       writeClipboard: async () => ({ ok: true, data: { written: true } }),
       appendAudio: async () => ({ ok: true, data: { accepted: true } }),
@@ -73,7 +74,9 @@ describe("adaptOiraApi", () => {
     await bridge.stopEncounter(encounterId)
     const generated = await bridge.generateNote(encounterId)
     expect(Object.keys(generated.note.sections).sort()).toEqual([...SECTION_IDS].sort())
-    await bridge.saveNote(encounterId, generated.note, true)
+    await expect(bridge.saveNote(encounterId, generated.note, true)).resolves.toMatchObject({
+      status: "SAVED",
+    })
     await bridge.exportNote(encounterId, "txt")
     await bridge.writeClipboard("preview")
     await bridge.appendAudio({ encounterId, sequence: 0, pcm: [0, 0] })
@@ -110,6 +113,10 @@ describe("adaptOiraApi", () => {
         error: { code: "INVALID_INPUT", message: "x", retryable: false },
       }),
       saveNote: async () => ({
+        ok: false,
+        error: { code: "INVALID_INPUT", message: "x", retryable: false },
+      }),
+      retryAudioCleanup: async () => ({
         ok: false,
         error: { code: "INVALID_INPUT", message: "x", retryable: false },
       }),

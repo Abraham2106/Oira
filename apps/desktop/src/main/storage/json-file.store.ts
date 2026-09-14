@@ -6,6 +6,7 @@ import {
   clinicalNoteSchema,
   transcriptSegmentSchema,
 } from "../../shared/schemas/clinical.schema"
+import { SECTION_IDS } from "@oira/types"
 import {
   databaseReadFailedError,
   databaseWriteFailedError,
@@ -22,6 +23,24 @@ const LOG_SAVE = "storage.save"
 const LOG_REMOVE = "storage.remove"
 const LOG_CORRUPT_RESET = "storage.load_corrupt_reset"
 
+const legacyFieldValueSchema = z.object({
+  text: z.string(),
+  presence: z.enum(["STATED", "NOT_STATED", "UNKNOWN"]),
+  sourceSegmentIds: z.array(z.string()),
+  reviewed: z.boolean(),
+}).strict()
+
+const legacyClinicalNoteSchema = z.object({
+  sections: z.object(Object.fromEntries(
+    SECTION_IDS.map((id) => [id, legacyFieldValueSchema]),
+  ) as Record<(typeof SECTION_IDS)[number], typeof legacyFieldValueSchema>).strict(),
+}).strict().transform((note) => ({
+  sections: Object.fromEntries(SECTION_IDS.map((id) => [
+    id,
+    { ...note.sections[id], provenance: "LEGACY_UNVERIFIED" as const },
+  ])) as StoredNoteRecord["note"]["sections"],
+}))
+
 const storedNoteRecordSchema = z
   .object({
     id: z.string().min(1),
@@ -29,7 +48,7 @@ const storedNoteRecordSchema = z
     acceptedAt: z.string().min(1),
     label: z.string(),
     visitType: z.string(),
-    note: clinicalNoteSchema,
+    note: z.union([clinicalNoteSchema, legacyClinicalNoteSchema]),
     transcript: z.array(transcriptSegmentSchema),
   })
   .strict()

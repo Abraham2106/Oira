@@ -93,7 +93,7 @@ Un scribe genérico puede generar texto, pero suele mezclar lo dicho con lo plau
 - **El borrador no es la nota.** Nada se da por aceptado hasta que el médico revisa y confirma.
 - **La ausencia es un dato válido.** Si algo no se dijo, la sección queda en *No consta en la consulta* o *Sin determinar*; no se rellena con una conclusión verosímil.
 - **Cada campo puede mostrar su origen.** Las secciones enlazan fragmentos de la transcripción para que la revisión no dependa de la memoria.
-- **La inferencia permanece en el dispositivo.** Whisper y Qwen3 corren por QVAC en el proceso Main de Electron. La salida del generador se normaliza de forma permisiva; comprobar que un ID de fuente exista no demuestra que respalde el texto. La validación semántica fuerte sigue pendiente.
+- **La inferencia permanece en el dispositivo.** Whisper y Qwen3 corren por QVAC en el proceso Main de Electron. La salida estructurada se rechaza si un campo `STATED` extraído no cita fuentes o cita un segmento inexistente; comprobar que un ID exista no demuestra que respalde el texto. La validación semántica fuerte sigue pendiente.
 - **Exportar es una decisión explícita.** Copiar al portapapeles saca el contenido de Oira; el destino tiene sus propias prácticas.
 
 ### Construido con
@@ -108,7 +108,7 @@ Un scribe genérico puede generar texto, pero suele mezclar lo dicho con lo plau
 | [Vitest](https://vitest.dev) | Pruebas unitarias y evaluación de casos. |
 | [QVAC (`@qvac/sdk` 0.18.2)](https://docs.qvac.tether.io/) | Runtime local para cargar modelos, consultar recursos del sistema, transcribir y generar completions. |
 | [Whisper Large V3 Turbo](https://docs.qvac.tether.io/ai-capabilities/transcription) | STT en español con preprocesamiento PCM, selección dinámica de GPU y sin diarización automática. |
-| [Qwen3 4B Q4_K_M](https://docs.qvac.tether.io/) | Generación local de borradores, chunks y normalización permisiva a siete secciones; validación semántica pendiente. |
+| [Qwen3 4B Q4_K_M](https://docs.qvac.tether.io/) | Generación local de borradores, chunks y validación de forma/fuentes a siete secciones; validación semántica pendiente. |
 | Almacenamiento en memoria / JSON | Encuentros en memoria; notas aceptadas pueden persistirse en un archivo JSON cuando se configura `notesFile`. |
 
 ## Capacidades principales
@@ -196,7 +196,7 @@ Médico
   └── Main (backend local)
         ├── encounters + audio temporal (WAV/PCM)
         ├── transcription  → Whisper (QVAC)
-        ├── structuring    → Qwen3 4B local + chunks y normalización permisiva
+        ├── structuring    → Qwen3 4B local + chunks y validación de forma/fuentes
         ├── verify-source  → IDs de segmento deben existir
         └── export         → TXT/JSON mediante adaptador de archivo; copia al portapapeles
 ```
@@ -290,7 +290,7 @@ Si el preload no está disponible (por ejemplo, abriendo solo el renderer en el 
 
 ### Consulta con inferencia local
 
-Con el adaptador QVAC, Main elige una GPU mediante heurísticas de recursos, transcribe el WAV y carga Qwen3 después de descargar Whisper. La transcripción aparece mientras Qwen divide el texto en chunks y genera el borrador. Se intenta parsear JSON y se normaliza la salida de forma permisiva, incluso con texto de respaldo. Los helpers de evidencia aún no comprueban fidelidad semántica. Un fallo operativo queda visible y no activa un fallback remoto.
+Con el adaptador QVAC, Main elige una GPU mediante heurísticas de recursos, transcribe el WAV y carga Qwen3 después de descargar Whisper. La transcripción aparece mientras Qwen divide el texto en chunks y genera el borrador. Se parsea JSON y se valida la forma: `STATED` extraído sin fuentes, citas inexistentes u objetos desconocidos se rechazan; no se conservan como borrador válido. Los helpers de evidencia aún no comprueban fidelidad semántica. Un fallo operativo queda visible y no activa un fallback remoto.
 
 ### Recorrido de interfaz sin modelos
 
@@ -336,7 +336,7 @@ Reglas de representación:
 | Pieza | Default P0 | Notas |
 |---|---|---|
 | STT | `WHISPER_LARGE_V3_TURBO` | Whisper.cpp con `language: "es"`; solicita GPU mediante la selección heurística del runtime. |
-| Estructuración | `QWEN3_4B_Q4_K_M` | Temperatura cero, chunks y normalización permisiva; no garantiza salida estricta ni fidelidad de evidencia. |
+| Estructuración | `QWEN3_4B_Q4_K_M` | Temperatura cero, chunks y rechazo de forma/fuentes inválidas; no garantiza fidelidad semántica de evidencia. |
 | Modelos grandes | Carga secuencial | Whisper se descarga antes de Qwen; Qwen se libera al preparar otra consulta. Parakeet no forma parte del flujo activo. |
 | Diarización | No en P0 | `speaker` queda `null` hasta una asignación humana. |
 | Fallback cloud | Prohibido | Un fallo se muestra; no se reenvía audio a una API. |
@@ -409,6 +409,7 @@ Oira/
 | [Revisor y métricas pendientes](docs/NOTE_VERIFIER_P3.md) | Prompts endurecidos, segundo agente Qwen, heurísticas y harness de evaluación. |
 | [Actualización de Abraham — 12/09/2026](docs/UPDATE_ABRAHAM_2026-09-12.md) | Avances del día, motivación, evidencia y próximos pasos. |
 | [Kit de investigación](docs/research/README.md) | Prompts y decisiones con fuentes. |
+| [R-13 — invariantes de dominio e IPC](docs/research/R-13-domain-invariants-and-ipc.md) | Procedencia, generación compartida, resultados parciales y guardia de emisor. |
 
 Un ítem marcado como investigación pendiente **no** se publica como claim de producto hasta que exista el write-up.
 
@@ -422,8 +423,8 @@ Implementado:
 - [x] Captura de micrófono PCM 16 kHz y almacén temporal de audio.
 - [x] Adaptador QVAC 0.18.2: Whisper Large V3 Turbo para transcripción local.
 - [x] Runtime compartido con selección de GPU, warm-up, carga secuencial y cierre seguro.
-- [x] Generación Qwen3 4B Q4_K_M con chunks y normalización permisiva a siete secciones.
-- [x] Comprobación de existencia de IDs citados al guardar; no es validación semántica de la nota.
+- [x] Generación Qwen3 4B Q4_K_M con chunks y rechazo de forma/fuentes inválidas a siete secciones.
+- [x] Comprobación de existencia de IDs citados al generar y al guardar; no es validación semántica de la nota.
 - [x] Transcripción progresiva durante estructuración y conservación del texto ante fallo de Qwen.
 - [x] Panel compacto de modelos y revisión clínica con layout simplificado.
 - [x] Adaptador mock para tests y desarrollo sin modelos.

@@ -6,9 +6,22 @@ export const fieldValueSchema = z
     text: z.string(),
     presence: z.enum(["STATED", "NOT_STATED", "UNKNOWN"]),
     sourceSegmentIds: z.array(z.string()),
+    provenance: z.enum(["EXTRACTED", "CLINICIAN_EDITED"]),
     reviewed: z.boolean(),
   })
   .strict()
+  .superRefine((field, ctx) => {
+    if (
+      field.provenance === "EXTRACTED" &&
+      field.presence === "STATED" &&
+      field.sourceSegmentIds.length === 0
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Extracted stated fields require source segments.",
+      })
+    }
+  })
 
 export const transcriptSegmentSchema = z
   .object({

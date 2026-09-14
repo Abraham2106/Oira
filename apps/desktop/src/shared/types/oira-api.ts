@@ -5,6 +5,7 @@ import type {
   ClipboardWriteInput,
   ExportNoteInput,
   GenerateNoteInput,
+  RetryAudioCleanupInput,
   SaveNoteInput,
   StartEncounterInput,
   StopEncounterInput,
@@ -32,12 +33,27 @@ export type StopEncounterResult = {
 }
 
 export type GenerateNoteResult = {
+  status: "READY"
   transcript: TranscriptSegment[]
   note: ClinicalNote
+} | {
+  status: "CLEANUP_PENDING"
+  transcript: TranscriptSegment[]
+  note: ClinicalNote
+  cleanup: { retryable: true }
 }
 
 export type SaveNoteResult = {
+  status: "SAVED"
   noteId: string
+} | {
+  status: "PERSISTED_TRANSITION_PENDING"
+  noteId: string
+  recovery: { retryable: true }
+}
+
+export type RetryAudioCleanupResult = {
+  cleaned: true
 }
 
 export type ExportNoteResult = {
@@ -73,6 +89,9 @@ export type OiraApi = {
     input: GenerateNoteInput,
   ) => Promise<Result<GenerateNoteResult>>
   saveNote: (input: SaveNoteInput) => Promise<Result<SaveNoteResult>>
+  retryAudioCleanup: (
+    input: RetryAudioCleanupInput,
+  ) => Promise<Result<RetryAudioCleanupResult>>
   exportNote: (input: ExportNoteInput) => Promise<Result<ExportNoteResult>>
   writeClipboard: (
     input: ClipboardWriteInput,

@@ -143,6 +143,109 @@ describe("createNotesService", () => {
     expect(existsSync(join(audioTempDir, ENCOUNTER))).toBe(false)
   })
 
+  it("keeps a useful draft and retries a failed purge without re-running inference", async () => {
+    const purge = vi.fn()
+      .mockImplementationOnce(() => { throw new Error("purge failed") })
+      .mockImplementation(() => undefined)
+    const transcribe = vi.fn(createMockTranscription().transcribe)
+    const structure = vi.fn(createMockStructuring().structure)
+    const notes = createNotesService({
+      transcription: { transcribe },
+      structuring: { structure },
+      audio: {
+        prepare() {}, append() {}, finalize: () => "synthetic.wav",
+        wavPath: () => "synthetic.wav", purge,
+      },
+    })
+
+    await expect(notes.generate(ENCOUNTER)).resolves.toMatchObject({
+      status: "CLEANUP_PENDING",
+      cleanup: { retryable: true },
+      note: expect.any(Object),
+    })
+    await expect(notes.retryAudioCleanup(ENCOUNTER)).resolves.toEqual({ cleaned: true })
+    expect(transcribe).toHaveBeenCalledTimes(1)
+    expect(structure).toHaveBeenCalledTimes(1)
+    expect(purge).toHaveBeenCalledTimes(2)
+  })
+
+  it("keeps the primary inference error when cleanup fails, while retaining a cleanup retry", async () => {
+    const purge = vi.fn()
+      .mockImplementationOnce(() => { throw new Error("purge failed") })
+      .mockImplementation(() => undefined)
+    const notes = createNotesService({
+      transcription: { async transcribe() { throw invalidStructuredOutputError() } },
+      structuring: createMockStructuring(),
+      audio: {
+        prepare() {}, append() {}, finalize: () => "synthetic.wav",
+        wavPath: () => "synthetic.wav", purge,
+      },
+    })
+
+    await expect(notes.generate(ENCOUNTER)).rejects.toMatchObject(
+      invalidStructuredOutputError(),
+    )
+    await expect(notes.retryAudioCleanup(ENCOUNTER)).resolves.toEqual({ cleaned: true })
+    expect(purge).toHaveBeenCalledTimes(2)
+  })
+
+  it("reports persisted state when the post-save encounter transition fails", async () => {
+    const store = createMemoryNoteStore()
+    let advanceCalls = 0
+    const notes = createNotesService({
+      transcription: createMockTranscription(),
+      structuring: createMockStructuring(),
+      notes: store,
+      encounters: {
+        async start() { return { encounterId: ENCOUNTER, startedAt: "" } },
+        async stop() { return { status: "recording" as const } },
+        async getById() {
+          return { id: ENCOUNTER, status: "transcribed" as const, createdAt: "", startedAt: "", endedAt: "", updatedAt: "", completedAt: null, transcriptId: null, label: "", visitType: "" }
+        },
+        async advance() {
+          advanceCalls += 1
+          if (advanceCalls > 1) throw new Error("transition failed")
+        },
+      },
+    })
+    const generated = await notes.generate(ENCOUNTER)
+    await expect(notes.save({ encounterId: ENCOUNTER, note: generated.note, clinicianConfirmed: true }))
+      .resolves.toMatchObject({ status: "PERSISTED_TRANSITION_PENDING", noteId: expect.any(String) })
+    expect(await store.list()).toHaveLength(1)
+  })
+
+  it("retries a persisted transition with the existing note id after reconciliation", async () => {
+    const store = createMemoryNoteStore()
+    let status: "transcribing" | "transcribed" | "drafting" | "drafted" = "transcribing"
+    let failDrafting = true
+    const notes = createNotesService({
+      transcription: createMockTranscription(),
+      structuring: createMockStructuring(),
+      notes: store,
+      createId: () => "stable-note-id",
+      encounters: {
+        async start() { return { encounterId: ENCOUNTER, startedAt: "" } },
+        async stop() { return { status: "recording" as const } },
+        async getById() {
+          return { id: ENCOUNTER, status, createdAt: "", startedAt: "", endedAt: "", updatedAt: "", completedAt: null, transcriptId: null, label: "", visitType: "" }
+        },
+        async advance(_encounterId, to) {
+          if (to === "transcribed") { status = "transcribed"; return }
+          if (to === "drafting" && failDrafting) throw new Error("transition failed")
+          if (to === "drafting") { status = "drafting"; return }
+          status = "drafted"
+        },
+      },
+    })
+    const generated = await notes.generate(ENCOUNTER)
+    const first = await notes.save({ encounterId: ENCOUNTER, note: generated.note, clinicianConfirmed: true })
+    expect(first).toMatchObject({ status: "PERSISTED_TRANSITION_PENDING", noteId: "stable-note-id" })
+    failDrafting = false
+    const second = await notes.save({ encounterId: ENCOUNTER, note: generated.note, clinicianConfirmed: true })
+    expect(second).toEqual({ status: "SAVED", noteId: "stable-note-id" })
+    expect(await store.list()).toHaveLength(1)
+  })
+
   it("fails closed when an audio store is present but there is no wav", async () => {
     const audioTempDir = mkdtempSync(join(tmpdir(), "nl-notes-"))
     dirs.push(audioTempDir)

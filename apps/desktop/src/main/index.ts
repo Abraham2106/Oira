@@ -1,5 +1,6 @@
 import { app, BrowserWindow, clipboard, ipcMain, session, shell } from "electron"
 import { join } from "node:path"
+import { pathToFileURL } from "node:url"
 import { IPC_EVENTS } from "../shared/constants/ipc-channels"
 import { createAudioTempStore, defaultAudioTempDir } from "./audio"
 import { loadAppConfig, resolveAppEnv } from "./config"
@@ -9,17 +10,19 @@ import {
   registerIpc,
   type IpcHandle,
 } from "./ipc"
+import { withTrustedIpcSender, type TrustedRenderer } from "./ipc/sender-guard"
 import { createLogger, type Logger } from "./logging"
 import { parseEmbeddedRuntime, runtimeLogMeta } from "./runtime"
 import { tmpdir } from "node:os"
 
-function bindIpcMain(): IpcHandle {
-  return (channel, listener) => {
+function bindIpcMain(trusted: () => readonly TrustedRenderer[]): IpcHandle {
+  const handle: IpcHandle = (channel, listener) => {
     ipcMain.handle(channel, listener)
   }
+  return withTrustedIpcSender(handle, trusted)
 }
 
-function createWindow(): void {
+function createWindow(trusted: Map<number, TrustedRenderer>): void {
   const window = new BrowserWindow({
     width: 1280,
     height: 840,
@@ -35,13 +38,25 @@ function createWindow(): void {
     },
   })
 
+  const url = process.env.ELECTRON_RENDERER_URL ??
+    pathToFileURL(join(__dirname, "../renderer/index.html")).href
+  const blockUnexpectedNavigation = (
+    details: { preventDefault: () => void; url: string; isMainFrame: boolean },
+  ) => {
+    if (!details.isMainFrame || details.url !== url) details.preventDefault()
+  }
+  window.webContents.on("will-navigate", blockUnexpectedNavigation)
+  window.webContents.on("will-frame-navigate", blockUnexpectedNavigation)
+  window.webContents.on("will-redirect", blockUnexpectedNavigation)
   window.webContents.setWindowOpenHandler((details) => {
     void shell.openExternal(details.url)
     return { action: "deny" }
   })
 
+  trusted.set(window.webContents.id, { webContentsId: window.webContents.id, url })
+  window.once("closed", () => trusted.delete(window.webContents.id))
   if (process.env.ELECTRON_RENDERER_URL) {
-    void window.loadURL(process.env.ELECTRON_RENDERER_URL)
+    void window.loadURL(url)
   } else {
     void window.loadFile(join(__dirname, "../renderer/index.html"))
   }
@@ -120,8 +135,9 @@ app.whenReady().then(() => {
       }
     },
   })
-  registerIpc(bindIpcMain(), application)
-  createWindow()
+  const trustedRenderers = new Map<number, TrustedRenderer>()
+  registerIpc(bindIpcMain(() => [...trustedRenderers.values()]), application)
+  createWindow(trustedRenderers)
 
   let shutdownStarted = false
   app.on("before-quit", (event) => {
@@ -132,7 +148,7 @@ app.whenReady().then(() => {
   })
 
   app.on("activate", () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
+    if (BrowserWindow.getAllWindows().length === 0) createWindow(trustedRenderers)
   })
 })
 

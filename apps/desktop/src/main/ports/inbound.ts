@@ -1,5 +1,9 @@
 import type { ClinicalNote } from "@oira/types"
-import type { GenerateNoteResult } from "../../shared/types/oira-api"
+import type {
+  GenerateNoteResult,
+  RetryAudioCleanupResult,
+  SaveNoteResult,
+} from "../../shared/types/oira-api"
 import type { AuthProfile, AuthSessionState } from "../../shared/types/auth-profile"
 
 /**
@@ -13,7 +17,8 @@ export type NotesPort = {
     encounterId: string
     note: ClinicalNote
     clinicianConfirmed: true
-  }) => Promise<{ noteId: string }>
+  }) => Promise<SaveNoteResult>
+  retryAudioCleanup: (encounterId: string) => Promise<RetryAudioCleanupResult>
 }
 
 export type ExportNoteCommand = {

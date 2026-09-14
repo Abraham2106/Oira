@@ -57,6 +57,9 @@ Fuente: [BACKEND_DESKTOP_ARCHITECTURE_GUIDE.md](../BACKEND_DESKTOP_ARCHITECTURE_
 | R-8 | P1 | escritorio + lab | [Semántica `append` / stream](prompts/backend.md#prompt-r-8) |
 | R-9 | P2 | escritorio + lab | [Empaquetado y firma](prompts/backend.md#prompt-r-9) |
 | R-10 | P2 | escritorio + lab | [Export PDF](prompts/backend.md#prompt-r-10) |
+| R-13 | — | ingeniería | [R-13 — invariantes de dominio, procedencia e IPC](R-13-domain-invariants-and-ipc.md) |
+
+R-13 documenta decisiones implementadas en OIRA-REF-01. No es un prompt de laboratorio ni un claim clínico.
 
 ### IA / QVAC
 

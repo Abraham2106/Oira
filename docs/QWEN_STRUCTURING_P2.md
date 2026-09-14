@@ -1,9 +1,11 @@
 # Qwen structured-note generation (P2)
 
 Oira uses Qwen3 4B Q4_K_M for local draft generation. The adapter requests
-Spanish output, parses JSON when available, and normalizes the result into
-the seven note sections. Non-JSON text can be retained as draft content.
-This is permissive normalization, not strict schema or evidence validation.
+Spanish output, parses `completion.text` as JSON, and validates the result
+against the seven note sections. Generated `STATED` fields require existing
+source segment IDs; unknown objects, empty `STATED` text, and missing
+citations are rejected rather than sanitized into a draft. This is structural
+validation, not semantic evidence checking. See [R-13](research/R-13-domain-invariants-and-ipc.md).
 
 Whisper and Qwen are mutually exclusive residents. Before structuring, Oira
 waits for Whisper to unload; before the next recording, `warmTranscription`

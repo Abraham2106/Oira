@@ -30,7 +30,7 @@ describe("main/structure/schema", () => {
     }
   })
 
-  it("descarta secciones desconocidas y completa las conocidas", () => {
+  it("rechaza secciones desconocidas en lugar de descartarlas", () => {
     const result = validateStructuringOutput(
       { sections: {
         inventada: { presence: "STATED", text: "x", sourceSegmentIds: [] },
@@ -39,14 +39,10 @@ describe("main/structure/schema", () => {
       KNOWN,
     )
 
-    expect(result.ok).toBe(true)
-    if (result.ok) {
-      expect(result.value.sections.clinical_narrative?.text).toBe("Dolor.")
-      expect(result.value.sections.follow_up?.presence).toBe("NOT_STATED")
-    }
+    expect(result.ok).toBe(false)
   })
 
-  it("descarta segmentos fantasma y conserva los válidos", () => {
+  it("rechaza segmentos fantasma sin sanear la evidencia", () => {
     const result = validateStructuringOutput(
       {
         sections: {
@@ -60,13 +56,10 @@ describe("main/structure/schema", () => {
       KNOWN,
     )
 
-    expect(result.ok).toBe(true)
-    if (result.ok) {
-      expect(result.value.sections.clinical_narrative?.sourceSegmentIds).toEqual(["seg-1"])
-    }
+    expect(result.ok).toBe(false)
   })
 
-  it("coerce STATED vacío a NOT_STATED", () => {
+  it("rechaza STATED vacío en lugar de convertirlo a NOT_STATED", () => {
     const result = validateStructuringOutput(
       {
         sections: {
@@ -76,13 +69,10 @@ describe("main/structure/schema", () => {
       KNOWN,
     )
 
-    expect(result.ok).toBe(true)
-    if (result.ok) {
-      expect(result.value.sections.clinical_narrative?.presence).toBe("NOT_STATED")
-    }
+    expect(result.ok).toBe(false)
   })
 
-  it("honra NOT_STATED aunque venga texto", () => {
+  it("rechaza NOT_STATED que trae texto", () => {
     const result = validateStructuringOutput(
       {
         sections: {
@@ -92,11 +82,7 @@ describe("main/structure/schema", () => {
       KNOWN,
     )
 
-    expect(result.ok).toBe(true)
-    if (result.ok) {
-      expect(result.value.sections.follow_up?.presence).toBe("NOT_STATED")
-      expect(result.value.sections.follow_up?.text).toBe("")
-    }
+    expect(result.ok).toBe(false)
   })
 
   it("preserva UNKNOWN con texto", () => {
@@ -125,19 +111,16 @@ describe("main/structure/schema", () => {
     }
   })
 
-  it("strings planas siguen siendo STATED si hay texto", () => {
+  it("rechaza strings planos que no aportan evidencia", () => {
     const result = validateStructuringOutput(
       { clinical_narrative: "Dolor de rodilla." },
       KNOWN,
     )
 
-    expect(result.ok).toBe(true)
-    if (result.ok) {
-      expect(result.value.sections.clinical_narrative?.presence).toBe("STATED")
-    }
+    expect(result.ok).toBe(false)
   })
 
-  it("acepta JSON plano de strings por sección", () => {
+  it("rechaza JSON plano de strings por sección", () => {
     const result = validateStructuringOutput(
       {
         visit_context: "Control.",
@@ -146,11 +129,14 @@ describe("main/structure/schema", () => {
       KNOWN,
     )
 
-    expect(result.ok).toBe(true)
-    if (result.ok) {
-      expect(result.value.sections.visit_context?.text).toBe("Control.")
-      expect(result.value.sections.clinical_narrative?.text).toBe("Dolor de rodilla.")
-      expect(result.value.sections.follow_up?.presence).toBe("NOT_STATED")
-    }
+    expect(result.ok).toBe(false)
+  })
+
+  it("rechaza objetos vacíos o secciones con forma inválida", () => {
+    expect(validateStructuringOutput({}, KNOWN).ok).toBe(false)
+    expect(validateStructuringOutput({ desconocida: "texto" }, KNOWN).ok).toBe(false)
+    expect(validateStructuringOutput({
+      sections: { clinical_narrative: { presence: "NOT_STATED", text: "texto", sourceSegmentIds: ["seg-ghost"] } },
+    }, KNOWN).ok).toBe(false)
   })
 })

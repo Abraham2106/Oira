@@ -52,6 +52,7 @@ function field(text: string): FieldValue {
     text,
     presence: "STATED",
     sourceSegmentIds: [],
+    provenance: "CLINICIAN_EDITED",
     reviewed: true,
   }
 }
@@ -109,6 +110,31 @@ describe("main/storage/json-file.store", () => {
 
     await store.remove("missing")
     expect(await store.list()).toHaveLength(1)
+  })
+
+  it("loads legacy records as unverified without quarantining their source file", async () => {
+    const legacy = makeRecord("legacy-1", CLINICAL_TEXT)
+    const { provenance: _provenance, ...legacyField } = legacy.note.sections.visit_context
+    const legacyNote = {
+      sections: Object.fromEntries(SECTION_IDS.map((id) => [
+        id,
+        id === "visit_context"
+          ? legacyField
+          : (() => {
+            const { provenance: _ignored, ...fieldWithoutProvenance } = legacy.note.sections[id]
+            return fieldWithoutProvenance
+          })(),
+      ])),
+    }
+    const before = JSON.stringify({ version: 1, records: [{ ...legacy, note: legacyNote }] })
+    const mem = makeMemFs(new Map([[STORE_PATH, before]]))
+    const store = createJsonFileStore(STORE_PATH, mem.deps)
+
+    const loaded = await store.get("legacy-1")
+
+    expect(loaded?.note.sections.visit_context.provenance).toBe("LEGACY_UNVERIFIED")
+    expect(mem.files.get(STORE_PATH)).toBe(before)
+    expect([...mem.files.keys()]).toEqual([STORE_PATH])
   })
 
   it("leaves the original file intact when the write fails", async () => {

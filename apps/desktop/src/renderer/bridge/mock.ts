@@ -1,8 +1,8 @@
 import {
   type ClinicalNote,
   type FieldValue,
-  type TranscriptSegment,
 } from "@oira/types"
+import type { GenerateNoteResult, SaveNoteResult } from "../../shared/types/oira-api"
 
 import { SYNTHETIC_TRANSCRIPT } from "../../shared/fixtures/synthetic-consult"
 import type { InferenceProgress } from "../../shared/types/inference-progress"
@@ -26,15 +26,13 @@ export type DemoBridge = {
     sequence: number
     pcm: number[]
   }) => Promise<void>
-  generateNote: (encounterId: string) => Promise<{
-    transcript: TranscriptSegment[]
-    note: ClinicalNote
-  }>
+  generateNote: (encounterId: string) => Promise<GenerateNoteResult>
   saveNote: (
     encounterId: string,
     note: ClinicalNote,
     clinicianConfirmed: true,
-  ) => Promise<void>
+  ) => Promise<SaveNoteResult>
+  retryAudioCleanup: (encounterId: string) => Promise<void>
   exportNote: (
     encounterId: string,
     format?: "txt" | "json",
@@ -56,7 +54,7 @@ function field(
   presence: FieldValue["presence"],
   sourceSegmentIds: string[] = [],
 ): FieldValue {
-  return { text, presence, sourceSegmentIds, reviewed: false }
+  return { text, presence, sourceSegmentIds, provenance: "EXTRACTED", reviewed: false }
 }
 
 function syntheticNote(): ClinicalNote {
@@ -117,13 +115,16 @@ export function createMockBridge(): DemoBridge {
         throw new Error("Consulta desconocida")
       }
       return {
+        status: "READY",
         transcript: SYNTHETIC_TRANSCRIPT,
         note: syntheticNote(),
       }
     },
     async saveNote() {
       await wait(150)
+      return { status: "SAVED", noteId: crypto.randomUUID() }
     },
+    async retryAudioCleanup() {},
     async exportNote() {
       return { exported: true as const }
     },

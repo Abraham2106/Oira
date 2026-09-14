@@ -6,6 +6,7 @@ export type {
 export type {
   AppendAudioResult,
   GenerateNoteResult,
+  RetryAudioCleanupResult,
   OiraApi,
   SaveNoteResult,
   StartEncounterResult,

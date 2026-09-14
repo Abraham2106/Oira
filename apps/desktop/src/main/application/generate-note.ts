@@ -1,7 +1,7 @@
 import { clinicalNoteSchema } from "../../shared/schemas/clinical.schema"
 import type { GenerateNoteResult } from "../../shared/types/oira-api"
 import { audioCaptureFailedError } from "../errors/audio"
-import { isAppError } from "../errors/core"
+import { addSecondaryFailure, isAppError } from "../errors/core"
 import { encounterNotFoundError } from "../errors/encounters"
 import { invalidStructuredOutputError } from "../errors/notes"
 import { verifySource } from "../notes/verify-source"
@@ -24,6 +24,7 @@ export type GenerateNoteWorkflowDeps = {
   progress?: ProgressPort
   structureAttempts?: number
   inferenceRuntime?: InferenceRuntimePort
+  onCleanupFailure?: (input: { encounterId: string; primaryFailure: boolean }) => void
 }
 
 /** Defensive precondition: callers must pass a real encounter id. */
@@ -39,11 +40,7 @@ async function advanceEncounter(
   to: "transcribed" | "failed",
 ): Promise<void> {
   if (!encounters) return
-  try {
-    await encounters.advance(encounterId, to)
-  } catch {
-    // Bookkeeping must never mask the pipeline result.
-  }
+  await encounters.advance(encounterId, to)
 }
 
 /**
@@ -64,6 +61,8 @@ export async function runGenerateNote(
 
   deps.progress?.emit({ encounterId, phase: "transcribing" })
   let transcriptForFailure: GenerateNoteResult["transcript"] | undefined
+  let generated: GenerateNoteResult | undefined
+  let primaryFailure: unknown
   try {
     const filePath = deps.audio ? deps.audio.wavPath(encounterId) : undefined
     if (deps.audio && !filePath) throw audioCaptureFailedError()
@@ -88,7 +87,8 @@ export async function runGenerateNote(
           throw invalidStructuredOutputError()
         }
         await advanceEncounter(deps.encounters, encounterId, "transcribed")
-        return { transcript: segments, note: parsed.data }
+        generated = { status: "READY", transcript: segments, note: parsed.data }
+        break
       } catch (error) {
         lastError = error
         const retryable =
@@ -96,9 +96,15 @@ export async function runGenerateNote(
         if (!retryable) throw error
       }
     }
-    throw lastError
+    if (!generated) throw lastError
   } catch (error) {
-    await advanceEncounter(deps.encounters, encounterId, "failed")
+    primaryFailure = error
+    try {
+      await advanceEncounter(deps.encounters, encounterId, "failed")
+    } catch (secondaryError) {
+      // Preserve the generation failure; recovery-state failure is secondary.
+      addSecondaryFailure(primaryFailure, "encounter_transition", secondaryError)
+    }
     deps.progress?.emit({
       encounterId,
       phase: "failed",
@@ -106,8 +112,27 @@ export async function runGenerateNote(
         ? { transcript: transcriptForFailure, stage: "structuring" as const }
         : { stage: "transcription" as const }),
     })
-    throw error
-  } finally {
-    deps.audio?.purge(encounterId)
   }
+
+  let cleanupFailed = false
+  try {
+    deps.audio?.purge(encounterId)
+  } catch (cleanupError) {
+    cleanupFailed = true
+    addSecondaryFailure(primaryFailure, "audio_cleanup", cleanupError)
+    // The observer records only a technical identifier and stage, never audio data.
+    deps.onCleanupFailure?.({ encounterId, primaryFailure: primaryFailure !== undefined })
+  }
+
+  if (primaryFailure !== undefined) throw primaryFailure
+  if (!generated) throw invalidStructuredOutputError()
+  if (cleanupFailed) {
+    return {
+      status: "CLEANUP_PENDING",
+      transcript: generated.transcript,
+      note: generated.note,
+      cleanup: { retryable: true },
+    }
+  }
+  return generated
 }
