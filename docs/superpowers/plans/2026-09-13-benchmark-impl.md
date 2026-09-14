@@ -333,6 +333,22 @@ Aprobada (plan `rustling-enchanting-cloud.md`). Cierra §9 Fase 4 del rediseño:
 3. `--replay` del run 13:00 → re-render idempotente; header muestra `Prompt hash: N/A · Schema hash: N/A` sin romper nada.
 4. Validación de flags: `--repeats 3 --skip-stt` → error explícito "solo aplica a --e2e/--with-stt".
 
-⚠️ **Pendiente (requiere GPU):** `--repeats N` real sobre QVAC (N=5 → ~4+ min de corrida). La mecánica (loop, warmup-solo-1ª, `repetitions[]`, `computeRepeatability`) está cubierta por tests y por el código compartido; el número medido queda para un run GPU.
+#### Run repeatability real — **medido** 2026-09-14 02:59 UTC ✅
+
+`reports/2026-09-14T02-59-03.316Z-e2e-qvac/` — 5 iteraciones × 19 casos, 0 errores, exit 0. Commit `1194884` (rama rebasada con el work de Abraham). Línea registrada en `eval/history.jsonl`.
+
+`--repeats 5` real sobre QVAC (antes documentado como pendiente GPU) — **ejecutado y medido**:
+
+| Métrica | Media | Std (n−1) | CV | N |
+| --- | ---: | ---: | ---: | ---: |
+| Presence accuracy | 83.5% | ~0.00 pp | 0.0% | 5 |
+| WER | 5.1% | ~0.00 pp | 0.0% | 5 |
+| Latency E2E p50 (ms) | 37380.2 | 992.1 | 2.7% | 5 |
+| Latency structure p50 (ms) | 19006.8 | 741.6 | 3.9% | 5 |
+| Cold/Hot steady p50 | N/A (warmup solo en iter 1 → <2 muestras finitas) | — | — | — |
+
+**Observado (medido).** La varianza de **contenido** es **cero**: presence accuracy y WER idénticos en las 5 pasadas (modelo determinista, misma entrada → mismo output). La única variabilidad está en **rendimiento**: CV 2.7–3.9% en latencias (ruido de máquina/GPU, no de modelo).
+
+⚠️ **Diferencia de latencia vs run 13:00 (observada, causa no confirmada):** E2E p50 38.2 s vs 49.0 s del run 13:00 (mismo HW/adapter/modelo). Este valor 5× repetido es más confiable que el run único previo; la causa (térmica/env o estado de VRAM) no está verificada — no se atribuye.
 
 Captura: `reports/COMPARISON.md` (generada). El adapter `heuristic` falla al cargar `heuristic-assembler` (issue pre-existente, no de Fase 4).
