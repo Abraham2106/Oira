@@ -5,6 +5,8 @@ import {
   SECTION_IDS,
   alignTokens,
   charErrorRate,
+  coldHotMetrics,
+  computeRepeatability,
   evaluateCase,
   extractConfusions,
   latencyStats,
@@ -22,6 +24,11 @@ import {
   summarizeStt,
   transcriptText,
 } from "./scorer/stt-metrics.mjs"
+import {
+  scoreMustNotInclude,
+  scoreQuoteCoverage,
+  scoreSourceSupport,
+} from "./scorer/extraction-fidelity.mjs"
 import { buildArtifacts, renderReport } from "./report.mjs"
 
 const emptyNote = () => ({
@@ -764,5 +771,563 @@ describe("summarizeStt por categoría y confusiones (Fase 5)", () => {
     assert.equal(s.status, "medido")
     assert.deepEqual(s.werPerCategory, {})
     assert.deepEqual(s.topConfusions, [])
+  })
+})
+
+describe("scoreQuoteCoverage (Fase 2)", () => {
+  it("counts a quote contained in the section text as found", () => {
+    const gold = {
+      sections: {
+        visit_context: { presence: "STATED", mustInclude: [], mustNotInclude: [], sourceQuotes: ["Dolor de rodilla"] },
+        clinical_narrative: { presence: "STATED", mustInclude: [], mustNotInclude: [], sourceQuotes: ["Hace tres dias"] },
+        relevant_history: { presence: "NOT_STATED", mustInclude: [], mustNotInclude: [], sourceQuotes: [] },
+        reported_findings: { presence: "NOT_STATED", mustInclude: [], mustNotInclude: [], sourceQuotes: [] },
+        clinician_documented_assessment: { presence: "NOT_STATED", mustInclude: [], mustNotInclude: [], sourceQuotes: [] },
+        clinician_documented_plan: { presence: "NOT_STATED", mustInclude: [], mustNotInclude: [], sourceQuotes: [] },
+        follow_up: { presence: "NOT_STATED", mustInclude: [], mustNotInclude: [], sourceQuotes: [] },
+      },
+    }
+    const note = {
+      sections: {
+        visit_context: { text: "Dolor de rodilla izquierda.", presence: "STATED", sourceSegmentIds: [], reviewed: false },
+        clinical_narrative: { text: "Niega fiebre.", presence: "NOT_STATED", sourceSegmentIds: [], reviewed: false },
+        relevant_history: { text: "", presence: "NOT_STATED", sourceSegmentIds: [], reviewed: false },
+        reported_findings: { text: "", presence: "NOT_STATED", sourceSegmentIds: [], reviewed: false },
+        clinician_documented_assessment: { text: "", presence: "NOT_STATED", sourceSegmentIds: [], reviewed: false },
+        clinician_documented_plan: { text: "", presence: "NOT_STATED", sourceSegmentIds: [], reviewed: false },
+        follow_up: { text: "", presence: "NOT_STATED", sourceSegmentIds: [], reviewed: false },
+      },
+    }
+    const r = scoreQuoteCoverage(gold, note)
+    assert.deepEqual(r.bySection.visit_context, { total: 1, found: 1 })
+    assert.equal(r.bySection.clinical_narrative.found, 0)
+    assert.equal(r.aggregate.found, 1)
+    assert.equal(r.aggregate.total, 2)
+  })
+
+  it("is empty when no section carries quotes (or note is null)", () => {
+    const gold = {
+      sections: Object.fromEntries(
+        SECTION_IDS.map((id) => [id, { presence: "NOT_STATED", mustInclude: [], mustNotInclude: [], sourceQuotes: [] }]),
+      ),
+    }
+    const r = scoreQuoteCoverage(gold, null)
+    assert.deepEqual(r.bySection, {})
+    assert.equal(r.aggregate.total, 0)
+    assert.equal(r.aggregate.recall, null)
+  })
+
+  it("counts UNKNOWN sections that carry sourceQuotes (12-contradiction shape)", () => {
+    const gold = {
+      sections: {
+        visit_context: { presence: "STATED", mustInclude: [], mustNotInclude: [], sourceQuotes: [] },
+        clinical_narrative: { presence: "UNKNOWN", mustInclude: [], mustNotInclude: [], sourceQuotes: ["me faltó el aire"] },
+        relevant_history: { presence: "NOT_STATED", mustInclude: [], mustNotInclude: [], sourceQuotes: [] },
+        reported_findings: { presence: "UNKNOWN", mustInclude: [], mustNotInclude: [], sourceQuotes: ["Queda incierto."] },
+        clinician_documented_assessment: { presence: "NOT_STATED", mustInclude: [], mustNotInclude: [], sourceQuotes: [] },
+        clinician_documented_plan: { presence: "NOT_STATED", mustInclude: [], mustNotInclude: [], sourceQuotes: [] },
+        follow_up: { presence: "NOT_STATED", mustInclude: [], mustNotInclude: [], sourceQuotes: [] },
+      },
+    }
+    const note = {
+      sections: {
+        visit_context: { text: "", presence: "NOT_STATED", sourceSegmentIds: [], reviewed: false },
+        clinical_narrative: { text: "Primero dijo que me faltó el aire ayer y luego lo negó.", presence: "UNKNOWN", sourceSegmentIds: [], reviewed: false },
+        relevant_history: { text: "", presence: "NOT_STATED", sourceSegmentIds: [], reviewed: false },
+        reported_findings: { text: "Indeterminado", presence: "UNKNOWN", sourceSegmentIds: [], reviewed: false },
+        clinician_documented_assessment: { text: "", presence: "NOT_STATED", sourceSegmentIds: [], reviewed: false },
+        clinician_documented_plan: { text: "", presence: "NOT_STATED", sourceSegmentIds: [], reviewed: false },
+        follow_up: { text: "", presence: "NOT_STATED", sourceSegmentIds: [], reviewed: false },
+      },
+    }
+    const r = scoreQuoteCoverage(gold, note)
+    assert.deepEqual(r.bySection.clinical_narrative, { total: 1, found: 1 })
+    assert.equal(r.bySection.reported_findings.found, 0)
+    assert.equal(r.aggregate.total, 2)
+  })
+})
+
+describe("scoreMustNotInclude (Fase 2)", () => {
+  it("lists per-section mustNotInclude hits when the term appears in that section", () => {
+    const gold = {
+      sections: {
+        visit_context: { presence: "NOT_STATED", mustInclude: [], mustNotInclude: ["diagnóstico"], sourceQuotes: [] },
+        clinical_narrative: { presence: "NOT_STATED", mustInclude: [], mustNotInclude: [], sourceQuotes: [] },
+        relevant_history: { presence: "NOT_STATED", mustInclude: [], mustNotInclude: [], sourceQuotes: [] },
+        reported_findings: { presence: "NOT_STATED", mustInclude: [], mustNotInclude: [], sourceQuotes: [] },
+        clinician_documented_assessment: { presence: "NOT_STATED", mustInclude: [], mustNotInclude: ["neumonia"], sourceQuotes: [] },
+        clinician_documented_plan: { presence: "NOT_STATED", mustInclude: [], mustNotInclude: [], sourceQuotes: [] },
+        follow_up: { presence: "NOT_STATED", mustInclude: [], mustNotInclude: [], sourceQuotes: [] },
+      },
+    }
+    const note = {
+      sections: {
+        visit_context: { text: "Diagnóstico de alergia.", presence: "STATED", sourceSegmentIds: [], reviewed: false },
+        clinical_narrative: { text: "", presence: "NOT_STATED", sourceSegmentIds: [], reviewed: false },
+        relevant_history: { text: "", presence: "NOT_STATED", sourceSegmentIds: [], reviewed: false },
+        reported_findings: { text: "", presence: "NOT_STATED", sourceSegmentIds: [], reviewed: false },
+        clinician_documented_assessment: { text: "", presence: "NOT_STATED", sourceSegmentIds: [], reviewed: false },
+        clinician_documented_plan: { text: "", presence: "NOT_STATED", sourceSegmentIds: [], reviewed: false },
+        follow_up: { text: "", presence: "NOT_STATED", sourceSegmentIds: [], reviewed: false },
+      },
+    }
+    const r = scoreMustNotInclude(gold, note)
+    assert.deepEqual(r.bySection.visit_context, ["diagnóstico"])
+    assert.equal(r.bySection.clinician_documented_assessment, undefined)
+    assert.equal(r.hasHit, true)
+    assert.deepEqual(r.all, ["diagnóstico"])
+  })
+
+  it("returns no hits when none appear", () => {
+    const gold = {
+      sections: {
+        visit_context: { presence: "NOT_STATED", mustInclude: [], mustNotInclude: ["diagnóstico"], sourceQuotes: [] },
+        clinical_narrative: { presence: "NOT_STATED", mustInclude: [], mustNotInclude: [], sourceQuotes: [] },
+        relevant_history: { presence: "NOT_STATED", mustInclude: [], mustNotInclude: [], sourceQuotes: [] },
+        reported_findings: { presence: "NOT_STATED", mustInclude: [], mustNotInclude: [], sourceQuotes: [] },
+        clinician_documented_assessment: { presence: "NOT_STATED", mustInclude: [], mustNotInclude: [], sourceQuotes: [] },
+        clinician_documented_plan: { presence: "NOT_STATED", mustInclude: [], mustNotInclude: [], sourceQuotes: [] },
+        follow_up: { presence: "NOT_STATED", mustInclude: [], mustNotInclude: [], sourceQuotes: [] },
+      },
+    }
+    const note = {
+      sections: Object.fromEntries(
+        SECTION_IDS.map((id) => [id, { text: "Sin hallazgos.", presence: "NOT_STATED", sourceSegmentIds: [], reviewed: false }]),
+      ),
+    }
+    const r = scoreMustNotInclude(gold, note)
+    assert.deepEqual(r.bySection, {})
+    assert.equal(r.hasHit, false)
+    assert.equal(r.all.length, 0)
+  })
+})
+
+describe("scoreSourceSupport (Fase 2)", () => {
+  it("marks a segment as supported when its text backs the section", () => {
+    const transcript = [{ id: "seg-1", text: "dolor de rodilla", startMs: 0 }]
+    const note = {
+      sections: {
+        visit_context: { text: "Dolor de rodilla izquierda.", presence: "STATED", sourceSegmentIds: ["seg-1"], reviewed: false },
+        clinical_narrative: { text: "", presence: "NOT_STATED", sourceSegmentIds: [], reviewed: false },
+        relevant_history: { text: "", presence: "NOT_STATED", sourceSegmentIds: [], reviewed: false },
+        reported_findings: { text: "", presence: "NOT_STATED", sourceSegmentIds: [], reviewed: false },
+        clinician_documented_assessment: { text: "", presence: "NOT_STATED", sourceSegmentIds: [], reviewed: false },
+        clinician_documented_plan: { text: "", presence: "NOT_STATED", sourceSegmentIds: [], reviewed: false },
+        follow_up: { text: "", presence: "NOT_STATED", sourceSegmentIds: [], reviewed: false },
+      },
+    }
+    const r = scoreSourceSupport(note, transcript)
+    assert.deepEqual(r.bySection.visit_context, { segments: 1, found: 1, supported: 1 })
+    assert.equal(r.literalMissSections.length, 0)
+    assert.equal(r.invalidIds.length, 0)
+  })
+
+  it("reports a literal miss when the segment exists but does not back the section", () => {
+    const transcript = [{ id: "seg-2", text: "habla de su familia", startMs: 0 }]
+    const note = {
+      sections: {
+        visit_context: { text: "", presence: "NOT_STATED", sourceSegmentIds: [], reviewed: false },
+        clinical_narrative: { text: "Paciente con tos seca.", presence: "STATED", sourceSegmentIds: ["seg-2"], reviewed: false },
+        relevant_history: { text: "", presence: "NOT_STATED", sourceSegmentIds: [], reviewed: false },
+        reported_findings: { text: "", presence: "NOT_STATED", sourceSegmentIds: [], reviewed: false },
+        clinician_documented_assessment: { text: "", presence: "NOT_STATED", sourceSegmentIds: [], reviewed: false },
+        clinician_documented_plan: { text: "", presence: "NOT_STATED", sourceSegmentIds: [], reviewed: false },
+        follow_up: { text: "", presence: "NOT_STATED", sourceSegmentIds: [], reviewed: false },
+      },
+    }
+    const r = scoreSourceSupport(note, transcript)
+    assert.deepEqual(r.bySection.clinical_narrative, { segments: 1, found: 1, supported: 0 })
+    assert.deepEqual(r.literalMissSections, ["clinical_narrative"])
+    assert.equal(r.invalidIds.length, 0)
+  })
+
+  it("returns invalid ids for cited ids missing from the transcript", () => {
+    const transcript = [{ id: "seg-1", text: "algo", startMs: 0 }]
+    const note = {
+      sections: {
+        visit_context: { text: "Dolor de rodilla.", presence: "STATED", sourceSegmentIds: ["seg-99"], reviewed: false },
+        clinical_narrative: { text: "", presence: "NOT_STATED", sourceSegmentIds: [], reviewed: false },
+        relevant_history: { text: "", presence: "NOT_STATED", sourceSegmentIds: [], reviewed: false },
+        reported_findings: { text: "", presence: "NOT_STATED", sourceSegmentIds: [], reviewed: false },
+        clinician_documented_assessment: { text: "", presence: "NOT_STATED", sourceSegmentIds: [], reviewed: false },
+        clinician_documented_plan: { text: "", presence: "NOT_STATED", sourceSegmentIds: [], reviewed: false },
+        follow_up: { text: "", presence: "NOT_STATED", sourceSegmentIds: [], reviewed: false },
+      },
+    }
+    const r = scoreSourceSupport(note, transcript)
+    assert.deepEqual(r.invalidIds, ["seg-99"])
+    assert.deepEqual(r.bySection.visit_context, { segments: 1, found: 0, supported: 0 })
+  })
+})
+
+describe("evaluateCase: unsupportedFacts (Fase 2)", () => {
+  it("combines the four unsupported-fact kinds in one shape", () => {
+    const transcript = [
+      { id: "seg-1", text: "dolor de rodilla", startMs: 0 },
+      { id: "seg-2", text: "habla de su familia", startMs: 9 },
+    ]
+    const gold = {
+      must_not_contain: ["faringitis"],
+      sections: {
+        visit_context: { presence: "STATED", mustInclude: [], mustNotInclude: ["diagnóstico"], sourceQuotes: ["Dolor de rodilla"] },
+        clinical_narrative: { presence: "STATED", mustInclude: [], mustNotInclude: [], sourceQuotes: [] },
+        relevant_history: { presence: "STATED", mustInclude: [], mustNotInclude: [], sourceQuotes: [] },
+        reported_findings: { presence: "NOT_STATED", mustInclude: [], mustNotInclude: [], sourceQuotes: [] },
+        clinician_documented_assessment: { presence: "NOT_STATED", mustInclude: [], mustNotInclude: [], sourceQuotes: [] },
+        clinician_documented_plan: { presence: "NOT_STATED", mustInclude: [], mustNotInclude: [], sourceQuotes: [] },
+        follow_up: { presence: "NOT_STATED", mustInclude: [], mustNotInclude: [], sourceQuotes: [] },
+      },
+    }
+    const note = {
+      sections: {
+        visit_context: { text: "Dolor de rodilla; sospecha de faringitis y diagnóstico.", presence: "STATED", sourceSegmentIds: ["seg-1"], reviewed: false },
+        clinical_narrative: { text: "Paciente con tos seca.", presence: "STATED", sourceSegmentIds: ["seg-2"], reviewed: false },
+        relevant_history: { text: "Alérgico.", presence: "STATED", sourceSegmentIds: [], reviewed: false },
+        reported_findings: { text: "", presence: "NOT_STATED", sourceSegmentIds: [], reviewed: false },
+        clinician_documented_assessment: { text: "", presence: "NOT_STATED", sourceSegmentIds: [], reviewed: false },
+        clinician_documented_plan: { text: "", presence: "NOT_STATED", sourceSegmentIds: [], reviewed: false },
+        follow_up: { text: "", presence: "NOT_STATED", sourceSegmentIds: [], reviewed: false },
+      },
+    }
+    const ev = evaluateCase({ gold, note, transcript, rawSdkText: null })
+    const kinds = new Set(ev.unsupportedFacts.map((f) => f.kind))
+    assert.ok(kinds.has("must_not_contain"), "must_not_contain (faringitis) counted")
+    assert.ok(kinds.has("mustNotInclude"), "mustNotInclude (diagnóstico) counted")
+    assert.ok(kinds.has("stated_without_source"), "stated_without_source (relevant_history) counted")
+    assert.ok(kinds.has("source_not_supported"), "source_not_supported (clinical_narrative with seg-2 not backing) counted")
+    assert.equal(ev.unsupportedFactCount, ev.unsupportedFacts.length)
+  })
+})
+
+describe("summarize: extractionFidelity + unsupportedFact (Fase 2)", () => {
+  it("aggregates quote recall and flags the one unsupported case", () => {
+    const gold = {
+      must_not_contain: ["faringitis"],
+      sections: {
+        visit_context: { presence: "STATED", mustInclude: [], mustNotInclude: [], sourceQuotes: ["dolor de rodilla"] },
+        clinical_narrative: { presence: "NOT_STATED", mustInclude: [], mustNotInclude: [], sourceQuotes: [] },
+        relevant_history: { presence: "NOT_STATED", mustInclude: [], mustNotInclude: [], sourceQuotes: [] },
+        reported_findings: { presence: "NOT_STATED", mustInclude: [], mustNotInclude: [], sourceQuotes: [] },
+        clinician_documented_assessment: { presence: "NOT_STATED", mustInclude: [], mustNotInclude: [], sourceQuotes: [] },
+        clinician_documented_plan: { presence: "NOT_STATED", mustInclude: [], mustNotInclude: [], sourceQuotes: [] },
+        follow_up: { presence: "NOT_STATED", mustInclude: [], mustNotInclude: [], sourceQuotes: [] },
+      },
+    }
+    const transcript = [{ id: "seg-1", text: "dolor de rodilla", startMs: 0 }]
+    const note = {
+      sections: {
+        visit_context: { text: "Dolor de rodilla izquierda; sospecha de faringitis.", presence: "STATED", sourceSegmentIds: ["seg-1"], reviewed: false },
+        clinical_narrative: { text: "", presence: "NOT_STATED", sourceSegmentIds: [], reviewed: false },
+        relevant_history: { text: "", presence: "NOT_STATED", sourceSegmentIds: [], reviewed: false },
+        reported_findings: { text: "", presence: "NOT_STATED", sourceSegmentIds: [], reviewed: false },
+        clinician_documented_assessment: { text: "", presence: "NOT_STATED", sourceSegmentIds: [], reviewed: false },
+        clinician_documented_plan: { text: "", presence: "NOT_STATED", sourceSegmentIds: [], reviewed: false },
+        follow_up: { text: "", presence: "NOT_STATED", sourceSegmentIds: [], reviewed: false },
+      },
+    }
+    const ev = evaluateCase({ gold, note, transcript, rawSdkText: null })
+    const summary = summarize([{ id: "01", evaluation: ev, error: null, latencyMs: 10 }])
+    assert.equal(summary.extractionFidelity.quoteTotal, 1)
+    assert.equal(summary.extractionFidelity.quoteHits, 1)
+    assert.equal(summary.unsupportedFact.casesWithFacts, 1)
+    assert.equal(summary.unsupportedFact.kinds.must_not_contain, 1)
+  })
+})
+
+describe("summarizeStt: transcribe retry rate (Fase 2)", () => {
+  it("computes retry/1er-intento rates from transcribeAttempts (objeto keyed by id)", () => {
+    const s = summarizeStt(
+      [
+        { id: "a", metrics: computeSttMetrics({ referenceText: "x", hypothesisText: "x" }) },
+        { id: "b", metrics: computeSttMetrics({ referenceText: "x", hypothesisText: "x" }) },
+        { id: "c", metrics: computeSttMetrics({ referenceText: "x", hypothesisText: "x" }) },
+      ],
+      { transcribeAttempts: { a: 1, b: 3, c: 2 } },
+    )
+    assert.equal(s.status, "medido")
+    assert.equal(s.transcribeRetryCases, 2)
+    assert.equal(s.transcribeRetries, 3) // (3-1)+(2-1)
+    assert.equal(s.transcribeFirstTryRate, 1 / 3)
+    assert.ok(Math.abs(s.transcribeRetryRate - 2 / 3) < 1e-12)
+  })
+
+  it("keeps the previous shape when transcribeAttempts is not provided (backward compat Fase 5)", () => {
+    const s = summarizeStt([
+      { id: "a", metrics: computeSttMetrics({ referenceText: "x", hypothesisText: "x" }) },
+    ])
+    assert.equal(s.status, "medido")
+    assert.equal(s.transcribeRetryRate, undefined)
+    assert.equal(s.transcribeFirstTryRate, undefined)
+    assert.equal(s.transcribeRetries, undefined)
+  })
+})
+
+describe("Report Fase 2: fidelity + unsupported + retry", () => {
+  it("renders Fidelidad de extracción + Unsupported clinical facts + retry rows when data is present", () => {
+    const gold = {
+      must_not_contain: ["faringitis"],
+      sections: {
+        visit_context: { presence: "STATED", mustInclude: [], mustNotInclude: [], sourceQuotes: ["dolor de rodilla"] },
+        clinical_narrative: { presence: "NOT_STATED", mustInclude: [], mustNotInclude: [], sourceQuotes: [] },
+        relevant_history: { presence: "NOT_STATED", mustInclude: [], mustNotInclude: [], sourceQuotes: [] },
+        reported_findings: { presence: "NOT_STATED", mustInclude: [], mustNotInclude: [], sourceQuotes: [] },
+        clinician_documented_assessment: { presence: "NOT_STATED", mustInclude: [], mustNotInclude: [], sourceQuotes: [] },
+        clinician_documented_plan: { presence: "NOT_STATED", mustInclude: [], mustNotInclude: [], sourceQuotes: [] },
+        follow_up: { presence: "NOT_STATED", mustInclude: [], mustNotInclude: [], sourceQuotes: [] },
+      },
+    }
+    const transcript = [{ id: "seg-1", text: "dolor de rodilla", startMs: 0 }]
+    const note = {
+      sections: {
+        visit_context: { text: "Dolor de rodilla; faringitis.", presence: "STATED", sourceSegmentIds: ["seg-1"], reviewed: false },
+        clinical_narrative: { text: "", presence: "NOT_STATED", sourceSegmentIds: [], reviewed: false },
+        relevant_history: { text: "", presence: "NOT_STATED", sourceSegmentIds: [], reviewed: false },
+        reported_findings: { text: "", presence: "NOT_STATED", sourceSegmentIds: [], reviewed: false },
+        clinician_documented_assessment: { text: "", presence: "NOT_STATED", sourceSegmentIds: [], reviewed: false },
+        clinician_documented_plan: { text: "", presence: "NOT_STATED", sourceSegmentIds: [], reviewed: false },
+        follow_up: { text: "", presence: "NOT_STATED", sourceSegmentIds: [], reviewed: false },
+      },
+    }
+    const ev = evaluateCase({ gold, note, transcript, rawSdkText: '{"a":1}' })
+    const rows = [{ id: "01", category: "simple", evaluation: ev, error: null, latencyMs: 10, transcribeMs: 60, structureMs: 40, stt: { reference: "dolor de rodilla", hypothesis: "dolor de rodilla" } }]
+    const summary = summarize([{ id: "01", evaluation: ev, error: null, latencyMs: 10 }])
+    summary.skippedNoAudio = 0
+    summary.stt = summarizeStt(
+      [{ id: "01", category: "simple", metrics: computeSttMetrics({ reference: "dolor de rodilla", hypothesis: "dolor de rodilla" }) }],
+      { transcribeAttempts: { "01": 2 } },
+    )
+    const run = {
+      metadata: {
+        evaluatorVersion: 1, stage: "e2e", layer: "C-e2e", runId: "test-F2",
+        startedAt: "2026-09-13T00:00:00.000Z", adapter: "qvac",
+        skipStt: false, datasetCases: 1,
+        node: "v24", electron: null, sdk: "0.18.2",
+        hardware: { platform: "win32", arch: "x64", cpu: "test" },
+        models: { stt: "WHISPER_QVAC_LOCAL", structuring: "QWEN3_4B_Q4_K_M" },
+        gitCommit: null, datasetHash: "abc", sourceHashes: {}, evidence_rule: "medido | observado | inferido | no_probado",
+      },
+      summary,
+      results: rows.map((r) => ({ ...r, gold, note, transcript, baselinePresence: null, baselinePresencePairs: [], baselineLatencyMs: null })),
+    }
+    const md = renderReport(run)
+    assert.match(md, /Raw JSON valid rate \(primer intento\)/)
+    assert.match(md, /Fidelidad de extracci[óo]n/)
+    assert.match(md, /Unsupported clinical facts/)
+    assert.match(md, /Transcribe retry rate/)
+    assert.match(md, /Transcribe 1er intento/)
+  })
+
+  it("omits the unsupported section when there are 0 facts", () => {
+    const gold = {
+      must_not_contain: [],
+      sections: Object.fromEntries(SECTION_IDS.map((id) => [id, { presence: "NOT_STATED", mustInclude: [], mustNotInclude: [], sourceQuotes: [] }])),
+    }
+    const transcript = [{ id: "seg-1", text: "algo", startMs: 0 }]
+    const note = emptyNote()
+    const ev = evaluateCase({ gold, note, transcript, rawSdkText: '{"a":1}' })
+    const summary = summarize([{ id: "01", evaluation: ev, error: null, latencyMs: 10 }])
+    summary.skippedNoAudio = 0
+    summary.stt = sttNotMeasured("stub")
+    const run = {
+      metadata: {
+        evaluatorVersion: 1, stage: "off", layer: "A-skip-stt", runId: "test-F2-noop",
+        startedAt: "2026-09-13T00:00:00.000Z", adapter: "qvac",
+        skipStt: true, datasetCases: 1,
+        node: "v24", electron: null, sdk: "0.18.2",
+        hardware: { platform: "win32", arch: "x64", cpu: "test" },
+        models: { stt: null, structuring: "QWEN3_4B_Q4_K_M" },
+        gitCommit: null, datasetHash: "abc", sourceHashes: {}, evidence_rule: "medido | observado | inferido | no_probado",
+      },
+      summary,
+      results: [{ id: "01", category: "simple", gold, note, transcript, evaluation: ev, error: null, latencyMs: 10 }],
+    }
+    const md = renderReport(run)
+    assert.doesNotMatch(md, /### Unsupported clinical facts/)
+  })
+})
+
+describe("coldHotMetrics (Fase 3) — breakdown frío/caliente", () => {
+  it("derives ratio steady / warmup for 2+ latencies", () => {
+    const r = coldHotMetrics(100, [200, 300, 400])
+    assert.equal(r.warmupMs, 100)
+    assert.equal(r.firstLatencyMs, 200)
+    assert.equal(r.steadyP50, latencyStats([300, 400]).p50)
+    assert.equal(r.ratio, r.steadyP50 / 100)
+  })
+  it("guards invalid warmup or <2 latencies", () => {
+    assert.equal(coldHotMetrics(null, [10, 20]), null)
+    assert.equal(coldHotMetrics(0, [10, 20]), null)
+    assert.equal(coldHotMetrics(100, [200]), null)
+    assert.equal(coldHotMetrics(100, []), null)
+  })
+})
+
+describe("Report Fase 3: latencia por fase + frío/caliente", () => {
+  function baseSummary(evs) {
+    const s = summarize(evs)
+    s.skippedNoAudio = 0
+    s.sttLatency = latencyStats([21800, 21200])
+    s.coldHot = { warmupMs: 18420, firstLatencyMs: 57612, steadyP50: 48600, ratio: 48600 / 18420 }
+    s.stt = sttNotMeasured("stub solo clasificación")
+    return s
+  }
+
+  it("renders Breakdown frío/caliente + Latency STT p50 when data is present", () => {
+    const gold = { sections: Object.fromEntries(SECTION_IDS.map((id) => [id, { presence: "NOT_STATED", mustInclude: [], mustNotInclude: [], sourceQuotes: [] }])) }
+    const transcript = [{ id: "seg-1", text: "algo", startMs: 0 }]
+    const note = emptyNote()
+    const ev = evaluateCase({ gold, note, transcript, rawSdkText: '{"a":1}' })
+    const summary = baseSummary([{ id: "a01", evaluation: ev, error: null, latencyMs: 57612 }])
+    const run = {
+      metadata: {
+        evaluatorVersion: 1, stage: "e2e", layer: "C-e2e", runId: "test-F3",
+        startedAt: "2026-09-13T00:00:00.000Z", adapter: "qvac",
+        skipStt: false, datasetCases: 2,
+        node: "v24", electron: null, sdk: "0.18.2",
+        hardware: { platform: "win32", arch: "x64", cpu: "test" },
+        models: { stt: "WHISPER_QVAC_LOCAL", structuring: "QWEN3_4B_Q4_K_M" },
+        gitCommit: null, datasetHash: "abc", sourceHashes: {}, evidence_rule: "medido | observado | inferido | no_probado",
+      },
+      summary,
+      results: [{ id: "a01", category: "simple", gold, note, transcript, evaluation: ev, error: null, latencyMs: 57612, transcribeMs: 21800, structureMs: 35200 }],
+    }
+    const md = renderReport(run)
+    assert.match(md, /Latency STT p50/)
+    assert.match(md, /### Breakdown fr[íi]o\/caliente/)
+    assert.match(md, /Warmup \(carga modelo\)/)
+    assert.match(md, /Caliente \/ fr[íi]o/)
+  })
+
+  it("omits the Breakdown section when coldHot is absent", () => {
+    const gold = { sections: Object.fromEntries(SECTION_IDS.map((id) => [id, { presence: "NOT_STATED", mustInclude: [], mustNotInclude: [], sourceQuotes: [] }])) }
+    const transcript = [{ id: "seg-1", text: "algo", startMs: 0 }]
+    const note = emptyNote()
+    const ev = evaluateCase({ gold, note, transcript, rawSdkText: '{"a":1}' })
+    const summary = summarize([{ id: "a01", evaluation: ev, error: null, latencyMs: 10 }])
+    summary.skippedNoAudio = 0
+    summary.coldHot = null
+    summary.sttLatency = null
+    summary.stt = sttNotMeasured("stub")
+    const run = {
+      metadata: {
+        evaluatorVersion: 1, stage: "e2e", layer: "C-e2e", runId: "test-F3-noop",
+        startedAt: "2026-09-13T00:00:00.000Z", adapter: "qvac",
+        skipStt: false, datasetCases: 1,
+        node: "v24", electron: null, sdk: "0.18.2",
+        hardware: { platform: "win32", arch: "x64", cpu: "test" },
+        models: { stt: "WHISPER_QVAC_LOCAL", structuring: "QWEN3_4B_Q4_K_M" },
+        gitCommit: null, datasetHash: "abc", sourceHashes: {}, evidence_rule: "medido | observado | inferido | no_probado",
+      },
+      summary,
+      results: [{ id: "a01", category: "simple", gold, note, transcript, evaluation: ev, error: null, latencyMs: 10, transcribeMs: 4, structureMs: 6 }],
+    }
+    const md = renderReport(run)
+    assert.doesNotMatch(md, /### Breakdown fr[íi]o\/caliente/)
+  })
+})
+
+describe("computeRepeatability (Fase 4)", () => {
+  const extractors = {
+    presenceAccuracy: (s) => s.presence?.accuracy ?? NaN,
+    latencyP50: (s) => s.latency?.p50 ?? NaN,
+  }
+
+  it("computes mean/std/cv over 3+ repetitions", () => {
+    const reps = [{ summary: { presence: { accuracy: 0.8 }, latency: { p50: 100 } } },
+      { summary: { presence: { accuracy: 0.9 }, latency: { p50: 110 } } },
+      { summary: { presence: { accuracy: 0.85 }, latency: { p50: 105 } } }]
+    const result = computeRepeatability(reps, extractors)
+    assert.ok(Math.abs(result.presenceAccuracy.mean - 0.85) < 1e-9)
+    assert.equal(result.presenceAccuracy.n, 3)
+    assert.ok(result.presenceAccuracy.cv > 0)
+    assert.ok(Number.isFinite(result.presenceAccuracy.std))
+    assert.equal(result.latencyP50.mean, 105)
+    assert.deepEqual(result.latencyP50.values, [100, 110, 105])
+  })
+
+  it("returns null when fewer than 2 finite samples", () => {
+    const reps = [{ summary: { presence: { accuracy: 0.8 }, latency: { p50: 100 } } }]
+    const result = computeRepeatability(reps, extractors)
+    assert.equal(result.presenceAccuracy, null)
+    assert.equal(result.latencyP50, null)
+  })
+
+  it("filters out NaN/undefined metric values", () => {
+    const reps = [{ summary: { presence: { accuracy: 0.8 }, latency: { p50: 100 } } },
+      { summary: { presence: { accuracy: NaN }, latency: { p50: 110 } } }]
+    // presence accuracy: only 1 finite sample → null; latency: 2 → computed
+    const result = computeRepeatability(reps, extractors)
+    assert.equal(result.presenceAccuracy, null)
+    assert.equal(result.latencyP50.n, 2)
+  })
+})
+
+describe("Report Fase 4: Repeatability + prompt/schema hash", () => {
+  function baseRun() {
+    const gold = { sections: Object.fromEntries(SECTION_IDS.map((id) => [id, { presence: "NOT_STATED", mustInclude: [], mustNotInclude: [], sourceQuotes: [] }])) }
+    const transcript = [{ id: "seg-1", text: "algo", startMs: 0 }]
+    const note = emptyNote()
+    const ev = evaluateCase({ gold, note, transcript, rawSdkText: '{"a":1}' })
+    const summary = summarize([{ id: "a01", evaluation: ev, error: null, latencyMs: 10 }])
+    summary.skippedNoAudio = 0
+    summary.coldHot = null
+    summary.sttLatency = null
+    summary.stt = sttNotMeasured("stub")
+    summary.repeatability = {
+      presenceAccuracy: { mean: 0.85, std: 0.05, cv: 5.88, n: 3, values: [0.8, 0.9, 0.85] },
+      latencyP50: { mean: 105, std: 5, cv: 4.76, n: 3, values: [100, 110, 105] },
+      sttWer: null,
+      structureLatencyP50: { mean: 60, std: 2, cv: 3.33, n: 3, values: [58, 62, 60] },
+      coldHotSteadyP50: null,
+    }
+    const run = {
+      metadata: {
+        evaluatorVersion: 1, stage: "e2e", layer: "C-e2e", runId: "test-F4",
+        startedAt: "2026-09-13T00:00:00.000Z", adapter: "qvac",
+        skipStt: false, datasetCases: 1,
+        node: "v24", electron: null, sdk: "0.18.2",
+        hardware: { platform: "win32", arch: "x64", cpu: "test" },
+        models: { stt: "WHISPER_QVAC_LOCAL", structuring: "QWEN3_4B_Q4_K_M" },
+        gitCommit: null, datasetHash: "abc", sourceHashes: {},
+        promptHash: "abc123def456", schemaHash: "def456abc123",
+        evidence_rule: "medido | observado | inferido | no_probado",
+      },
+      summary,
+      repetitions: [{}, {}, {}],
+      results: [{ id: "a01", category: "simple", gold, note, transcript, evaluation: ev, error: null, latencyMs: 10 }],
+    }
+    return run
+  }
+
+  it("renders the Repeatability section with a table when data is present", () => {
+    const md = renderReport(baseRun())
+    assert.match(md, /### Repeatability \(3 runs\)/)
+    assert.match(md, /\| Presence accuracy \| 85\.0% \| 5\.00pp \|/)
+    assert.match(md, /\| Latency E2E p50 \(ms\) \| 105\.0 \| 5\.0 \| 4\.8 \|/)
+    assert.match(md, /3 corridas consecutivas sin warmup intermedio/)
+  })
+
+  it("shows null repeatability metrics as N/A", () => {
+    const md = renderReport(baseRun())
+    assert.match(md, /\| WER \| N\/A \| N\/A \| N\/A \| N\/A \|/)
+  })
+
+  it("omits the Repeatability section when repeatability is absent", () => {
+    const run = baseRun()
+    delete run.summary.repeatability
+    const md = renderReport(run)
+    assert.doesNotMatch(md, /### Repeatability/)
+  })
+
+  it("renders prompt/schema hashes in the header", () => {
+    const md = renderReport(baseRun())
+    assert.match(md, /Prompt hash: `abc123def456`/)
+    assert.match(md, /Schema hash: `def456abc123`/)
+  })
+
+  it("includes repeatability in metrics.json", () => {
+    const { metrics } = buildArtifacts(baseRun())
+    assert.ok(metrics.repeatability)
+    assert.equal(metrics.repeatability.presenceAccuracy.n, 3)
   })
 })

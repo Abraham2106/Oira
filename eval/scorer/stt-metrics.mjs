@@ -97,13 +97,15 @@ export function computeSttMetrics(input) {
 /**
  * Summarize STT metrics across cases. Optional per-result `category` groups
  * WER/CER by category (`werPerCategory`); `confusions` (reference/hypothesis
- * text pairs) yields global `topConfusions`. Both are additive — runs without
- * them keep the previous shape (fields absent, not null).
+ * text pairs) yields global `topConfusions`; `transcribeAttempts` (1 entry
+ * per result, in the same order; first-try is 1) yields transcribe retry
+ * rates (Fase 2). All are additive — runs without them keep the previous
+ * shape (fields absent, not null).
  *
  * @param {Array<{ id: string, category?: string, metrics?: ReturnType<typeof computeSttMetrics>, error?: string | null }>} results
- * @param {{ confusions?: Array<{ reference: string, hypothesis: string }> }} opts
+ * @param {{ confusions?: Array<{ reference: string, hypothesis: string }>, transcribeAttempts?: number[] }} opts
  */
-export function summarizeStt(results, { confusions = [] } = {}) {
+export function summarizeStt(results, { confusions = [], transcribeAttempts = null } = {}) {
   const measured = results.filter((r) => r.metrics && r.metrics.status === "medido")
   const fail = results.filter((r) => !r.metrics || r.metrics.emptyTranscript)
 
@@ -171,6 +173,35 @@ export function summarizeStt(results, { confusions = [] } = {}) {
     .sort((x, y) => y.count - x.count)
     .slice(0, 10)
 
+  // Fase 2: tasa de reintentos STT. `transcribeAttempts` puede ser un objeto
+  // keyed by id (preferido, sin ambigüedad) o un array alineado a `results`
+  // (fallback). Campos ausentes si no se provee (backward compatible).
+  const retryFields =
+    transcribeAttempts && measured.length > 0
+      ? (() => {
+          const lookup =
+            !Array.isArray(transcribeAttempts)
+              ? (r) => Number(transcribeAttempts[r.id]) || 1
+              : (r) => {
+                  const i = results.indexOf(r)
+                  return i >= 0 ? Number(transcribeAttempts[i]) || 1 : 1
+                }
+          const perCase = measured.map((r) => lookup(r))
+          const retries = perCase.reduce((s, n) => s + Math.max(0, n - 1), 0)
+          const retryCases = perCase.filter((n) => n > 1).length
+          return {
+            transcribeRetryRate: ratio(retryCases, measured.length),
+            transcribeRetryCases: retryCases,
+            transcribeFirstTryRate: ratio(measured.length - retryCases, measured.length),
+            transcribeRetries: retries,
+            transcribeAttempts: perCase.reduce((acc, n, i) => {
+              acc[measured[i].id] = n
+              return acc
+            }, {}),
+          }
+        })()
+      : null
+
   return {
     status: "medido",
     cases: measured.length,
@@ -185,6 +216,7 @@ export function summarizeStt(results, { confusions = [] } = {}) {
     topConfusions,
     negationDrops: dropped,
     negationAdds: added,
+    ...(retryFields ?? {}),
     evidence: "medido",
   }
 }

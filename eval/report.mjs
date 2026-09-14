@@ -29,7 +29,14 @@ export function buildArtifacts(run) {
     rawJsonValidRate: s.rawJsonValidRate,
     statedWithoutSource: s.statedWithoutSource,
     sourceIdFailureCases: s.sourceIdFailureCases,
+    extractionFidelity: s.extractionFidelity,
+    mustNotInclude: s.mustNotInclude,
+    unsupportedFact: s.unsupportedFact,
     latency: s.latency,
+    sttLatency: s.sttLatency,
+    structureLatency: s.structureLatency,
+    coldHot: s.coldHot,
+    repeatability: s.repeatability,
     stt: s.stt,
     cases: s.cases,
     errors: s.errors,
@@ -189,6 +196,7 @@ ${evidence("Medido", "Solo sustituciones token-a-token (ins/del excluidas).")}`
 ${sttRow("WER", `${fmt(s.stt.meanWer * 100, 1)}%`)}
 ${sttRow("CER", `${fmt(s.stt.meanCer * 100, 1)}%`)}
 ${sttRow("Transcribe success", pct(s.stt.cases - s.stt.emptyTranscriptCount, s.stt.cases))}
+${s.stt.transcribeRetryRate !== undefined ? `${sttRow("Transcribe retry rate", `${pct(s.stt.transcribeRetryCases, s.stt.cases)} (${s.stt.transcribeRetries} reintentos)`)}\n${sttRow("Transcribe 1er intento", `${fmt(s.stt.transcribeFirstTryRate * 100, 1)}%`)}` : ""}
 ${sttRow("Negación drop / add (heurística)", `${s.stt.negationDrops} / ${s.stt.negationAdds}`)}
 \n${evidence("Medido", `WER/CER sobre ${sttDenom} casos (WAV). Negación = recuento de tokens 'no', no es juicio clínico.`)}
 ${categoryBlock}
@@ -200,7 +208,7 @@ ${confusionBlock}`
   const presenceLabel = e2e ? "Presence accuracy (I4, sobre hipótesis STT)" : "Presence accuracy (I4)"
 
   const latencyRows = e2e
-    ? `| Latency structure p50 (ms) | ${fmt(s.structureLatency?.p50)} |\n| Latency E2E p50 (ms) | ${fmt(s.latency.p50)} |`
+    ? `| Latency STT p50 (ms) | ${fmt(s.sttLatency?.p50)} |\n| Latency structure p50 (ms) | ${fmt(s.structureLatency?.p50)} |\n| Latency E2E p50 (ms) | ${fmt(s.latency.p50)} |`
     : `| Latencia p50 (ms) | ${fmt(s.latency.p50)} |`
 
   const deltaBlock = e2e
@@ -259,86 +267,187 @@ ${evidence("Medido", `Contadores de esta corrida. F1 = N/A si la clase no tiene 
       ? `pnpm eval -- --with-stt                  # re-ejecutar Nivel 1 STT (requiere GPU + Whisper QVAC)`
       : `pnpm eval                               # re-ejecutar Capa C --e2e (default; requiere GPU + Whisper QVAC + Qwen)`
 
+  // --- Fase 4: Repeatability (N runs) ---
+  // Helper to format with unit only when not N/A
+  function fmtUnit(value, digits, unit) {
+    const formatted = fmt(value, digits)
+    if (formatted === "N/A") return "N/A"
+    return formatted + unit
+  }
+  // Helper for N column: show N/A if the metric itself is null/absent
+  function fmtN(metric) {
+    if (!metric || metric.n === undefined || metric.n === null) return "N/A"
+    return String(metric.n)
+  }
+  const repeatabilityBlock = s.repeatability
+    ? `\n### Repeatability (${run.repetitions?.length ?? "N/A"} runs)
+
+| Métrica | Media | Std Dev | CV (%) | N |
+| --- | ---: | ---: | ---: | ---: |
+| Presence accuracy | ${fmtUnit(s.repeatability.presenceAccuracy?.mean * 100, 1, "%")} | ${fmtUnit(s.repeatability.presenceAccuracy?.std * 100, 2, "pp")} | ${fmt(s.repeatability.presenceAccuracy?.cv, 1)} | ${fmtN(s.repeatability.presenceAccuracy)} |
+| Latency E2E p50 (ms) | ${fmt(s.repeatability.latencyP50?.mean, 1)} | ${fmt(s.repeatability.latencyP50?.std, 1)} | ${fmt(s.repeatability.latencyP50?.cv, 1)} | ${fmtN(s.repeatability.latencyP50)} |
+| WER | ${fmtUnit(s.repeatability.sttWer?.mean * 100, 1, "%")} | ${fmtUnit(s.repeatability.sttWer?.std * 100, 2, "pp")} | ${fmt(s.repeatability.sttWer?.cv, 1)} | ${fmtN(s.repeatability.sttWer)} |
+| Latency structure p50 (ms) | ${fmt(s.repeatability.structureLatencyP50?.mean, 1)} | ${fmt(s.repeatability.structureLatencyP50?.std, 1)} | ${fmt(s.repeatability.structureLatencyP50?.cv, 1)} | ${fmtN(s.repeatability.structureLatencyP50)} |
+| Cold/Hot steady p50 (ms) | ${fmt(s.repeatability.coldHotSteadyP50?.mean, 1)} | ${fmt(s.repeatability.coldHotSteadyP50?.std, 1)} | ${fmt(s.repeatability.coldHotSteadyP50?.cv, 1)} | ${fmtN(s.repeatability.coldHotSteadyP50)} |
+${evidence("Observado", `${run.repetitions?.length ?? "N/A"} corridas consecutivas sin warmup intermedio; mismo hardware/adapter.`)}`
+    : ""
+
+  // --- Fase 3: breakdown frío/caliente (warmup vs steady-state) ---
+  const coldHotBlock = s.coldHot
+    ? `\n### Breakdown frío/caliente
+
+| Componente | ms |
+| --- | ---: |
+| Warmup (carga modelo) — frío | ${fmt(s.coldHot.warmupMs)} |
+| 1er caso (tras warmup) | ${fmt(s.coldHot.firstLatencyMs)} |
+| p50 steady-state (resto) | ${fmt(s.coldHot.steadyP50)} |
+| Caliente / frío | ${fmt(s.coldHot.ratio)}× |
+${evidence("Medido", "Warmup wall-clock de esta corrida; el modelo ya estaba cargado al medir los casos.")}`
+    : ""
+
+  // --- Fase 2: fidelity + unsupported fact blocks ---
+  const fidelityQuoteRows =
+    classify && s.extractionFidelity?.quoteTotal > 0
+      ? results
+          .map((r) => {
+            const q = r.evaluation.quoteCoverage
+            if (q.aggregate.total === 0) return null
+            return `| ${r.id} | ${q.aggregate.total} | ${q.aggregate.found} | ${
+              q.aggregate.recall !== null ? `${fmt(q.aggregate.recall * 100, 1)}%` : "N/A"
+            } |`
+          })
+          .filter(Boolean)
+          .join("\n")
+      : ""
+
+  const fidelityBlock =
+    classify && s.extractionFidelity?.quoteTotal > 0
+      ? `\n### Fidelidad de extracción (sourceQuotes)
+
+| Caso | Quotes | Encontradas | Recall |
+| --- | ---: | ---: | ---: |
+${fidelityQuoteRows}
+${evidence("Medido", "Match literal normalizado (no semántico); parafraseo del modelo frente a la cita literal produce falsos negativos.")}`
+      : ""
+
+  const unsupportedRows =
+    classify && s.unsupportedFact?.facts > 0
+      ? results
+          .map((r) => {
+            if (r.evaluation.unsupportedFactCount === 0) return null
+            const kinds = [...new Set(r.evaluation.unsupportedFacts.map((f) => f.kind))].join(", ")
+            const details = r.evaluation.unsupportedFacts
+              .map((f) => (f.term ? `${f.term}` : f.sectionId ?? "—"))
+              .join("; ")
+            return `| ${r.id} | ${r.evaluation.unsupportedFactCount} | ${kinds} | ${details} |`
+          })
+          .filter(Boolean)
+          .join("\n")
+      : ""
+
+  const unsupportedFactBlock =
+    classify && (s.unsupportedFact?.facts ?? 0) > 0
+      ? `\n### Unsupported clinical facts
+
+| Caso | Nº | Tipo(s) | Detalle |
+| --- | ---: | --- | --- |
+${unsupportedRows}
+${evidence("Medido", `§15.1: must_not_contain + mustNotInclude + STATED sin source + fuente sin respaldo literal. La componente 4 (revisión manual) no está medida.`)}`
+      : ""
+
   const notProbedFooter = classify
     ? e2e
-      ? evidence("No probado", `Fidelidad semántica de citas fuera de los ${results.length}/${datasetCases} casos con WAV.`)
+      ? evidence("No probado", `Fidelidad semántica de citas (cualitativa) fuera de los ${results.length}/${datasetCases} casos con WAV. sourceQuotes se puntúan por match literal; la verificación semántica aún falta (NOTE_VERIFIER).`)
       : evidence("No probado", "Fidelidad semántica de citas y pipeline audio→nota no se miden en esta corrida.")
     : evidence("No probado", "Capa B no ejecuta estructuración; clasificación, fidelidad de citas y pipeline audio→nota no se miden.")
 
-  return `# Oira eval report — \`${m.runId}\`
+  // Code block for reproduction instructions (avoids backtick nesting in main template)
+  const reproCodeBlock =
+    "`" + "`" + "`bash\n" +
+    "pnpm eval:self-check                     # tests sin modelos\n" +
+    reproducedFlag + "\n" +
+    "pnpm eval -- --replay reports/" + m.runId + "/run.json   # re-renderizar sin modelos\n" +
+    "`" + "`" + "`"
 
-${m.startedAt} · capa \`${m.layer}\` · adapter \`${m.adapter}\` · ${layerLabel}
-${evidence("Observado", `Rama ${m.gitCommit ?? "sin commit"} · dataset hash \`${m.datasetHash ?? "N/A"}\``)}
-
-## Resultados
-
-### Métricas principales
-
-| Métrica | Valor |
-| --- | ---: |
-${casesRow}${skippedRow}
-| Errores de adaptador | ${s.errors} |
-| ${presenceLabel} | ${classify ? pct(s.presence.correct, s.presence.total) : "no_probado"} |
-| Macro-F1 presencia | ${classify ? fmt(s.presence.macroF1, 3) : "no_probado"} |
-| Invención léxica (casos) | ${classify ? pct(s.invention.casesWithHits, s.cases) : "no_probado"} |
-| mustInclude cobertura | ${
-    classify
-      ? s.mustIncludeCoverage === null
-        ? "N/A"
-        : pct(s.mustIncludeHits, s.mustIncludeTotal)
-      : "no_probado"
-  } |
-| Product emitted rate | ${
-    classify
-      ? productOk === null
-        ? "N/A"
-        : pct(productOk, s.cases)
-      : "no_probado"
-  } |
-| Raw JSON valid rate | ${classify && s.rawJsonValidRate !== null ? fmt(s.rawJsonValidRate, 3) : "no_probado"} |
-| STATED sin sourceSegmentIds | ${classify ? s.statedWithoutSource : "no_probado"} |
-| Casos con source IDs inválidos | ${classify ? s.sourceIdFailureCases : "no_probado"} |
-${latencyRows}
-| STT WER/CER | ${
-    s.stt.status === "medido" && Number.isFinite(s.stt.meanWer)
-      ? `${fmt(s.stt.meanWer * 100, 1)}% / ${fmt(s.stt.meanCer * 100, 1)}%`
-      : "no_medido"
-  } |
-
-${classify ? evidence("Medido", `Presencia, invención, mustInclude y source IDs${e2e ? ` sobre la hipótesis STT (${results.length}/${datasetCases} casos con WAV)` : ""}; latencia ${e2e ? "E2E" : "de structure()"} de esta corrida.`) : evidence("No probado", "Capa B no ejecuta estructuración; clasificación y E2E no se miden.")}
-
-### Latencia
-
-| Stat | ms |
-| --- | ---: |
-| n (éxitos) | ${s.latency.samples} |
-| p50 | ${fmt(s.latency.p50)} |
-| p95 | ${fmt(s.latency.p95)} |
-| p99 | ${fmt(s.latency.p99)} |
-| mean | ${fmt(s.latency.mean)} |
-| min | ${fmt(s.latency.min)} |
-| max | ${fmt(s.latency.max)} |
-${evidence("Medido", sttOnly ? "Wall-clock de transcribe() por caso exitoso." : e2e ? "Wall-clock E2E (transcribe + structure) por caso exitoso (p50 E2E)." : "Wall-clock de structure() por caso exitoso.")}
-${sttBlock}
-${classificationBlock}
-${deltaBlock}
-
-### Por caso
-
-| Caso | ms | Presence | Invención | Resultado |
-| --- | ---: | --- | --- | --- |
-${caseRows}
-
-## Cómo reproducir este reporte
-
-\`\`\`bash
-pnpm eval:self-check                     # tests sin modelos
-${reproducedFlag}
-pnpm eval -- --replay reports/${m.runId}/run.json   # re-renderizar sin modelos
-\`\`\`
-
-Hashes de fuentes: \`metadata.sourceHashes\` en \`run.json\`. Detalle por caso en \`cases.json\` / \`errors.json\`.
-
-${notProbedFooter}
-`
+  const parts = [
+    "# Oira eval report — `" + m.runId + "`\n\n",
+    m.startedAt + " · capa `" + m.layer + "` · adapter `" + m.adapter + "` · " + layerLabel + "\n",
+    evidence("Observado", "Rama " + (m.gitCommit ?? "sin commit") + " · dataset hash `" + (m.datasetHash ?? "N/A") + "`") + "\n",
+    "Prompt hash: `" + (m.promptHash ?? "N/A") + "` · Schema hash: `" + (m.schemaHash ?? "N/A") + "`\n\n",
+    "## Resultados\n\n",
+    "### Métricas principales\n\n",
+    "| Métrica | Valor |\n",
+    "| --- | ---: |\n",
+    casesRow + skippedRow + "\n",
+    "| Errores de adaptador | " + s.errors + " |\n",
+    "| " + presenceLabel + " | " + (classify ? pct(s.presence.correct, s.presence.total) : "no_probado") + " |\n",
+    "| Macro-F1 presencia | " + (classify ? fmt(s.presence.macroF1, 3) : "no_probado") + " |\n",
+    "| Invención léxica (casos) | " + (classify ? pct(s.invention.casesWithHits, s.cases) : "no_probado") + " |\n",
+    "| mustInclude cobertura | " + (
+      classify
+        ? s.mustIncludeCoverage === null
+          ? "N/A"
+          : pct(s.mustIncludeHits, s.mustIncludeTotal)
+        : "no_probado"
+    ) + " |\n",
+    "| Product emitted rate | " + (
+      classify
+        ? productOk === null
+          ? "N/A"
+          : pct(productOk, s.cases)
+        : "no_probado"
+    ) + " |\n",
+    "| Raw JSON valid rate (primer intento) | " + (classify && s.rawJsonValidRate !== null ? fmt(s.rawJsonValidRate, 3) : "no_probado") + " |\n",
+    "| Source quote fidelity (recall) | " + (
+      classify && s.extractionFidelity?.quoteTotal > 0
+        ? pct(s.extractionFidelity.quoteHits, s.extractionFidelity.quoteTotal)
+        : s.extractionFidelity?.quoteTotal === 0
+          ? "N/A (sin sourceQuotes en el run)"
+          : "no_probado"
+    ) + " |\n",
+    "| mustNotInclude hits | " + (classify && s.mustNotInclude ? s.mustNotInclude.hits : "no_probado") + " |\n",
+    "| Unsupported clinical fact rate | " + (
+      classify && s.unsupportedFact
+        ? s.unsupportedFact.casesWithFacts > 0
+          ? "⛔ " + pct(s.unsupportedFact.casesWithFacts, s.cases)
+          : pct(0, s.cases)
+        : "no_probado"
+    ) + " |\n",
+    "| STATED sin sourceSegmentIds | " + (classify ? s.statedWithoutSource : "no_probado") + " |\n",
+    "| Casos con source IDs inválidos | " + (classify ? s.sourceIdFailureCases : "no_probado") + " |\n",
+    latencyRows + "\n",
+    "| STT WER/CER | " + (
+      s.stt.status === "medido" && Number.isFinite(s.stt.meanWer)
+        ? fmt(s.stt.meanWer * 100, 1) + "% / " + fmt(s.stt.meanCer * 100, 1) + "%"
+        : "no_medido"
+    ) + " |\n\n",
+    (classify ? evidence("Medido", "Presencia, invención, mustInclude y source IDs" + (e2e ? " sobre la hipótesis STT (" + results.length + "/" + datasetCases + " casos con WAV)" : "") + "; latencia " + (e2e ? "E2E" : "de structure()") + " de esta corrida.") : evidence("No probado", "Capa B no ejecuta estructuración; clasificación y E2E no se miden.")) + "\n\n",
+    "### Latencia\n\n",
+    "| Stat | ms |\n",
+    "| --- | ---: |\n",
+    "| n (éxitos) | " + s.latency.samples + " |\n",
+    "| p50 | " + fmt(s.latency.p50) + " |\n",
+    "| p95 | " + fmt(s.latency.p95) + " |\n",
+    "| p99 | " + fmt(s.latency.p99) + " |\n",
+    "| mean | " + fmt(s.latency.mean) + " |\n",
+    "| min | " + fmt(s.latency.min) + " |\n",
+    "| max | " + fmt(s.latency.max) + " |\n",
+    evidence("Medido", sttOnly ? "Wall-clock de transcribe() por caso exitoso." : e2e ? "Wall-clock E2E (transcribe + structure) por caso exitoso (p50 E2E)." : "Wall-clock de structure() por caso exitoso.") + "\n",
+    coldHotBlock,
+    repeatabilityBlock,
+    sttBlock,
+    fidelityBlock,
+    unsupportedFactBlock,
+    classificationBlock,
+    deltaBlock + "\n\n",
+    "### Por caso\n\n",
+    "| Caso | ms | Presence | Invención | Resultado |\n",
+    "| --- | ---: | --- | --- | --- |\n",
+    caseRows + "\n\n",
+    "## Cómo reproducir este reporte\n\n",
+    reproCodeBlock + "\n\n",
+    "Hashes de fuentes: `metadata.sourceHashes` en `run.json`. Detalle por caso en `cases.json` / `errors.json`.\n\n",
+    notProbedFooter + "\n"
+  ]
+  return parts.join("")
 }

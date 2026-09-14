@@ -243,8 +243,112 @@ Top confusiones (filtro de puntuación validado en datos reales): rosuvastatina�
 
 ⚠️ **Observación del primer intento (fallido, 12:52)**: 18/19 con `TRANSCRIPTION_FAILED` (RPC timeout en 02 + `MODEL_LOAD_PENDING` sin resolver en 03-19) + workers huérfanos. Un segundo `pnpm eval` corrió limpio. Fallo transitorio del worker QVAC, no regresión de Fase 5 — documentado en memoria para no confundir futuras corridas.
 
-Hasta que el usuario apruebe una fase siguiente, **solo se implementa la medición de fases aprobadas** (hoy: 1, 2, 4 y 5 completas).
+Hasta que el usuario apruebe una fase siguiente, **solo se implementa la medición de fases aprobadas** (hoy: 1, 2, 3, 4 y 5 completas).
 
 ---
 
-## Fase 4+ (diseñada, no implementada aún — no implementar sin aprobación)
+## Rediseño — Fase 2 (Ampliación de métricas): fidelity + unsupported facts + reintentos ✅ implementada 2026-09-13
+
+Aprobada (plan `rustling-enchanting-cloud.md`). Cierra los gaps §4.4 del rediseño (items 4/6/9): `sourceQuotes` y `mustNotInclude` se puntúan por primera vez, `unsupported clinical fact rate` tiene su fórmula §15.1, y la tasa de reintentos STT se persiste.
+
+### Cambios (aditivos, backward compatible con runs Fase 5)
+
+- **`eval/scorer/extraction-fidelity.mjs`** (nuevo, puro): `scoreQuoteCoverage` (match literal normalizado de `sourceQuotes` ⊆ texto de la sección), `scoreMustNotInclude` (hits por sección), `scoreSourceSupport` (segmento citado existe **y** su texto respalda la sección). Reusa `containsNormalized`/`ratio`/`SECTION_IDS`.
+- **`index.mjs` `evaluateCase`**: suma `quoteCoverage`, `mustNotIncludeHits`, `sourceSupport`, `unsupportedFacts` (kinds: `must_not_contain` | `mustNotInclude` | `stated_without_source` | `source_not_supported`) y `unsupportedFactCount`. `summarize` agrega `extractionFidelity.{quoteRecall,quoteHits,quoteTotal,sourceVerificationRate}`, `mustNotInclude.{casesWithHits,hits,rate}`, `unsupportedFact.{casesWithFacts,facts,rate,kinds}`. La componente §15.1-4 (revisión manual) queda documentada como `no_probado`.
+- **`stt-metrics.mjs` `summarizeStt`**: opción `transcribeAttempts` (objeto keyed by id o array) → `transcribeRetryRate`, `transcribeRetryCases`, `transcribeRetries`, `transcribeFirstTryRate`, `transcribeAttempts`. Sin la opción, campos ausentes.
+- **`runner.mjs`**: persiste `row.transcribeAttempts` (success = fallos+1) en `run.json`; lo pasa a `summarizeStt` en main y en `--replay`.
+- **`report.mjs`**: fila `Raw JSON valid rate (primer intento)`, nuevas filas `Source quote fidelity (recall)`, `mustNotInclude hits`, `Unsupported clinical fact rate` (⛔ cuando >0), secciones `### Fidelidad de extracción (sourceQuotes)` y `### Unsupported clinical facts` (solo si hay facts), filas STT `Transcribe retry rate` / `Transcribe 1er intento`.
+- **Tests**: 68 → **82/82** (fidelity 6, unsupportedFacts 1, summarize agregado 1, summarizeStt retry 2, render Fase 2 2).
+
+### Resultados del replay retroactivo (sin modelos) — **medido**
+
+`--replay` sobre runs viejos re-deriva todo desde gold+note+transcript+sourceSegmentIds guardados en `run.json`.
+
+**Run 13:00 (19 casos):**
+
+| Métrica (Fase 2, nueva) | Valor |
+| --- | --- |
+| Source quote fidelity (recall) | **22.4% (15/67)** — el modelo parafrasea; el match literal las pierde |
+| mustNotInclude hits | 0/19 |
+| Unsupported clinical fact rate | **⛔ 78.9% (15/19)** |
+| Transcribe retry rate (run viejo) | 0.0% (0/19) — los attempts no se persistían antes de esta fase |
+
+**Run 05-11 (13 casos):** quote fidelity 37.5% (15/40), unsupported 69.2% (9/13), retry 0 (run viejo).
+
+⚠️ **Honestidad del dato nuevo**: `unsupportedFactRate` >0 viene casi todo de `source_not_supported` — una comprobación **literal normalizada** de respaldo (más estricta que el componente 1 del §15.1, que solo exige que el id exista). El parafraseo lo infla; es una cota superior del problema real, no un fallo de verificación semántica (esa sigue `no_probado`, NOTE_VERIFIER). La componente 4 (revisión manual) `no_probado`. Runs viejos sin `transcribeAttempts` reportan retry 0 honestamente (no se inventa).
+
+### Verificación
+1. `pnpm eval:self-check` → 82/82.
+2. `--replay` 13:00 y 05-11 → renderizan las secciones nuevas sin re-inferencia.
+3. (Opcional, GPU) `pnpm eval` → run nuevo con `transcribeAttempts` por caso y `transcribeRetryRate` real.
+
+---
+
+## Rediseño — Fase 3 (Nivel 3 E2E): latencia por fase + breakdown frío/caliente ✅ implementada 2026-09-13
+
+Aprobada (plan `rustling-enchanting-cloud.md`). Cierra §9 Fase 3 del rediseño. La task 3.1 (wire audio→nota `--e2e`) ya existía de las Fases 4/5; esta fase añade lo que faltaba: latencia por fase STT y el breakdown frío/caliente.
+
+### Cambios (aditivos, backward compatible)
+
+- **`eval/scorer/index.mjs`**: `coldHotMetrics(warmupMs, latencies)` — helper puro; null si falta warmup o <2 latencias. `sttLatency` se resume con el `latencyStats` existente.
+- **`eval/runner.mjs`**: `finalizeLatencySummary(run)` compartido entre main y `--replay` → `summary.sttLatency` (p50/p95 de `transcribeMs`) y `summary.coldHot` (warmup, 1er caso, steadyP50, ratio).
+- **`eval/report.mjs`**: fila `Latency STT p50 (ms)`; sección `### Breakdown frío/caliente` (Warmup frío | 1er caso tras warmup | p50 steady-state | Caliente/frío) solo si `coldHot`; `metrics.json` + `sttLatency`/`structureLatency`/`coldHot`.
+- **Tests**: 82 → **86/86** (coldHotMetrics 2, render Fase 3 2).
+
+### Resultados del replay retroactivo (sin modelos) — **medido**
+
+Replay sobre `run.json` (transcribeMs/structureMs/latencyMs/warmup ya persistidos): latencia por fase y breakdown idempotentes en ambos runs.
+
+**Run 13:00 (19 casos):** Latency STT p50 **14065.5 ms** · structure 26930.7 · E2E 48967.4. Warmup frío 33667.8 ms · 1er caso 48095.1 · p50 steady 49332.5 · **Caliente/frío 1.5×**.
+
+**Run 05-11 (13 casos):** STT p50 14631.8 ms. Warmup 41616.9 · 1er caso 51232.6 · Caliente/frío 1.3×.
+
+⚠️ **Honestidad del dato**: "1er caso" es el primer caso procesado tras warmup (no un cold-call real de carga de modelo — el warmup ya lo cargó). El ratio cruza magnitudes distintas (costo de carga puntual × latencia por caso: se presenta como relación, no como ahorro).
+
+### Verificación
+1. `pnpm eval:self-check` → 86/86.
+2. `--replay` 13:00 y 05-11 → secciones nuevas renderizadas; re-render → byte-idéntico (idempotente).
+3. Capa A (`--skip-stt`) no muestra `Latency STT p50` (sin transcribeMs) — correcto.
+
+---
+
+## Fase 4 — Reproducibilidad y comparación ✅ implementada 2026-09-13
+
+Aprobada (plan `rustling-enchanting-cloud.md`). Cierra §9 Fase 4 del rediseño: versionado prompt/schema, repeatability study (`--repeats N`) y comparación side-by-side (`--compare`).
+
+### Cambios (aditivos, backward compatible)
+
+- **`eval/runner.mjs`**:
+  - `metadata.promptHash` / `metadata.schemaHash` (SHA-256, 12 hex) desde `adapter.getPromptTemplate?.()` y `adapter.getSchema?.()`; `null` si el adapter no los expone (heuristic).
+  - `--repeats N` (default 1) — solo `--e2e`/`--with-stt` (guard en parseArgs). Warmup **solo en la iteración 1**; cada pasada en `run.repetitions[]`. `runIteration(iteration, isFirstIteration)` desacopla el loop.
+  - `--compare <paths...>` (mutuamente excluyente con stages/`--replay`/`--self-check`/`--cases`) → `compareMode()` lee N `run.json` (o dirs) y escribe `COMPARISON.md` side-by-side (WER/CER, presence STT-fed, latencias E2E/STT/structure, cold/hot, dataset, adapter, prompt/schema hash, git commit, fecha). Evidencia `Observado` — no re-inferencia.
+- **`eval/scorer/index.mjs`**: `computeRepeatability(repetitions, metricExtractors)` — media, std muestral (n−1), CV %, N y values por métrica; `null` con <2 muestras finitas (no inventa).
+- **`eval/report.mjs`**: header `Prompt hash: xxxx · Schema hash: yyyy`; sección `### Repeatability (N runs)` (tabla por métrica con N/A cuando la métrica falta — `fmtUnit` no pega "%"/"pp" sobre N/A); `metrics.json` incluye `repeatability`. Reescrito el template de retorno a concatenación de `parts[]` para evitar anidamiento de backticks que rompía el parse (SyntaxError previo).
+- **Tests**: 86 → **94/94** (computeRepeatability 3, render Fase 4 5). Assert de media con tolerancia de punto flotante (`Math.abs(...) < 1e-9`) y estructura de reps corregida (`latency` dentro de `summary`).
+
+### Verificación (sin GPU)
+
+1. `pnpm eval:self-check` → **94/94**.
+2. `--compare reports/13-00-31 reports/05-11-23` → `COMPARISON.md` side-by-side correcto: WER 5.1% vs 3.1%, presence 83.5% vs 89.0%, cold/hot 1.46× vs 1.26×; prompt/schema hash `N/A` en runs viejos (backward compatible).
+3. `--replay` del run 13:00 → re-render idempotente; header muestra `Prompt hash: N/A · Schema hash: N/A` sin romper nada.
+4. Validación de flags: `--repeats 3 --skip-stt` → error explícito "solo aplica a --e2e/--with-stt".
+
+#### Run repeatability real — **medido** 2026-09-14 02:59 UTC ✅
+
+`reports/2026-09-14T02-59-03.316Z-e2e-qvac/` — 5 iteraciones × 19 casos, 0 errores, exit 0. Commit `1194884` (rama rebasada con el work de Abraham). Línea registrada en `eval/history.jsonl`.
+
+`--repeats 5` real sobre QVAC (antes documentado como pendiente GPU) — **ejecutado y medido**:
+
+| Métrica | Media | Std (n−1) | CV | N |
+| --- | ---: | ---: | ---: | ---: |
+| Presence accuracy | 83.5% | ~0.00 pp | 0.0% | 5 |
+| WER | 5.1% | ~0.00 pp | 0.0% | 5 |
+| Latency E2E p50 (ms) | 37380.2 | 992.1 | 2.7% | 5 |
+| Latency structure p50 (ms) | 19006.8 | 741.6 | 3.9% | 5 |
+| Cold/Hot steady p50 | N/A (warmup solo en iter 1 → <2 muestras finitas) | — | — | — |
+
+**Observado (medido).** La varianza de **contenido** es **cero**: presence accuracy y WER idénticos en las 5 pasadas (modelo determinista, misma entrada → mismo output). La única variabilidad está en **rendimiento**: CV 2.7–3.9% en latencias (ruido de máquina/GPU, no de modelo).
+
+⚠️ **Diferencia de latencia vs run 13:00 (observada, causa no confirmada):** E2E p50 38.2 s vs 49.0 s del run 13:00 (mismo HW/adapter/modelo). Este valor 5× repetido es más confiable que el run único previo; la causa (térmica/env o estado de VRAM) no está verificada — no se atribuye.
+
+Captura: `reports/COMPARISON.md` (generada). El adapter `heuristic` falla al cargar `heuristic-assembler` (issue pre-existente, no de Fase 4).

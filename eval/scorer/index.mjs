@@ -1,5 +1,11 @@
 /** Pure Oira eval scorer (Capa A). No model I/O. Empty denominators → null. */
 
+import {
+  scoreMustNotInclude,
+  scoreQuoteCoverage,
+  scoreSourceSupport,
+} from "./extraction-fidelity.mjs"
+
 export const SECTION_IDS = [
   "visit_context",
   "clinical_narrative",
@@ -314,6 +320,33 @@ export function evaluateCase(input) {
   const rawJsonValid =
     rawSdkText === null || rawSdkText === undefined ? null : looksLikeJson(rawSdkText)
 
+  // --- Fase 2: fidelidad de extracción (sourceQuotes, mustNotInclude,
+  // soporte literal de source) + unsupported facts (§15.1). Match literal
+  // normalizado; no semántico. ---
+  const quoteCoverage = scoreQuoteCoverage(input.gold, note)
+  const mustNotIncludeHits = scoreMustNotInclude(input.gold, note)
+  const sourceSupport = scoreSourceSupport(note, transcript)
+
+  const unsupportedFacts = []
+  const pushFacts = (kind, entries) => {
+    for (const entry of entries) {
+      unsupportedFacts.push({
+        sectionId: entry.sectionId ?? null,
+        kind,
+        term: typeof entry.term === "string" ? entry.term : null,
+      })
+    }
+  }
+  pushFacts("must_not_contain", mustNotContainHits.map((term) => ({ term })))
+  // mustNotInclude por sección (Fase 2: recién puntuado)
+  for (const [sectionId, terms] of Object.entries(mustNotIncludeHits.bySection)) {
+    pushFacts("mustNotInclude", terms.map((term) => ({ sectionId, term })))
+  }
+  // STATED sin sourceSegmentIds
+  pushFacts("stated_without_source", statedWithoutSource.map((sectionId) => ({ sectionId })))
+  // Segmento citado existe pero su texto no respalda el valor extraído
+  pushFacts("source_not_supported", sourceSupport.literalMissSections.map((sectionId) => ({ sectionId })))
+
   return {
     productEmitted: Boolean(note) && !failed,
     error: input.error ?? null,
@@ -328,6 +361,11 @@ export function evaluateCase(input) {
     verifySourceOk: invalidSourceIds.length === 0,
     rawJsonValid,
     rawSdkText,
+    quoteCoverage,
+    mustNotIncludeHits,
+    sourceSupport,
+    unsupportedFacts,
+    unsupportedFactCount: unsupportedFacts.length,
   }
 }
 
@@ -341,6 +379,62 @@ export function latencyStats(samples) {
     min: samples.length === 0 ? null : Math.min(...samples),
     max: samples.length === 0 ? null : Math.max(...samples),
   }
+}
+
+/**
+ * Fase 3: breakdown frío/caliente. Caliente = warmup (carga del modelo, una vez
+ * por corrida); 1er caso tras warmup; p50 steady-state del resto de casos.
+ * Devuelve null cuando no hay warmup válido o <2 latencias (no inventa).
+ *
+ * @param {number|null} warmupMs run.warmup.ms (wall-clock del warmup)
+ * @param {number[]} latencies latencia E2E por caso (results[].latencyMs)
+ * @returns {{ warmupMs: number, firstLatencyMs: number, steadyP50: number, ratio: number } | null}
+ */
+export function coldHotMetrics(warmupMs, latencies) {
+  const a = latencies.filter((n) => Number.isFinite(n))
+  if (!Number.isFinite(warmupMs) || warmupMs <= 0 || a.length < 2) return null
+  const [first, ...rest] = a
+  const steadyP50 = quantile(rest, 0.5)
+  if (!Number.isFinite(steadyP50)) return null
+  return {
+    warmupMs,
+    firstLatencyMs: first,
+    steadyP50,
+    ratio: steadyP50 / warmupMs, // caliente/frío (pv del usuario: steady / warmup)
+  }
+}
+
+/**
+ * Fase 4: repeatability study. Computa media, std dev, y coeficiente de
+ * variación (CV = std/mean * 100) para métricas clave a partir de N
+ * repeticiones.
+ *
+ * @param {Array<object>} repetitions array de objetos con summary por iteración
+ * @param {object} metricExtractors { metricName: (summary) => number }
+ * @returns {object} { [metricName]: { mean, std, cv, n, values } | null }
+ */
+export function computeRepeatability(repetitions, metricExtractors) {
+  const out = {}
+  for (const [metricName, extract] of Object.entries(metricExtractors)) {
+    const vals = repetitions
+      .map((r) => extract(r.summary))
+      .filter((n) => Number.isFinite(n))
+    if (vals.length < 2) {
+      out[metricName] = null
+      continue
+    }
+    const mean = vals.reduce((a, b) => a + b, 0) / vals.length
+    const variance = vals.reduce((a, b) => a + (b - mean) ** 2, 0) / (vals.length - 1)
+    const std = Math.sqrt(variance)
+    out[metricName] = {
+      mean,
+      std,
+      cv: mean !== 0 ? (std / mean) * 100 : null,
+      n: vals.length,
+      values: vals,
+    }
+  }
+  return out
 }
 
 /**
@@ -370,11 +464,58 @@ export function summarize(results) {
   const statedWithoutSource = emitted.reduce((sum, e) => sum + e.statedWithoutSource.length, 0)
   const sourceIdFailureCases = emitted.filter((e) => !e.verifySourceOk).length
 
+  // --- Fase 2: fidelidad de extracción + unsupported facts (agregado) ---
+  const quoteTotal = emitted.reduce((sum, e) => sum + e.quoteCoverage.aggregate.total, 0)
+  const quoteHits = emitted.reduce((sum, e) => sum + e.quoteCoverage.aggregate.found, 0)
+  const mnihits = emitted.reduce(
+    (sum, e) => sum + Object.values(e.mustNotIncludeHits.bySection).flat().length,
+    0,
+  )
+  const mustNotIncludeCases = emitted.filter((e) => e.mustNotIncludeHits.hasHit).length
+  const unsupportedCases = emitted.filter((e) => e.unsupportedFactCount > 0).length
+  const unsupportedFacts = emitted.flatMap((e) => e.unsupportedFacts)
+  // sourceSupport.bySection solo incluye secciones STATED con sourceSegmentIds;
+  // contamos los segmentos encontrados y respaldados
+  const sourceSegsFound = emitted.reduce(
+    (sum, e) => sum + Object.values(e.sourceSupport.bySection).reduce((s, row) => s + row.found, 0),
+    0,
+  )
+  const sourceSegsSupported = emitted.reduce(
+    (sum, e) =>
+      sum + Object.values(e.sourceSupport.bySection).reduce((s, row) => s + row.supported, 0),
+    0,
+  )
+  const literalMissCases = emitted.filter((e) => e.sourceSupport.literalMissSections.length > 0).length
+
   return {
     cases: results.length,
     errors,
     productEmittedRate: ratio(emitted.length, results.length),
     rawJsonValidRate: ratio(rawValid, rawKnown),
+    extractionFidelity: {
+      quoteRecall: ratio(quoteHits, quoteTotal),
+      quoteHits,
+      quoteTotal,
+      sourceVerificationRate: ratio(sourceSegsSupported, sourceSegsFound),
+      sourceSegsFound,
+      sourceSegsSupported,
+      sourceLiteralMissCases: literalMissCases,
+    },
+    mustNotInclude: {
+      casesWithHits: mustNotIncludeCases,
+      hits: mnihits,
+      rate: ratio(mustNotIncludeCases, emitted.length),
+    },
+    unsupportedFact: {
+      casesWithFacts: unsupportedCases,
+      facts: unsupportedFacts.length,
+      rate: ratio(unsupportedCases, emitted.length),
+      kinds: Object.fromEntries(
+        ["must_not_contain", "mustNotInclude", "stated_without_source", "source_not_supported"].map(
+          (kind) => [kind, unsupportedFacts.filter((f) => f.kind === kind).length],
+        ),
+      ),
+    },
     presence: {
       accuracy: presence.accuracy,
       correct: presence.correct,

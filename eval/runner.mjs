@@ -14,7 +14,7 @@ import { dirname, join, resolve } from "node:path"
 import { performance } from "node:perf_hooks"
 import { fileURLToPath, pathToFileURL } from "node:url"
 import { inspect } from "node:util"
-import { evaluateCase, latencyStats, presenceMetrics, summarize } from "./scorer/index.mjs"
+import { coldHotMetrics, computeRepeatability, evaluateCase, latencyStats, presenceMetrics, summarize } from "./scorer/index.mjs"
 import { summarizeStt, transcriptText } from "./scorer/stt-metrics.mjs"
 import { buildArtifacts } from "./report.mjs"
 import { appendHistory, historyEntry } from "./history.mjs"
@@ -26,6 +26,21 @@ const AUDIO = join(ROOT, "eval", "audio")
 const HISTORY = join(ROOT, "eval", "history.jsonl")
 const require = createRequire(join(DESKTOP, "package.json"))
 const SELF = fileURLToPath(import.meta.url)
+
+/**
+ * Fase 3: resumir latencia por fase + breakdown frío/caliente sobre run.results.
+ * Comparte shape entre el run principal y --replay (ambos derivan de run.json).
+ * sttLatency solo cuando hay transcribeMs numéricos; coldHot requiere warmup.
+ */
+function finalizeLatencySummary(run) {
+  run.summary.sttLatency = latencyStats(
+    run.results.map((r) => r.transcribeMs).filter((n) => Number.isFinite(n)),
+  )
+  run.summary.coldHot = coldHotMetrics(
+    Number.isFinite(run.warmup?.ms) ? run.warmup.ms : null,
+    run.results.map((r) => r.latencyMs),
+  )
+}
 
 function helpText() {
   return `Uso: pnpm eval [flags]
@@ -39,18 +54,23 @@ Stages (mutuamente excluyentes):
   --with-stt       Capa B: solo STT (WER/CER), sin estructuración. Solo casos con WAV.
 
 Otros flags:
-  --replay <run.json>  Re-render + re-score determinístico (nunca re-inferencia).
-  --cases "01,05,02"   Subconjunto de casos del manifest.
+  --replay <run.json>     Re-render + re-score determinístico (nunca re-inferencia).
+  --repeats <N>           Repetir el corpus N veces (default 1; solo --e2e/--with-stt).
+                          Warmup solo en la 1ra iteración; calcula varianza (CV).
+  --compare <paths...>    Comparar 2+ runs side-by-side (paths a run.json o dirs).
+  --cases "01,05,02"      Subconjunto de casos del manifest.
   --adapter qvac|heuristic  Adapter de modelos (default qvac; qvac requiere GPU/Whisper local).
-  --output-dir <dir>   Directorio de salida (default reports/).
-  --self-check         Tests sin modelos.
-  --help               Muestra esta ayuda.
+  --output-dir <dir>      Directorio de salida (default reports/).
+  --self-check            Tests sin modelos.
+  --help                  Muestra esta ayuda.
 
 Ejemplos:
-  pnpm eval                      # Capa C (e2e, default)
-  pnpm eval -- --skip-stt        # Capa A
-  pnpm eval -- --with-stt        # Capa B
+  pnpm eval                                      # Capa C (e2e, default)
+  pnpm eval -- --skip-stt                        # Capa A
+  pnpm eval -- --with-stt                        # Capa B
   pnpm eval -- --replay reports/<run-id>/run.json
+  pnpm eval -- --repeats 5                       # Repeatability study (5 runs)
+  pnpm eval -- --compare reports/run1/run.json reports/run2/run.json
 `
 }
 
@@ -62,6 +82,8 @@ function parseArgs(argv) {
     cases: null,
     adapter: "qvac",
     outputRoot: join(ROOT, "reports"),
+    repeats: 1,
+    compare: null,
   }
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]
@@ -70,6 +92,15 @@ function parseArgs(argv) {
     else if (a === "--with-stt") args.stage = "sttOnly"
     else if (a === "--e2e") args.stage = "e2e"
     else if (a === "--replay") args.replay = argv[++i]
+    else if (a === "--repeats") args.repeats = Math.max(1, parseInt(argv[++i], 10) || 1)
+    else if (a === "--compare") {
+      const paths = []
+      while (i + 1 < argv.length && !argv[i + 1].startsWith("--")) {
+        paths.push(argv[++i])
+      }
+      if (!paths.length) throw new Error("--compare requiere al menos un path a run.json o directorio")
+      args.compare = paths
+    }
     else if (a === "--cases") {
       args.cases = argv[++i].split(",").map((s) => s.trim()).filter(Boolean)
     } else if (a === "--adapter") args.adapter = argv[++i]
@@ -78,11 +109,20 @@ function parseArgs(argv) {
   }
   if (!args.help) {
     const explicit = new Set(argv)
-    if (explicit.has("--e2e") && (explicit.has("--with-stt") || explicit.has("--skip-stt"))) {
-      throw new Error("--e2e es mutuamente excluyente con --with-stt y --skip-stt.")
-    }
-    if (explicit.has("--with-stt") && explicit.has("--skip-stt")) {
-      throw new Error("--with-stt y --skip-stt son mutuamente excluyentes.")
+    if (args.compare) {
+      if (args.replay || args.selfCheck || explicit.has("--e2e") || explicit.has("--with-stt") || explicit.has("--skip-stt") || args.cases) {
+        throw new Error("--compare es mutuamente excluyente con --replay, --self-check, stages y --cases")
+      }
+    } else {
+      if (explicit.has("--e2e") && (explicit.has("--with-stt") || explicit.has("--skip-stt"))) {
+        throw new Error("--e2e es mutuamente excluyente con --with-stt y --skip-stt.")
+      }
+      if (explicit.has("--with-stt") && explicit.has("--skip-stt")) {
+        throw new Error("--with-stt y --skip-stt son mutuamente excluyentes.")
+      }
+      if (args.repeats > 1 && args.stage === "off") {
+        throw new Error("--repeats solo aplica a --e2e (default) y --with-stt")
+      }
     }
   }
   return args
@@ -202,6 +242,13 @@ async function createAdapter(name) {
         return { note: result.note, rawSdkText: null }
       },
       async close() {},
+      // Fase 4: heuristic no tiene prompt/schema configurables
+      getPromptTemplate() {
+        return ""
+      },
+      getSchema() {
+        return {}
+      },
     }
   }
 
@@ -253,6 +300,13 @@ async function createAdapter(name) {
     async close() {
       await runtime.shutdown()
     },
+    // Fase 4: prompt/schema versioning (opcional — QVAC puede no exponerlos)
+    getPromptTemplate() {
+      return "" // TODO: exponer desde QVAC runtime si está disponible
+    },
+    getSchema() {
+      return {} // TODO: exponer schema JSON desde QVAC si está disponible
+    },
   }
 }
 
@@ -265,6 +319,67 @@ function writeRunArtifacts(dir, run) {
   writeJson(join(dir, "errors.json"), errors)
   writeFileSync(join(dir, "REPORT.md"), reportMarkdown)
   return join(dir, "run.json")
+}
+
+const evidence = (kind, text) => `**${kind}.** ${text}`
+
+/**
+ * Fase 4: modo --compare. Lee N run.json y genera COMPARISON.md side-by-side.
+ */
+async function compareMode(paths, outputRoot) {
+  const runs = []
+  for (const p of paths) {
+    const absolute = resolve(p)
+    let runPath = absolute
+    if (statSync(absolute).isDirectory()) {
+      runPath = join(absolute, "run.json")
+    }
+    const run = readJson(runPath)
+    if (!run.metadata?.runId || !run.summary) {
+      throw new Error(`Run inválido (falta metadata.runId o summary): ${runPath}`)
+    }
+    runs.push({ path: runPath, run })
+  }
+  if (runs.length < 2) throw new Error("--compare requiere al menos 2 runs válidos")
+
+  const outDir = outputRoot
+  mkdirSync(outDir, { recursive: true })
+
+  const metricRows = [
+    { key: "WER", label: "WER", fmt: (s) => s.stt?.meanWer !== undefined && Number.isFinite(s.stt.meanWer) ? `${(s.stt.meanWer * 100).toFixed(1)}%` : "N/A" },
+    { key: "CER", label: "CER", fmt: (s) => s.stt?.meanCer !== undefined && Number.isFinite(s.stt.meanCer) ? `${(s.stt.meanCer * 100).toFixed(1)}%` : "N/A" },
+    { key: "presenceAccuracy", label: "Presence accuracy (STT-fed)", fmt: (s) => s.presence?.accuracy !== undefined && Number.isFinite(s.presence.accuracy) ? `${(s.presence.accuracy * 100).toFixed(1)}%` : "N/A" },
+    { key: "latencyE2E", label: "Latency E2E p50 (ms)", fmt: (s) => s.latency?.p50 !== undefined && Number.isFinite(s.latency.p50) ? s.latency.p50.toFixed(1) : "N/A" },
+    { key: "latencySTT", label: "Latency STT p50 (ms)", fmt: (s) => s.sttLatency?.p50 !== undefined && Number.isFinite(s.sttLatency.p50) ? s.sttLatency.p50.toFixed(1) : "N/A" },
+    { key: "latencyStructure", label: "Latency structure p50 (ms)", fmt: (s) => s.structureLatency?.p50 !== undefined && Number.isFinite(s.structureLatency.p50) ? s.structureLatency.p50.toFixed(1) : "N/A" },
+    { key: "coldHotRatio", label: "Cold/Hot ratio", fmt: (s) => s.coldHot?.ratio !== undefined && Number.isFinite(s.coldHot.ratio) ? `${s.coldHot.ratio.toFixed(2)}×` : "N/A" },
+    { key: "datasetCases", label: "Dataset", fmt: (s) => s.cases ? `${s.cases} casos` : "N/A" },
+    { key: "adapter", label: "Adapter", fmt: (s) => s.stt?.status === "medido" ? "qvac" : "heuristic" },
+  ]
+
+  const metaRows = [
+    { key: "promptHash", label: "Prompt hash" },
+    { key: "schemaHash", label: "Schema hash" },
+    { key: "gitCommit", label: "Git commit" },
+    { key: "startedAt", label: "Fecha" },
+  ]
+
+  let md = `### Comparación de configuraciones\n\n`
+  md += `| Métrica | ${runs.map((r) => r.run.metadata.runId).join(" | ")} |\n`
+  md += `| --- | ${runs.map(() => "---:").join(" | ")} |\n`
+
+  for (const row of metricRows) {
+    md += `| ${row.label} | ${runs.map((r) => row.fmt(r.run.summary)).join(" | ")} |\n`
+  }
+  md += `\n`
+  md += `| --- | ${runs.map(() => "---:").join(" | ")} |\n`
+  for (const row of metaRows) {
+    md += `| ${row.label} | ${runs.map((r) => r.run.metadata[row.key] ?? "N/A").join(" | ")} |\n`
+  }
+  md += `\n${evidence("Observado", "Comparación de corridas existentes; no hay re-inferencia.")}`
+
+  writeFileSync(join(outDir, "COMPARISON.md"), md)
+  console.log(`Comparison written to ${join(outDir, "COMPARISON.md")}`)
 }
 
 async function replay(path) {
@@ -301,6 +416,7 @@ async function replay(path) {
       run.results.map((r) => r.structureMs).filter((n) => Number.isFinite(n)),
     )
   }
+  finalizeLatencySummary(run)
   if (isSttRun) {
     const { computeSttMetrics, summarizeStt } = await import("./scorer/stt-metrics.mjs")
     const sttPairs = run.results.filter((r) => r.stt && r.stt.reference && r.stt.hypothesis)
@@ -316,8 +432,11 @@ async function replay(path) {
       reference: r.stt.reference,
       hypothesis: r.stt.hypothesis,
     }))
+    const transcribeAttemptsMap = Object.fromEntries(
+      run.results.map((r) => [r.id, typeof r.transcribeAttempts === "number" ? r.transcribeAttempts : 1]),
+    )
     run.summary.stt = sttResults.length
-      ? summarizeStt(sttResults, { confusions })
+      ? summarizeStt(sttResults, { confusions, transcribeAttempts: transcribeAttemptsMap })
       : run.summary.stt
   }
   run.metadata.rescoredAt = new Date().toISOString()
@@ -355,6 +474,11 @@ async function main() {
 
   if (args.replay) {
     await replay(args.replay)
+    return
+  }
+
+  if (args.compare) {
+    await compareMode(args.compare, args.outputRoot)
     return
   }
 
@@ -434,6 +558,13 @@ async function main() {
     }
     metadata.models.structuring = adapter.structuringLabel
     metadata.models.stt = sttMode ? adapter.transcribingLabel ?? null : null
+
+    // Fase 4: prompt/schema versioning para reproducibilidad
+    const promptTemplate = adapter.getPromptTemplate?.() ?? ""
+    const schemaObj = adapter.getSchema?.() ?? {}
+    metadata.promptHash = promptTemplate ? createHash("sha256").update(promptTemplate).digest("hex").slice(0, 12) : null
+    metadata.schemaHash = Object.keys(schemaObj).length ? createHash("sha256").update(JSON.stringify(schemaObj)).digest("hex").slice(0, 12) : null
+
     if (args.adapter === "qvac") {
       try {
         metadata.sdk = readJson(
@@ -471,224 +602,269 @@ async function main() {
   }
   mkdirSync(outDir, { recursive: true })
 
-  try {
-    console.log(`Warmup (${args.adapter}${sttMode ? `, modo ${stage}` : ""})…`)
-    const warmStart = performance.now()
-    try {
-      if (e2e) {
-        if (typeof adapter.warmTranscribe === "function") await adapter.warmTranscribe()
-        if (typeof adapter.warm === "function") await adapter.warm()
-      } else if (sttMode) {
-        if (typeof adapter.warmTranscribe === "function") await adapter.warmTranscribe()
-      } else {
-        await adapter.warm()
-      }
-      run.warmup = { ok: true, ms: performance.now() - warmStart }
-    } catch (error) {
-      const errMsg = inspect(error, { depth: 6, colors: false, getters: true, compact: false })
-      run.warmup = {
-        ok: false,
-        ms: performance.now() - warmStart,
-        error: errMsg,
-        stack: error instanceof Error ? error.stack : undefined,
-      }
-      throw new Error(`Warmup falló: ${errMsg}`)
-    }
+  // Helper: ejecuta una iteración completa (un pass por todos los casos)
+    async function runIteration(iteration, isFirstIteration) {
+      const iterResults = []
+      let iterWarmup = null
 
-    for (const fixture of work) {
-      const t0 = performance.now()
-      let note = null
-      let error = null
-      let rawSdkText = null
-      let rawCompletion = null
-      let sttResult = null
-      let transcribeMs = null
-      let structureMs = null
-      let baselinePresence = null
-      let baselinePresencePairs = []
-      let baselineLatencyMs = null
-      let transcriptForEval = fixture.transcript
-      try {
-        if (sttMode) {
-          // --- STT real sobre WAV (B) o primero de la cadena (C) ---
-          // Retry/backoff para manejar MODEL_LOAD_PENDING tras handoff Qwen→Whisper
-          let hyp = null
-          let transcribeAttempt = 0
-          const maxAttempts = 3
-          const baseDelay = 2000
-          while (true) {
-            try {
-              hyp = await adapter.transcribe(fixture.audioRef)
-              break
-            } catch (e) {
-              const msg = e?.message ?? String(e)
-              const isModelLoadPending = msg.includes("MODEL_LOAD_PENDING")
-              transcribeAttempt++
-              if (!isModelLoadPending || transcribeAttempt >= maxAttempts) throw e
-              const delay = baseDelay * Math.pow(2, transcribeAttempt - 1) + Math.random() * 500
-              console.log(`  [retry] ${fixture.id} transcribe MODEL_LOAD_PENDING (attempt ${transcribeAttempt}/${maxAttempts}), waiting ${Math.round(delay)}ms…`)
-              await new Promise(r => setTimeout(r, delay))
-            }
-          }
-          transcribeMs = performance.now() - t0
-          sttResult = {
-            reference: transcriptText(fixture.transcript),
-            hypothesis: transcriptText(hyp),
-            referenceSegments: fixture.transcript,
-            hypothesisSegments: hyp,
-          }
+      if (isFirstIteration) {
+        console.log(`Warmup (${args.adapter}${sttMode ? `, modo ${stage}` : ""})…`)
+        const warmStart = performance.now()
+        try {
           if (e2e) {
-            const structStart = performance.now()
-            const result = await adapter.structure(hyp)
-            structureMs = performance.now() - structStart
+            if (typeof adapter.warmTranscribe === "function") await adapter.warmTranscribe()
+            if (typeof adapter.warm === "function") await adapter.warm()
+          } else if (sttMode) {
+            if (typeof adapter.warmTranscribe === "function") await adapter.warmTranscribe()
+          } else {
+            await adapter.warm()
+          }
+          iterWarmup = { ok: true, ms: performance.now() - warmStart }
+        } catch (error) {
+          const errMsg = inspect(error, { depth: 6, colors: false, getters: true, compact: false })
+          iterWarmup = {
+            ok: false,
+            ms: performance.now() - warmStart,
+            error: errMsg,
+            stack: error instanceof Error ? error.stack : undefined,
+          }
+          throw new Error(`Warmup falló: ${errMsg}`)
+        }
+      }
+
+      for (const fixture of work) {
+        const t0 = performance.now()
+        let note = null
+        let error = null
+        let rawSdkText = null
+        let rawCompletion = null
+        let sttResult = null
+        let transcribeMs = null
+        let transcribeAttempts = null
+        let structureMs = null
+        let baselinePresence = null
+        let baselinePresencePairs = []
+        let baselineLatencyMs = null
+        let transcriptForEval = fixture.transcript
+        try {
+          if (sttMode) {
+            // --- STT real sobre WAV (B) o primero de la cadena (C) ---
+            // Retry/backoff para manejar MODEL_LOAD_PENDING tras handoff Qwen→Whisper
+            let hyp = null
+            let transcribeAttempt = 0
+            const maxAttempts = 3
+            const baseDelay = 2000
+            while (true) {
+              try {
+                hyp = await adapter.transcribe(fixture.audioRef)
+                break
+              } catch (e) {
+                const msg = e?.message ?? String(e)
+                const isModelLoadPending = msg.includes("MODEL_LOAD_PENDING")
+                transcribeAttempt++
+                if (!isModelLoadPending || transcribeAttempt >= maxAttempts) throw e
+                const delay = baseDelay * Math.pow(2, transcribeAttempt - 1) + Math.random() * 500
+                console.log(`  [retry] ${fixture.id} transcribe MODEL_LOAD_PENDING (attempt ${transcribeAttempt}/${maxAttempts}), waiting ${Math.round(delay)}ms…`)
+                await new Promise(r => setTimeout(r, delay))
+              }
+            }
+            transcribeMs = performance.now() - t0
+            transcribeAttempts = transcribeAttempt + 1 // 0 fallos → 1er intento
+            sttResult = {
+              reference: transcriptText(fixture.transcript),
+              hypothesis: transcriptText(hyp),
+              referenceSegments: fixture.transcript,
+              hypothesisSegments: hyp,
+            }
+            if (e2e) {
+              const structStart = performance.now()
+              const result = await adapter.structure(hyp)
+              structureMs = performance.now() - structStart
+              note = result.note
+              rawSdkText = result.rawSdkText ?? null
+              rawCompletion = result.rawCompletion ?? null
+              transcriptForEval = hyp
+              // Baseline gold-fed: mismo gold, transcripción gold (columna de
+              // comparación del delta). Opcional: si falla, se excluye sin inventar.
+              const baseStart = performance.now()
+              try {
+                const base = await adapter.structure(fixture.transcript)
+                const baseLatency = performance.now() - baseStart
+                const baseEval = evaluateCase({
+                  gold: fixture.gold,
+                  transcript: fixture.transcript,
+                  note: base.note,
+                  error: null,
+                  latencyMs: baseLatency,
+                  rawSdkText: base.rawSdkText ?? null,
+                })
+                baselinePresence = baseEval.presence
+                baselinePresencePairs = baseEval.presencePairs
+                baselineLatencyMs = baseLatency
+              } catch {
+                // Baseline no disponible: no se inventa ni se cuenta como error.
+              }
+            } else {
+              // Capa B: solo STT; no se estructura.
+              note = null
+              rawSdkText = transcriptText(hyp)
+            }
+          } else {
+            const result = await adapter.structure(fixture.transcript)
             note = result.note
             rawSdkText = result.rawSdkText ?? null
             rawCompletion = result.rawCompletion ?? null
-            transcriptForEval = hyp
-            // Baseline gold-fed: mismo gold, transcripción gold (columna de
-            // comparación del delta). Opcional: si falla, se excluye sin inventar.
-            const baseStart = performance.now()
-            try {
-              const base = await adapter.structure(fixture.transcript)
-              const baseLatency = performance.now() - baseStart
-              const baseEval = evaluateCase({
-                gold: fixture.gold,
-                transcript: fixture.transcript,
-                note: base.note,
-                error: null,
-                latencyMs: baseLatency,
-                rawSdkText: base.rawSdkText ?? null,
-              })
-              baselinePresence = baseEval.presence
-              baselinePresencePairs = baseEval.presencePairs
-              baselineLatencyMs = baseLatency
-            } catch {
-              // Baseline no disponible: no se inventa ni se cuenta como error.
-            }
-          } else {
-            // Capa B: solo STT; no se estructura.
-            note = null
-            rawSdkText = transcriptText(hyp)
           }
-        } else {
-          const result = await adapter.structure(fixture.transcript)
-          note = result.note
-          rawSdkText = result.rawSdkText ?? null
-          rawCompletion = result.rawCompletion ?? null
+        } catch (failure) {
+          error =
+            failure && typeof failure === "object" && "code" in failure
+              ? `${failure.code}: ${failure.message}`
+              : failure instanceof Error
+                ? failure.message
+                : String(failure)
         }
-      } catch (failure) {
-        error =
-          failure && typeof failure === "object" && "code" in failure
-            ? `${failure.code}: ${failure.message}`
-            : failure instanceof Error
-              ? failure.message
-              : String(failure)
+        const latencyMs = performance.now() - t0
+        const evaluation = evaluateCase({
+          gold: fixture.gold,
+          transcript: transcriptForEval,
+          note,
+          error,
+          latencyMs,
+          rawSdkText,
+        })
+        const row = {
+          id: fixture.id,
+          category: fixture.category,
+          transcript: transcriptForEval,
+          gold: fixture.gold,
+          note,
+          error,
+          latencyMs,
+          rawSdkText,
+          rawCompletion,
+          evaluation,
+          stage,
+          transcribeMs,
+          transcribeAttempts,
+          structureMs,
+          baselinePresence,
+          baselinePresencePairs,
+          baselineLatencyMs,
+        }
+        if (sttResult) row.stt = sttResult
+        iterResults.push(row)
+        const label = sttMode
+          ? e2e
+            ? `${transcribeMs === null ? "?" : transcribeMs.toFixed(1)}ms stt + ${structureMs === null ? "?" : structureMs.toFixed(1)}ms struct`
+            : "STT"
+          : error ?? (evaluation.invention ? "invención" : "ok")
+        console.log(`Iter ${iteration} | Caso ${fixture.id}: ${latencyMs.toFixed(1)} ms; ${label}`)
       }
-      const latencyMs = performance.now() - t0
-      const evaluation = evaluateCase({
-        gold: fixture.gold,
-        transcript: transcriptForEval,
-        note,
-        error,
-        latencyMs,
-        rawSdkText,
-      })
-      const row = {
-        id: fixture.id,
-        category: fixture.category,
-        transcript: transcriptForEval,
-        gold: fixture.gold,
-        note,
-        error,
-        latencyMs,
-        rawSdkText,
-        rawCompletion,
-        evaluation,
-        stage,
-        transcribeMs,
-        structureMs,
-        baselinePresence,
-        baselinePresencePairs,
-        baselineLatencyMs,
+
+      // Resumir esta iteración
+      const { computeSttMetrics, summarizeStt } = await import("./scorer/stt-metrics.mjs")
+      const sttResults = []
+      const confusions = []
+      for (const r of iterResults) {
+        if (!r.stt || !r.stt.reference || !r.stt.hypothesis) continue
+        sttResults.push({
+          id: r.id,
+          category: r.category,
+          metrics: computeSttMetrics({
+            reference: r.stt.reference,
+            hypothesis: r.stt.hypothesis,
+          }),
+        })
+        confusions.push({ reference: r.stt.reference, hypothesis: r.stt.hypothesis })
       }
-      if (sttResult) row.stt = sttResult
-      run.results.push(row)
-      writeJson(join(outDir, "run.json"), run)
-      const label = sttMode
-        ? e2e
-          ? `${transcribeMs === null ? "?" : transcribeMs.toFixed(1)}ms stt + ${structureMs === null ? "?" : structureMs.toFixed(1)}ms struct`
-          : "STT"
-        : error ?? (evaluation.invention ? "invención" : "ok")
-      console.log(`Caso ${fixture.id}: ${latencyMs.toFixed(1)} ms; ${label}`)
+      const transcribeAttemptsMap =
+        iterResults.length > 0
+          ? Object.fromEntries(
+              iterResults.map((r) => [r.id, typeof r.transcribeAttempts === "number" ? r.transcribeAttempts : 1]),
+            )
+          : null
+      const sttSummary = sttResults.length
+        ? summarizeStt(sttResults, { confusions, transcribeAttempts: transcribeAttemptsMap })
+        : null
+
+      const iterSummary = summarize(
+        iterResults.map((r) => ({
+          id: r.id,
+          evaluation: r.evaluation,
+          error: r.error,
+          latencyMs: r.latencyMs,
+        })),
+      )
+      iterSummary.skippedNoAudio = skippedNoAudio
+      iterSummary.stt = sttSummary ?? {
+        status: "no_medido",
+        reason: "Sin resultados STT medidos en esta corrida.",
+        evidence: "no_probado",
+      }
+      if (e2e) {
+        const withBaseline = iterResults.filter(
+          (r) => Array.isArray(r.baselinePresencePairs) && r.baselinePresencePairs.length > 0,
+        )
+        iterSummary.baselinePresence = presenceMetrics(
+          withBaseline.flatMap((r) => r.baselinePresencePairs),
+        )
+        iterSummary.structureLatency = latencyStats(
+          iterResults.map((r) => r.structureMs).filter((n) => Number.isFinite(n)),
+        )
+      }
+      // sttLatency + coldHot para esta iteración
+      const iterSttLatency = latencyStats(
+        iterResults.map((r) => r.transcribeMs).filter((n) => Number.isFinite(n)),
+      )
+      const iterColdHot = coldHotMetrics(
+        iterWarmup?.ok ? iterWarmup.ms : null,
+        iterResults.map((r) => r.latencyMs),
+      )
+
+      return {
+        iteration,
+        warmup: iterWarmup,
+        results: iterResults,
+        summary: {
+          ...iterSummary,
+          sttLatency: iterSttLatency,
+          coldHot: iterColdHot,
+        },
+      }
     }
 
-    const { computeSttMetrics, summarizeStt } = await import("./scorer/stt-metrics.mjs")
-    const sttResults = []
-    const confusions = []
-    for (const r of run.results) {
-      if (!r.stt || !r.stt.reference || !r.stt.hypothesis) continue
-      sttResults.push({
-        id: r.id,
-        category: r.category,
-        metrics: computeSttMetrics({
-          reference: r.stt.reference,
-          hypothesis: r.stt.hypothesis,
-        }),
-      })
-      confusions.push({ reference: r.stt.reference, hypothesis: r.stt.hypothesis })
+    // --- Main: ejecutar N repeticiones ---
+    const repetitions = []
+    for (let i = 1; i <= args.repeats; i++) {
+      console.log(`\n=== Iteración ${i}/${args.repeats} ===`)
+      const iter = await runIteration(i, i === 1)
+      repetitions.push(iter)
+      // Acumular en run.results para backward compat (última iteración)
+      run.results = iter.results
+      run.warmup = iter.warmup
     }
-    const sttSummary = sttResults.length ? summarizeStt(sttResults, { confusions }) : null
 
-    run.summary = summarize(
-      run.results.map((r) => ({
-        id: r.id,
-        evaluation: r.evaluation,
-        error: r.error,
-        latencyMs: r.latencyMs,
-      })),
-    )
+    // Summary final = última iteración (para compat con report.mjs actual)
+    const lastIter = repetitions[repetitions.length - 1]
+    run.summary = lastIter.summary
     run.summary.skippedNoAudio = skippedNoAudio
-    run.summary.stt = sttSummary ?? {
-      status: "no_medido",
-      reason: "Sin resultados STT medidos en esta corrida.",
-      evidence: "no_probado",
+    run.repetitions = repetitions
+
+    // Fase 4: compute repeatability a partir de todas las iteraciones
+    const metricExtractors = {
+      presenceAccuracy: (s) => s.presence?.accuracy ?? NaN,
+      latencyP50: (s) => s.latency?.p50 ?? NaN,
+      sttWer: (s) => s.stt?.meanWer ?? NaN,
+      structureLatencyP50: (s) => s.structureLatency?.p50 ?? NaN,
+      coldHotSteadyP50: (s) => s.coldHot?.steadyP50 ?? NaN,
     }
-    if (e2e) {
-      const withBaseline = run.results.filter(
-        (r) => Array.isArray(r.baselinePresencePairs) && r.baselinePresencePairs.length > 0,
-      )
-      run.summary.baselinePresence = presenceMetrics(
-        withBaseline.flatMap((r) => r.baselinePresencePairs),
-      )
-      run.summary.structureLatency = latencyStats(
-        run.results.map((r) => r.structureMs).filter((n) => Number.isFinite(n)),
-      )
-    }
-  } catch (error) {
-    run.error = error instanceof Error ? error.message : String(error)
-    run.summary = summarize(
-      run.results.map((r) => ({
-        id: r.id,
-        evaluation: r.evaluation,
-        error: r.error,
-        latencyMs: r.latencyMs,
-      })),
+    run.summary.repeatability = computeRepeatability(
+      repetitions.map((r) => ({ summary: r.summary })),
+      metricExtractors,
     )
-    run.summary.skippedNoAudio = skippedNoAudio
+
     writeRunArtifacts(outDir, run)
-    console.error(run.error)
-    process.exitCode = 1
-    return
-  } finally {
-    try {
-      await adapter.close()
-    } catch {
-      // ignore
-    }
-  }
-
-  writeRunArtifacts(outDir, run)
-  appendHistory(HISTORY, historyEntry(metadata, run.summary))
+    appendHistory(HISTORY, historyEntry(metadata, run.summary))
   console.log(
     JSON.stringify(
       {
@@ -710,6 +886,9 @@ async function main() {
           topConfusions: run.summary.stt.topConfusions,
           negationDrops: run.summary.stt.negationDrops,
           negationAdds: run.summary.stt.negationAdds,
+          transcribeRetryRate: run.summary.stt.transcribeRetryRate ?? null,
+          transcribeFirstTryRate: run.summary.stt.transcribeFirstTryRate ?? null,
+          transcribeRetries: run.summary.stt.transcribeRetries ?? null,
           evidence: run.summary.stt.evidence,
         } : null,
       },
