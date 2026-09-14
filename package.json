@@ -2,6 +2,8 @@
   "name": "oira",
   "private": true,
   "scripts": {
+    "atlas:check": "node scripts/architecture/atlas/check.mjs",
+    "atlas:capture": "node scripts/architecture/atlas/capture.mjs",
     "dev": "pnpm install && pnpm dev:desktop",
     "dev:desktop": "pnpm --filter oira-desktop dev",
     "test": "pnpm --filter oira-desktop test",

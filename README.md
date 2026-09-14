@@ -379,6 +379,22 @@ El renderer solo habla con el resto del sistema a través de `apps/desktop/src/r
 
 ## Estructura del repositorio
 
+### Atlas de arquitectura
+
+[![Grafo de arquitectura de Oira: interfaz, frontera IPC, servicios, inferencia y persistencia](docs/assets/codebase-map.png)](docs/codebase-map.html)
+
+El [atlas interactivo](docs/codebase-map.html) incluye grafo de conocimiento, UML de servicios/puertos y diagramas de componentes y modelos. Descarga o abre el HTML localmente para usar zoom, búsqueda, recorridos e inspección de nodos; GitHub muestra el código fuente del HTML.
+
+Los cambios estructurales deben actualizar el atlas en el mismo PR, según [AGENTS.md](AGENTS.md#architecture-atlas-maintenance-required). La Action [Architecture atlas](.github/workflows/architecture-atlas.yml) valida el grafo, adjunta una captura a cada ejecución relevante y actualiza esta imagen al integrar en `main`. La imagen se genera desde el HTML; las relaciones se mantienen revisando el código.
+
+Comprobación local: `pnpm atlas:check`. Para regenerar la captura:
+
+```bash
+npm ci --prefix scripts/architecture/atlas
+npm --prefix scripts/architecture/atlas exec -- playwright install chromium
+pnpm atlas:capture
+```
+
 ```text
 Oira/
 ├── apps/
