@@ -8,13 +8,14 @@ Endurecer los prompts de generación, incorporar un segundo agente Qwen de
 revisión y añadir heurísticas deterministas y tests de procesamiento que
 permitan medir calidad, errores y coste de ejecución de extremo a extremo.
 
-Actualmente, la generación usa Qwen3 4B Q4_K_M y normalización permisiva:
-puede conservar texto que no sea JSON como contenido del borrador. Los helpers
-de evidencia devuelven éxito o listas vacías; no verifican números, negaciones,
-omisiones ni fidelidad semántica. El control al guardar comprueba que los IDs
-citados existan, pero no que respalden las afirmaciones. El puerto del segundo
-agente está definido en `apps/desktop/src/main/inference/note-verifier.port.ts`;
-eso no equivale a tener un verificador funcionando.
+Actualmente, la generación usa Qwen3 4B Q4_K_M. Desde OIRA-REF-01 la forma y
+las citas de la salida estructurada se rechazan si son inválidas (R-13); eso
+no sustituye el endurecimiento de prompts ni la fidelidad semántica. Los
+helpers de evidencia siguen devolviendo éxito o listas vacías; no verifican
+números, negaciones, omisiones ni que un ID citado respalde el texto. El
+puerto del segundo agente está definido en
+`apps/desktop/src/main/inference/note-verifier.port.ts`; eso no equivale a
+tener un verificador funcionando.
 
 Referencia de la generación actual: [QWEN_STRUCTURING_P2.md](QWEN_STRUCTURING_P2.md).
 

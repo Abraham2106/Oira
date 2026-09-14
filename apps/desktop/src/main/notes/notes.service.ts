@@ -20,6 +20,7 @@ import type {
   TranscriptionPort,
   InferenceRuntimePort,
 } from "../ports/outbound"
+import { SECTION_IDS, type ClinicalNote, type FieldValue } from "@oira/types"
 
 export type { NotesPort }
 
@@ -39,10 +40,30 @@ export type NotesPipelineDeps = NotesServiceDeps & {
   inferenceRuntime?: InferenceRuntimePort
 }
 
-type GeneratedDraft = Awaited<ReturnType<typeof runGenerateNote>>
+type GeneratedDraft = Pick<Awaited<ReturnType<typeof runGenerateNote>>, "transcript" | "note">
 
 const systemClock: Clock = {
   nowIso: () => new Date().toISOString(),
+}
+
+function sameGeneratedField(input: FieldValue, draft: FieldValue): boolean {
+  return input.text === draft.text &&
+    input.presence === draft.presence &&
+    input.sourceSegmentIds.length === draft.sourceSegmentIds.length &&
+    input.sourceSegmentIds.every((id, index) => id === draft.sourceSegmentIds[index])
+}
+
+function reconcileClinicianEdits(input: ClinicalNote, draft: ClinicalNote): ClinicalNote {
+  return {
+    sections: Object.fromEntries(SECTION_IDS.map((id) => {
+      const submitted = input.sections[id]
+      const generated = draft.sections[id]
+      if (sameGeneratedField(submitted, generated)) {
+        return [id, { ...submitted, provenance: generated.provenance }]
+      }
+      return [id, { ...submitted, provenance: "CLINICIAN_EDITED", sourceSegmentIds: [] }]
+    })) as ClinicalNote["sections"],
+  }
 }
 
 export function createNotesStub(_deps: NotesServiceDeps = {}): NotesPort {
@@ -53,21 +74,42 @@ export function createNotesStub(_deps: NotesServiceDeps = {}): NotesPort {
     async save() {
       throw noteSaveNotImplementedError()
     },
+    async retryAudioCleanup() {
+      throw noteGenerationNotImplementedError()
+    },
   }
 }
 
 export function createNotesService(deps: NotesPipelineDeps): NotesPort {
   const drafts = new Map<string, GeneratedDraft>()
+  const generations = new Map<string, Promise<Awaited<ReturnType<typeof runGenerateNote>>>>()
   const saveChains = new Map<string, Promise<unknown>>()
+  const cleanupPending = new Set<string>()
   const createId = deps.createId ?? (() => crypto.randomUUID())
   const clock = deps.clock ?? systemClock
 
   return {
     async generate(encounterId) {
-      const generated = await runGenerateNote(encounterId, deps)
-      const stored = structuredClone(generated)
-      drafts.set(encounterId, stored)
-      return structuredClone(stored)
+      const existing = generations.get(encounterId)
+      if (existing) return structuredClone(await existing)
+      const current = runGenerateNote(encounterId, {
+        ...deps,
+        onCleanupFailure: ({ encounterId: failedEncounterId }) => {
+          cleanupPending.add(failedEncounterId)
+        },
+      }).then((generated) => {
+        if (generated.status === "CLEANUP_PENDING") cleanupPending.add(encounterId)
+        else cleanupPending.delete(encounterId)
+        const stored = structuredClone(generated)
+        drafts.set(encounterId, stored)
+        return stored
+      })
+      generations.set(encounterId, current)
+      try {
+        return structuredClone(await current)
+      } finally {
+        if (generations.get(encounterId) === current) generations.delete(encounterId)
+      }
     },
     async save(input) {
       const previous = saveChains.get(input.encounterId) ?? Promise.resolve()
@@ -90,6 +132,7 @@ export function createNotesService(deps: NotesPipelineDeps): NotesPort {
           if (!verifySource(parsed.data, transcript)) {
             throw invalidStructuredOutputError()
           }
+          const note = reconcileClinicianEdits(parsed.data, draft.note)
           if (!deps.notes) throw noteSaveNotImplementedError()
           const existing = selectCurrentAcceptedNote(
             await deps.notes.list(),
@@ -102,15 +145,23 @@ export function createNotesService(deps: NotesPipelineDeps): NotesPort {
             acceptedAt: clock.nowIso(),
             label: record?.label ?? existing?.label ?? "",
             visitType: record?.visitType ?? existing?.visitType ?? "",
-            note: structuredClone(parsed.data),
+            note: structuredClone(note),
             transcript,
           })
           drafts.set(input.encounterId, {
             transcript: structuredClone(transcript),
-            note: structuredClone(parsed.data),
+            note: structuredClone(note),
           })
-          await settleDrafted(deps.encounters, input.encounterId)
-          return { noteId }
+          try {
+            await settleDrafted(deps.encounters, input.encounterId)
+            return { status: "SAVED" as const, noteId }
+          } catch {
+            return {
+              status: "PERSISTED_TRANSITION_PENDING" as const,
+              noteId,
+              recovery: { retryable: true as const },
+            }
+          }
         })
       saveChains.set(input.encounterId, current)
       try {
@@ -121,6 +172,13 @@ export function createNotesService(deps: NotesPipelineDeps): NotesPort {
         }
       }
     },
+    async retryAudioCleanup(encounterId) {
+      if (!cleanupPending.has(encounterId)) return { cleaned: true }
+      if (!deps.audio) throw noteGenerationNotImplementedError()
+      deps.audio.purge(encounterId)
+      cleanupPending.delete(encounterId)
+      return { cleaned: true }
+    },
   }
 }
 
@@ -129,10 +187,15 @@ async function settleDrafted(
   encounterId: string,
 ): Promise<void> {
   if (!encounters) return
-  try {
-    await encounters.advance(encounterId, "drafting")
-    await encounters.advance(encounterId, "drafted")
-  } catch {
-    // Bookkeeping must never mask the pipeline result.
+  const current = await encounters.getById(encounterId)
+  if (!current) throw encounterNotFoundError()
+  if (current.status === "drafted") return
+  if (current.status === "transcribed") await encounters.advance(encounterId, "drafting")
+  const afterDrafting = await encounters.getById(encounterId)
+  if (!afterDrafting) throw encounterNotFoundError()
+  if (afterDrafting.status === "drafted") return
+  if (afterDrafting.status !== "drafting") {
+    throw invalidStructuredOutputError("The persisted note could not be reconciled with its encounter.")
   }
+  await encounters.advance(encounterId, "drafted")
 }

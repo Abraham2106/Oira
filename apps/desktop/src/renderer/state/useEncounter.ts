@@ -142,6 +142,11 @@ export function useEncounter(): EncounterView {
       const generated = await bridge.generateNote(encounter.id)
       setTranscript(generated.transcript)
       setNote(generated.note)
+      if (generated.status === "CLEANUP_PENDING") {
+        setErrorMessage(
+          "El borrador está disponible, pero la eliminación local del audio queda pendiente de reintento.",
+        )
+      }
       setMachine((current) => {
         let next = current
         if (next.state === "TRANSCRIBING") next = reduceMachine(next, "TRANSCRIBE_DONE")
@@ -169,6 +174,8 @@ export function useEncounter(): EncounterView {
             ...current.sections[sectionId],
             text,
             presence: text.trim() ? "STATED" : current.sections[sectionId].presence,
+            provenance: "CLINICIAN_EDITED",
+            sourceSegmentIds: [],
           },
         },
       }
@@ -202,7 +209,13 @@ export function useEncounter(): EncounterView {
   const acceptNote = useCallback(async (clinicianConfirmed: true) => {
     if (!encounter || !note) return
     try {
-      await bridge.saveNote(encounter.id, note, clinicianConfirmed)
+      const saved = await bridge.saveNote(encounter.id, note, clinicianConfirmed)
+      if (saved.status === "PERSISTED_TRANSITION_PENDING") {
+        setErrorMessage(
+          "La nota se guardó, pero su estado de consulta requiere reconciliación. Reintenta guardar sin generar otra nota.",
+        )
+        return
+      }
       apply("ACCEPT")
     } catch {
       fail("No se pudo guardar el borrador.")

@@ -5,7 +5,7 @@ function field(
   presence: FieldValue["presence"],
   sourceSegmentIds: string[] = [],
 ): FieldValue {
-  return { text, presence, sourceSegmentIds, reviewed: false }
+  return { text, presence, sourceSegmentIds, provenance: "EXTRACTED", reviewed: false }
 }
 
 export const SYNTHETIC_TRANSCRIPT: TranscriptSegment[] = [

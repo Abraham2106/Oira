@@ -30,6 +30,7 @@ describe("preload wiring", () => {
       "appendAudio",
       "generateNote",
       "saveNote",
+      "retryAudioCleanup",
       "exportNote",
       "onInferenceProgress",
     ]) {

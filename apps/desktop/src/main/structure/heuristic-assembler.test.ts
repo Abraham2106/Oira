@@ -12,6 +12,7 @@ describe("main/structure/heuristic-assembler", () => {
           text: "Esta es una consulta de demostración con datos sintéticos. ¿Qué le trae hoy?",
           presence: "STATED",
           sourceSegmentIds: ["seg-1"],
+          provenance: "EXTRACTED",
           reviewed: false,
         },
         clinical_narrative: {
@@ -20,18 +21,20 @@ describe("main/structure/heuristic-assembler", () => {
             "Queda como borrador para revisión. No hay diagnóstico de este prototipo.",
           presence: "STATED",
           sourceSegmentIds: ["seg-2", "seg-3"],
+          provenance: "EXTRACTED",
           reviewed: false,
         },
-        relevant_history: { text: "", presence: "NOT_STATED", sourceSegmentIds: [], reviewed: false },
-        reported_findings: { text: "", presence: "NOT_STATED", sourceSegmentIds: [], reviewed: false },
+        relevant_history: { text: "", presence: "NOT_STATED", sourceSegmentIds: [], provenance: "EXTRACTED", reviewed: false },
+        reported_findings: { text: "", presence: "NOT_STATED", sourceSegmentIds: [], provenance: "EXTRACTED", reviewed: false },
         clinician_documented_assessment: {
           text: "",
           presence: "NOT_STATED",
           sourceSegmentIds: [],
+          provenance: "EXTRACTED",
           reviewed: false,
         },
-        clinician_documented_plan: { text: "", presence: "NOT_STATED", sourceSegmentIds: [], reviewed: false },
-        follow_up: { text: "", presence: "NOT_STATED", sourceSegmentIds: [], reviewed: false },
+        clinician_documented_plan: { text: "", presence: "NOT_STATED", sourceSegmentIds: [], provenance: "EXTRACTED", reviewed: false },
+        follow_up: { text: "", presence: "NOT_STATED", sourceSegmentIds: [], provenance: "EXTRACTED", reviewed: false },
       },
     }
 
