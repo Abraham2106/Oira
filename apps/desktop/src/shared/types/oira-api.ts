@@ -31,10 +31,27 @@ export type StopEncounterResult = {
   status: EncounterStatus
 }
 
-export type GenerateNoteResult = {
-  transcript: TranscriptSegment[]
-  note: ClinicalNote
+export type GenerateNoteIssue = {
+  code: string
+  sectionId?: string
+  message: string
 }
+
+/**
+ * Resultado de la generación. `status: "draft_unvalidated"` significa que el
+ * generador (QVAC) agotó sus reintentos sin pasar el contrato estricto: la
+ * transcripción se conserva, `draftText` es el intento crudo del modelo y
+ * `issues[]` explica el porqué. El renderer debe presentarlo como borrador NO
+ * validado, nunca como nota.
+ */
+export type GenerateNoteResult =
+  | { status: "ok"; transcript: TranscriptSegment[]; note: ClinicalNote }
+  | {
+      status: "draft_unvalidated"
+      transcript: TranscriptSegment[]
+      draftText: string
+      issues: GenerateNoteIssue[]
+    }
 
 export type SaveNoteResult = {
   noteId: string

@@ -43,7 +43,7 @@ describe("runGenerateNote", () => {
       await handoffStarted
       expect(events).toEqual(["display-started", "handoff-started"])
       finishLoading()
-      await expect(result).resolves.toHaveProperty("note")
+      await expect(result).resolves.toMatchObject({ status: "ok" })
       expect(events).toEqual(["display-started", "handoff-started", "structure-started"])
     } finally {
       finishLoading()
@@ -69,10 +69,41 @@ describe("runGenerateNote", () => {
       structuring: createMockStructuring(),
       progress: { emit: (event) => events.push(event) },
     })
+    expect(result.status).toBe("ok")
+    if (result.status !== "ok") return
     expect(result.transcript).toHaveLength(3)
     expect(Object.keys(result.note.sections)).toHaveLength(7)
     expect(events.map((event) => event.phase)).toEqual(["transcribing", "structuring"])
     expect(events[1]?.transcript).toEqual(result.transcript)
+  })
+
+  it("returns a draft_unvalidated outcome that keeps the transcript and issues", async () => {
+    const events: Array<{ phase: string; transcript?: unknown; stage?: string }> = []
+    const result = await runGenerateNote("00000000-0000-4000-8000-000000000001", {
+      transcription: createMockTranscription(),
+      structuring: {
+        structure: async () => ({
+          kind: "draft_unvalidated",
+          draftText: "{\"sections\": ...crudo",
+          issues: [{ code: "MISSING_SECTION", message: "Falta una sección." }],
+        }),
+      },
+      progress: { emit: (event) => events.push(event) },
+    })
+    expect(result.status).toBe("draft_unvalidated")
+    if (result.status !== "draft_unvalidated") return
+    expect(result.transcript).toHaveLength(3)
+    expect(result.draftText).toContain("sections")
+    expect(result.issues[0]).toMatchObject({
+      code: "MISSING_SECTION",
+      message: "Falta una sección.",
+    })
+    expect(events.map((event) => event.phase)).toEqual([
+      "transcribing",
+      "structuring",
+      "failed",
+    ])
+    expect(events.at(-1)).toMatchObject({ stage: "structuring" })
   })
 
   it("keeps the transcript when structuring fails", async () => {

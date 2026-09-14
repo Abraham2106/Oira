@@ -15,7 +15,7 @@ export function createMockTranscription(): TranscriptionPort {
 export function createMockStructuring(): StructuringPort {
   return {
     async structure() {
-      return { note: syntheticClinicalNote() }
+      return { kind: "note", note: syntheticClinicalNote() }
     },
   }
 }

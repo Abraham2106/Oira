@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useRef, useState } from "react"
 import type { ClinicalNote, Encounter, ProductState, TranscriptSegment } from "@oira/types"
 import { getBridge } from "../bridge/oira"
+import type { GenerateNoteIssue } from "../../shared/types/oira-api"
 import { startMicCapture, type MicCapture } from "../lib/micCapture"
 import {
   canTransition,
@@ -8,6 +9,11 @@ import {
   reduceMachine,
   type MachineSnapshot,
 } from "./encounterMachine"
+
+export type UnvalidatedDraft = {
+  text: string
+  issues: GenerateNoteIssue[]
+}
 
 type EncounterView = {
   productState: ProductState
@@ -19,6 +25,8 @@ type EncounterView = {
   encounter: Encounter | null
   transcript: TranscriptSegment[]
   note: ClinicalNote | null
+  /** Intento crudo del generador que no pasó el contrato estricto. */
+  unvalidatedDraft: UnvalidatedDraft | null
   errorMessage: string | null
   copied: boolean
   setLabel: (value: string) => void
@@ -45,6 +53,7 @@ export function useEncounter(): EncounterView {
   const [encounter, setEncounter] = useState<Encounter | null>(null)
   const [transcript, setTranscript] = useState<TranscriptSegment[]>([])
   const [note, setNote] = useState<ClinicalNote | null>(null)
+  const [unvalidatedDraft, setUnvalidatedDraft] = useState<UnvalidatedDraft | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const captureRef = useRef<MicCapture | null>(null)
@@ -141,7 +150,16 @@ export function useEncounter(): EncounterView {
       apply("STOP")
       const generated = await bridge.generateNote(encounter.id)
       setTranscript(generated.transcript)
-      setNote(generated.note)
+      if (generated.status === "ok") {
+        setUnvalidatedDraft(null)
+        setNote(generated.note)
+      } else {
+        // Borrador no validado visible: la transcripción ya está en pantalla,
+        // el intento crudo queda expuesto y la máquina ya está en ERROR por el
+        // evento progress "failed" — nunca una nota aparentemente válida.
+        setUnvalidatedDraft({ text: generated.draftText, issues: generated.issues })
+        setNote(null)
+      }
       setMachine((current) => {
         let next = current
         if (next.state === "TRANSCRIBING") next = reduceMachine(next, "TRANSCRIBE_DONE")
@@ -234,6 +252,7 @@ export function useEncounter(): EncounterView {
     setEncounter(null)
     setTranscript([])
     setNote(null)
+    setUnvalidatedDraft(null)
     setErrorMessage(null)
     setCopied(false)
   }, [])
@@ -248,6 +267,7 @@ export function useEncounter(): EncounterView {
     encounter,
     transcript,
     note,
+    unvalidatedDraft,
     errorMessage,
     copied,
     setLabel,

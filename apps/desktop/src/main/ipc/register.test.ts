@@ -4,6 +4,7 @@ import { join } from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
 import { IPC_CHANNELS } from "../../shared/constants/ipc-channels"
 import { syntheticClinicalNote } from "../../shared/fixtures/synthetic-consult"
+import type { GenerateNoteResult } from "../../shared/types/oira-api"
 import type { InferenceProgress } from "../../shared/types/inference-progress"
 import { createAuthStub } from "../auth"
 import { createAudioTempStore } from "../audio"
@@ -131,13 +132,15 @@ describe("I04 registerIpc", () => {
       encounterId: started.data.encounterId,
     })) as {
       ok: boolean
-      data?: { transcript: unknown[]; note: { sections: Record<string, unknown> } }
+      data?: GenerateNoteResult
       error?: { code: string }
     }
 
     expect(result.ok).toBe(true)
-    expect(result.data?.transcript).toHaveLength(3)
-    expect(Object.keys(result.data?.note.sections ?? {}).sort()).toEqual([
+    expect(result.data?.status).toBe("ok")
+    if (result.data?.status !== "ok") return
+    expect(result.data.transcript).toHaveLength(3)
+    expect(Object.keys(result.data.note.sections).sort()).toEqual([
       "clinical_narrative",
       "clinician_documented_assessment",
       "clinician_documented_plan",

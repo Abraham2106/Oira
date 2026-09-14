@@ -275,6 +275,29 @@ export function App() {
         {encounter.errorMessage ? (
           <div className="error" role="alert">
             <p>{encounter.errorMessage}</p>
+            {encounter.unvalidatedDraft ? (
+              <div className="draft-unvalidated" data-testid="unvalidated-draft">
+                <p>{t("draft.unvalidatedHelper")}</p>
+                {encounter.unvalidatedDraft.issues.length > 0 ? (
+                  <>
+                    <p className="draft-unvalidated-issues-title">
+                      {t("draft.unvalidatedIssues")}
+                    </p>
+                    <ul>
+                      {encounter.unvalidatedDraft.issues.map((issue, index) => (
+                        <li key={index}>{issue.message}</li>
+                      ))}
+                    </ul>
+                  </>
+                ) : null}
+                <details>
+                  <summary>{t("draft.unvalidatedShow")}</summary>
+                  <pre className="draft-unvalidated-text">
+                    {encounter.unvalidatedDraft.text}
+                  </pre>
+                </details>
+              </div>
+            ) : null}
             <button
               className="nl-button"
               type="button"

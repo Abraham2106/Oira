@@ -9,6 +9,8 @@ describe("mock bridge", () => {
     await bridge.stopEncounter(started.encounterId)
     const generated = await bridge.generateNote(started.encounterId)
 
+    expect(generated.status).toBe("ok")
+    if (generated.status !== "ok") return
     expect(Object.keys(generated.note.sections).sort()).toEqual([...SECTION_IDS].sort())
     expect(generated.transcript).toHaveLength(SYNTHETIC_TRANSCRIPT.length)
     const blob = JSON.stringify(generated)

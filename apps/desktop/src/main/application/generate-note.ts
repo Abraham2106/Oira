@@ -79,16 +79,34 @@ export async function runGenerateNote(
     let lastError: unknown
     for (let attempt = 0; attempt < attempts; attempt++) {
       try {
-        const { note } = await deps.structuring.structure({
+        const result = await deps.structuring.structure({
           transcript: segments,
         })
+        if (result.kind === "draft_unvalidated") {
+          // Nunca un éxito silencioso: el borrador no validado conserva la
+          // transcripción, marca el intento, y el renderer lo muestra como tal.
+          await advanceEncounter(deps.encounters, encounterId, "failed")
+          deps.progress?.emit({
+            encounterId,
+            phase: "failed",
+            stage: "structuring",
+            transcript: segments,
+          })
+          return {
+            status: "draft_unvalidated",
+            transcript: segments,
+            draftText: result.draftText,
+            issues: result.issues,
+          }
+        }
+        const { note } = result
         const parsed = clinicalNoteSchema.safeParse(note)
         if (!parsed.success) throw invalidStructuredOutputError()
         if (!verifySource(parsed.data, segments)) {
           throw invalidStructuredOutputError()
         }
         await advanceEncounter(deps.encounters, encounterId, "transcribed")
-        return { transcript: segments, note: parsed.data }
+        return { status: "ok", transcript: segments, note: parsed.data }
       } catch (error) {
         lastError = error
         const retryable =

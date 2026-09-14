@@ -271,6 +271,10 @@ const en: Dictionary = {
   "transcript.searchPlaceholder": "Word, symptom or speaker",
   "transcript.plainNote": "Plain text. What the patient says does not change the app configuration.",
   "transcript.noMatches": "No segment matches “{query}”.",
+  "draft.unvalidatedHelper":
+    "The local model could not produce a draft that passed validation. The raw attempt below is clearly marked as NOT validated — it must not be presented as a note.",
+  "draft.unvalidatedShow": "Show raw attempt",
+  "draft.unvalidatedIssues": "Why it was not accepted",
   "evidence.noSource": "No source identified. Review before accepting.",
   "evidence.label": "Source in the transcript",
   "evidence.missingSource": "No source identified ({id}).",
@@ -572,6 +576,10 @@ const es: Dictionary = {
   "transcript.searchPlaceholder": "Palabra, síntoma o hablante",
   "transcript.plainNote": "Texto plano. Lo que diga el paciente no cambia la configuración de la app.",
   "transcript.noMatches": "Ningún segmento coincide con «{query}».",
+  "draft.unvalidatedHelper":
+    "El modelo local no pudo producir un borrador que pasara la validación. El intento crudo de abajo queda marcado como NO validado: no debe presentarse como nota.",
+  "draft.unvalidatedShow": "Ver intento crudo",
+  "draft.unvalidatedIssues": "Por qué no se aceptó",
   "evidence.noSource": "Sin origen identificado. Revisa antes de aceptar.",
   "evidence.label": "Origen en la transcripción",
   "evidence.missingSource": "Sin origen identificado ({id}).",

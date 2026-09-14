@@ -1,12 +1,12 @@
 import {
   type ClinicalNote,
   type FieldValue,
-  type TranscriptSegment,
 } from "@oira/types"
 
 import { SYNTHETIC_TRANSCRIPT } from "../../shared/fixtures/synthetic-consult"
 import type { InferenceProgress } from "../../shared/types/inference-progress"
 import type { ModelLifecycleEvent } from "../../shared/types/model-lifecycle"
+import type { GenerateNoteResult } from "../../shared/types/oira-api"
 import {
   defaultSettings,
   type AppSettings,
@@ -26,10 +26,7 @@ export type DemoBridge = {
     sequence: number
     pcm: number[]
   }) => Promise<void>
-  generateNote: (encounterId: string) => Promise<{
-    transcript: TranscriptSegment[]
-    note: ClinicalNote
-  }>
+  generateNote: (encounterId: string) => Promise<GenerateNoteResult>
   saveNote: (
     encounterId: string,
     note: ClinicalNote,
@@ -117,6 +114,7 @@ export function createMockBridge(): DemoBridge {
         throw new Error("Consulta desconocida")
       }
       return {
+        status: "ok",
         transcript: SYNTHETIC_TRANSCRIPT,
         note: syntheticNote(),
       }

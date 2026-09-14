@@ -5,7 +5,7 @@ import { applyGlossary, assembleNote } from "./heuristic-assembler"
 export function createHeuristicStructuring(): StructuringPort {
   return {
     async structure(input) {
-      return { note: applyGlossary(assembleNote(input.transcript)) }
+      return { kind: "note", note: applyGlossary(assembleNote(input.transcript)) }
     },
   }
 }

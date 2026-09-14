@@ -20,7 +20,7 @@ describe("adaptOiraApi", () => {
       }),
       generateNote: async () => ({
         ok: true,
-        data: { transcript: [], note },
+        data: { status: "ok", transcript: [], note },
       }),
       saveNote: async () => ({
         ok: true,
@@ -72,6 +72,8 @@ describe("adaptOiraApi", () => {
     expect(started.encounterId).toBe(encounterId)
     await bridge.stopEncounter(encounterId)
     const generated = await bridge.generateNote(encounterId)
+    expect(generated.status).toBe("ok")
+    if (generated.status !== "ok") return
     expect(Object.keys(generated.note.sections).sort()).toEqual([...SECTION_IDS].sort())
     await bridge.saveNote(encounterId, generated.note, true)
     await bridge.exportNote(encounterId, "txt")

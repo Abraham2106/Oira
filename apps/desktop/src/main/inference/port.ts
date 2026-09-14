@@ -31,9 +31,25 @@ export type StructuringInput = {
   transcript: TranscriptSegment[]
 }
 
-export type StructuringResult = {
-  note: ClinicalNote
+/**
+ * Issue de validación estricta (Nivel 2). `code` es estable y consumible por
+ * el retry loop y por las métricas; ver `structure/generation-errors.ts`.
+ */
+export type StructuringIssue = {
+  code: string
+  sectionId?: string
+  message: string
 }
+
+/**
+ * Resultado de la estructuración. `note` nunca es un éxito silencioso: si el
+ * modelo agota los reintentos sin producir JSON que pase el contrato estricto,
+ * se entrega `draft_unvalidated` con el texto crudo del intento, jamás un
+ * borrador inventado presentado como válido.
+ */
+export type StructuringResult =
+  | { kind: "note"; note: ClinicalNote }
+  | { kind: "draft_unvalidated"; draftText: string; issues: StructuringIssue[] }
 
 export type StructuringPort = {
   structure: (input: StructuringInput) => Promise<StructuringResult>

@@ -1,8 +1,12 @@
 import { describe, expect, it, vi } from "vitest"
-import { SECTION_IDS, type TranscriptSegment } from "@oira/types"
+import { SECTION_IDS, type ClinicalNote, type TranscriptSegment } from "@oira/types"
 import { CLINICAL_NOTE_JSON_SCHEMA } from "../structure/json-schema"
-import { createQwenStructuring } from "./qwen-structuring"
+import {
+  createQwenStructuring,
+  STRUCTURE_GENERATION_ATTEMPTS,
+} from "./qwen-structuring"
 import type { QvacInferenceRuntime } from "./inference-runtime"
+import type { StructuringResult } from "../inference/port"
 
 function output(
   overrides: Partial<Record<(typeof SECTION_IDS)[number], {
@@ -47,27 +51,63 @@ const segment = (id: string, text: string): TranscriptSegment => ({
   startMs: 0,
 })
 
+async function structure(
+  runtime: QvacInferenceRuntime,
+  transcript: TranscriptSegment[],
+): Promise<StructuringResult> {
+  return createQwenStructuring({ runtime }).structure({ transcript })
+}
+
+async function noteOf(
+  runtime: QvacInferenceRuntime,
+  transcript: TranscriptSegment[],
+): Promise<ClinicalNote> {
+  const result = await structure(runtime, transcript)
+  if (result.kind !== "note") throw new Error("Se esperaba una nota validada")
+  return result.note
+}
+
 describe("createQwenStructuring", () => {
   it("preserves absence and does not turn hypotheses into diagnoses", async () => {
     const runtime = runtimeFor([JSON.stringify(output({
       clinical_narrative: { presence: "STATED", text: "Probable gastritis, no confirmado.", sourceSegmentIds: ["s1"] },
       reported_findings: { presence: "STATED", text: "No fiebre.", sourceSegmentIds: ["s1"] },
     }))])
-    const { note } = await createQwenStructuring({ runtime: runtime as QvacInferenceRuntime }).structure({
-      transcript: [segment("s1", "Probable gastritis, no confirmado. No fiebre.")],
-    })
+    const note = await noteOf(runtime, [segment("s1", "Probable gastritis, no confirmado. No fiebre.")])
     expect(note.sections.clinical_narrative.presence).toBe("STATED")
     expect(note.sections.clinical_narrative.text).toContain("Probable")
     expect(note.sections.relevant_history.presence).toBe("NOT_STATED")
   })
 
-  it("pastes truncated or invalid JSON into the draft instead of rejecting", async () => {
+  it("returns draft_unvalidated instead of inventing a note when JSON cannot be validated", async () => {
     const runtime = runtimeFor(["{\"sections\":"])
-    const { note } = await createQwenStructuring({ runtime: runtime as QvacInferenceRuntime }).structure({
-      transcript: [segment("s1", "Consulta breve.")],
-    })
-    expect(runtime.completeStructuring).toHaveBeenCalledTimes(1)
-    expect(note.sections.clinical_narrative.text).toContain("sections")
+    const result = await structure(runtime, [segment("s1", "Consulta breve.")])
+    expect(runtime.completeStructuring).toHaveBeenCalledTimes(STRUCTURE_GENERATION_ATTEMPTS)
+    expect(result.kind).toBe("draft_unvalidated")
+    if (result.kind !== "draft_unvalidated") return
+    expect(result.draftText).toContain("sections")
+    expect(result.issues.length).toBeGreaterThan(0)
+    // El reintento consumió el feedback del intento anterior.
+    const histories = vi.mocked(runtime.completeStructuring).mock.calls as Array<
+      [{ history: Array<{ role: string; content: string }> }]
+    >
+    expect(histories[1]?.[0]?.history[2]?.content).toContain(
+      "La validación del intento anterior no pasó",
+    )
+  })
+
+  it("marks a valid retry attempt as a note instead of an unvalidated draft", async () => {
+    const runtime = runtimeFor([
+      JSON.stringify({
+        clinical_narrative: { presence: "STATED", text: "Dolor.", sourceSegmentIds: ["s1"] },
+      }),
+      JSON.stringify(output({
+        clinical_narrative: { presence: "STATED", text: "Dolor.", sourceSegmentIds: ["s1"] },
+      })),
+    ])
+    const note = await noteOf(runtime, [segment("s1", "Dolor de rodilla.")])
+    expect(runtime.completeStructuring).toHaveBeenCalledTimes(2)
+    expect(note.sections.clinical_narrative.text).toBe("Dolor.")
   })
 
   it("passes transcript prompt injection as data and chunks long consultations", async () => {
@@ -81,7 +121,7 @@ describe("createQwenStructuring", () => {
         sourceSegmentIds: [item.id],
       },
     }))))
-    await createQwenStructuring({ runtime: runtime as QvacInferenceRuntime }).structure({ transcript })
+    await structure(runtime, transcript)
     expect(runtime.completeStructuring.mock.calls.length).toBeGreaterThan(1)
     const histories = vi.mocked(runtime.completeStructuring).mock.calls as Array<
       [{ history: Array<{ role: string; content: string }> }]
@@ -91,27 +131,23 @@ describe("createQwenStructuring", () => {
 
   it("accepts an empty all-NOT_STATED draft without repair", async () => {
     const runtime = runtimeFor([JSON.stringify(output())])
-    const { note } = await createQwenStructuring({ runtime: runtime as QvacInferenceRuntime }).structure({
-      transcript: [segment("s1", "Dolor de rodilla.")],
-    })
+    const note = await noteOf(runtime, [segment("s1", "Dolor de rodilla.")])
     expect(runtime.completeStructuring).toHaveBeenCalledTimes(1)
     expect(note.sections.clinical_narrative.presence).toBe("NOT_STATED")
   })
 
   it("allows an empty transcript to remain all NOT_STATED", async () => {
     const runtime = runtimeFor([JSON.stringify(output())])
-    await expect(createQwenStructuring({ runtime: runtime as QvacInferenceRuntime }).structure({
-      transcript: [],
-    })).resolves.toBeDefined()
+    await expect(structure(runtime, [])).resolves.toMatchObject({ kind: "note" })
   })
 
   it("keeps paraphrase drafts even when lexical evidence differs", async () => {
     const runtime = runtimeFor([JSON.stringify(output({
       clinical_narrative: { presence: "STATED", text: "Dosis 500 mg.", sourceSegmentIds: ["s1"] },
     }))])
-    await expect(createQwenStructuring({ runtime: runtime as QvacInferenceRuntime }).structure({
-      transcript: [segment("s1", "Dolor de rodilla.")],
-    })).resolves.toBeDefined()
+    await expect(structure(runtime, [segment("s1", "Dolor de rodilla.")])).resolves.toMatchObject({
+      kind: "note",
+    })
   })
 
   it("pastes flat section strings into the matching fields", async () => {
@@ -124,19 +160,43 @@ describe("createQwenStructuring", () => {
       clinician_documented_plan: "",
       follow_up: "",
     })])
-    const { note } = await createQwenStructuring({ runtime: runtime as QvacInferenceRuntime }).structure({
-      transcript: [segment("s1", "Dolor de rodilla recurrente. Control.")],
-    })
+    const note = await noteOf(runtime, [segment("s1", "Dolor de rodilla recurrente. Control.")])
     expect(note.sections.visit_context.text).toBe("Control de rodilla.")
     expect(note.sections.clinical_narrative.text).toBe("Dolor de rodilla recurrente.")
     expect(note.sections.follow_up.presence).toBe("NOT_STATED")
   })
 
+  it("rejects a STATED-without-text on first try and repairs on retry", async () => {
+    const runtime = runtimeFor([
+      JSON.stringify(output({
+        clinical_narrative: { presence: "STATED", text: "", sourceSegmentIds: ["s1"] },
+      })),
+      JSON.stringify(output({
+        clinical_narrative: { presence: "STATED", text: "Dolor de rodilla.", sourceSegmentIds: ["s1"] },
+      })),
+    ])
+    const note = await noteOf(runtime, [segment("s1", "Dolor de rodilla.")])
+    expect(runtime.completeStructuring).toHaveBeenCalledTimes(2)
+    expect(note.sections.clinical_narrative.text).toBe("Dolor de rodilla.")
+  })
+
+  it("rejects an unknown source id and does not pass it through silently", async () => {
+    const runtime = runtimeFor([
+      JSON.stringify(output({
+        clinical_narrative: { presence: "STATED", text: "Dolor.", sourceSegmentIds: ["seg-fantasma"] },
+      })),
+      JSON.stringify(output({
+        clinical_narrative: { presence: "STATED", text: "Dolor.", sourceSegmentIds: ["s1"] },
+      })),
+    ])
+    const note = await noteOf(runtime, [segment("s1", "Dolor de rodilla.")])
+    expect(runtime.completeStructuring).toHaveBeenCalledTimes(2)
+    expect(note.sections.clinical_narrative.sourceSegmentIds).toEqual(["s1"])
+  })
+
   it("forwards CLINICAL_NOTE_JSON_SCHEMA to completeStructuring", async () => {
     const runtime = runtimeFor([JSON.stringify(output())])
-    await createQwenStructuring({ runtime: runtime as QvacInferenceRuntime }).structure({
-      transcript: [segment("s1", "Dolor de rodilla.")],
-    })
+    await structure(runtime, [segment("s1", "Dolor de rodilla.")])
     expect(runtime.completeStructuring).toHaveBeenCalledWith(
       expect.objectContaining({
         schema: CLINICAL_NOTE_JSON_SCHEMA,

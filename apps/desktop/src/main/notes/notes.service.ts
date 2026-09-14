@@ -85,7 +85,7 @@ export function createNotesService(deps: NotesPipelineDeps): NotesPort {
           if (deps.encounters && !record) throw encounterNotFoundError()
 
           const draft = drafts.get(input.encounterId)
-          if (!draft) throw noteDraftRequiredError()
+          if (!draft || draft.status !== "ok") throw noteDraftRequiredError()
           const transcript = structuredClone(draft.transcript)
           if (!verifySource(parsed.data, transcript)) {
             throw invalidStructuredOutputError()
@@ -106,6 +106,7 @@ export function createNotesService(deps: NotesPipelineDeps): NotesPort {
             transcript,
           })
           drafts.set(input.encounterId, {
+            status: "ok",
             transcript: structuredClone(transcript),
             note: structuredClone(parsed.data),
           })
