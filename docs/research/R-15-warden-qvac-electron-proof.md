@@ -116,6 +116,26 @@ diálogo `Object has been destroyed` al cerrar la aplicación.
 
 ## Cómo repetir la prueba
 
+### Alcance de la corrección de preparación de modelos
+
+La verificación SHA-256 consume el archivo por chunks sin acumular una salida
+de stream sin lector. Una descarga parcial ya completa se verifica y promueve
+antes de pedir otro rango HTTP. La prueba sintética usa 2 MiB, por encima del
+buffer del stream, e incluye alteración del contenido y recuperación del parcial.
+
+La preparación bloquea plataformas no Windows y espacio libre conocido menor
+que el tamaño total de modelos pendientes. La reserva es conservadora: no
+descuenta parciales ya descargados. RAM, conectividad y firma permanecen como
+desconocidas cuando no existe validación; conocer la RAM libre no certifica
+aptitud para inferencia. El bloqueo también se aplica al iniciar la preparación
+desde Main. No se cambian módulos, contratos IPC ni relaciones del atlas.
+
+Estas pruebas sintéticas no acreditan una descarga real de ambos modelos ni
+inferencia en el instalador. Los hashes de instalador anteriores corresponden
+a los candidatos históricos; una compilación con esta corrección requiere
+nueva evidencia. Firma, autorización de redistribución y mínimos de hardware
+siguen pendientes de evidencia externa.
+
 ```powershell
 pnpm typecheck
 pnpm test
@@ -145,3 +165,63 @@ Authenticode: NotSigned
 
 `NotSigned` no significa que el paquete esté incompleto; sí significa que
 Windows puede mostrar SmartScreen y que el artefacto no está listo para release.
+
+## Diagnóstico de «Preparar grabación» en instalación Windows — 2026-09-15
+
+Se compararon dos ejecuciones de la versión 0.1.0 mediante
+`scripts/qvac-packaged-gpu-smoke.mjs`, que invoca el IPC real de warm-up sin
+capturar audio ni descargar pesos:
+
+- El ejecutable bajo `out/Oira-win32-x64` cargó Whisper (`warmed: true`).
+- La copia instalada bajo `%LOCALAPPDATA%/Oira/app-0.1.0` falló con
+  `Could not load the Bare runtime binary for win32-x64`.
+- `bare.exe` sí existía. Un `require` desde la instalación reveló la causa
+  inmediata: `Cannot find module 'require-asset'`.
+- Tras incluir esa dependencia, el worker falló con
+  `Cannot find module 'bare-os'` al importar el núcleo del SDK.
+
+La causa común fue el empaquetado incompleto del árbol pnpm. El ejecutable en
+el repositorio resolvía enlaces hacia `.pnpm`; la instalación contenía paquetes
+directos sin sus dependencias transitivas. La prueba dentro del repositorio
+daba un falso positivo. Forge documenta que su recolección de dependencias no
+resuelve correctamente árboles basados en symlinks y recomienda un árbol
+hoisted: <https://www.electronforge.io/cli>.
+
+Los errores anteriores de asignación a `child_process.spawn` constan en el
+registro local, pero el gateway actual ya no ejecuta ese parche. Las rutas
+explícitas de modelos y la caché común también estaban implementadas antes de
+esta investigación; no resolvían las dependencias ausentes del instalador.
+
+### Corrección y guardia de empaquetado
+
+`package-production-dependencies.cjs` ejecuta el deploy moderno de pnpm 10
+con un lockfile derivado y congelado, `--prod`, `--ignore-scripts` y
+`node-linker=hoisted` únicamente en staging temporal. No modifica el modo de
+instalación del workspace. No usa el deploy legacy, que con hoisting vuelve a
+resolver versiones sin respetar el lockfile en pnpm 10.33.3.
+
+`verify-packaged-runtime.cjs` rechaza symlinks, comprueba que el binario Bare se
+resuelve dentro del artefacto y carga en Bare el núcleo del SDK y ambos plugins.
+La guardia se ejecuta fuera del repositorio antes de entregar `node_modules`
+a Forge. No inicializa la exclusión mutua global del worker ni carga modelos.
+Con el árbol hoisted, se habilita el pruning estándar de Forge y el hook
+`afterPrune` de QVAC elimina prebuilds de otras plataformas/arquitecturas.
+El campo `files` limita el deploy a `dist` y `qvac`, evitando copiar builds
+anteriores. El atlas refleja el nuevo paso de distribución; no cambia el IPC
+ni la arquitectura de inferencia.
+
+### Resultado de validación local
+
+- Se reparó el árbol de dependencias de la instalación existente sin modificar
+  los modelos, notas ni ajustes del usuario. El mismo smoke sobre
+  `%LOCALAPPDATA%/Oira/app-0.1.0/Oira.exe` pasó: respuesta IPC
+  `{"ok":true,"data":{"warmed":true}}` y `PACKAGED_SMOKE_PASS`.
+- Los SHA-256 de ambos archivos en `model-cache` coincidieron con el manifiesto:
+  Whisper `1fc70f774d38eb169993ac391eea357ef47c88757ef72ee5943879b7e8e2bc69`,
+  Qwen `f6f851777709861056efcdad3af01da38b31223a3ba26e61a4f8bf3a2195813a`.
+- `pnpm test`: 80 archivos, 393 pruebas aprobadas. Typecheck, lint y
+  `atlas:check` aprobados. `test:packaging` aprobó el paquete reconstruido.
+
+Esta validación demuestra preparación de Whisper en este equipo y carga de
+los módulos nativos de ambos plugins. No constituye una prueba de transcripción
+con audio, generación clínica con Qwen ni compatibilidad con todo hardware.

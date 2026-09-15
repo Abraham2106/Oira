@@ -1,6 +1,10 @@
-# Pendiente: endurecer generación, revisión Qwen y evaluación de procesamiento
+# Estado: generación, revisión Qwen y evaluación de procesamiento
 
-Fecha: 2026-09-12. Estado: propuesta de trabajo pendiente, no implementada.
+Actualizado: 2026-09-15. Estado: contratos, heurísticas y revisor implementados;
+evaluación comparativa final pendiente. Desde `fbba960`, el revisor Qwen está
+desactivado por defecto para evitar la segunda pasada de inferencia. Puede
+activarse explícitamente mediante la opción `reviewer` del segundo argumento de
+`composeApplication`; su implementación no implica ejecución en el flujo normal.
 
 ## Objetivo y situación actual
 
@@ -11,15 +15,15 @@ permitan medir calidad, errores y coste de ejecución de extremo a extremo.
 Actualmente, la generación usa Qwen3 4B Q4_K_M. Desde OIRA-REF-01 la forma y
 las citas de la salida estructurada se rechazan si son inválidas (R-13); eso
 no sustituye el endurecimiento de prompts ni la fidelidad semántica. Los
-helpers de evidencia siguen devolviendo éxito o listas vacías; no verifican
-números, negaciones, omisiones ni que un ID citado respalde el texto. El
-puerto del segundo agente está definido en
-`apps/desktop/src/main/inference/note-verifier.port.ts`; eso no equivale a
-tener un verificador funcionando.
+contratos estrictos rechazan salidas inválidas y las heurísticas producen
+advertencias. El revisor implementado en `apps/desktop/src/main/qvac/qwen-verifier.ts`
+valida secciones, IDs y citas literales; una cita existente no demuestra por sí
+sola respaldo semántico. Si su respuesta no es verificable, devuelve revisión
+incompleta. La aceptación de la nota sigue requiriendo revisión médica.
 
 Referencia de la generación actual: [QWEN_STRUCTURING_P2.md](QWEN_STRUCTURING_P2.md).
 
-## Base implementada al cierre del día
+## Antecedentes al 12 de septiembre (registro histórico)
 
 La [actualización de Abraham](UPDATE_ABRAHAM_2026-09-12.md) recoge los avances
 de runtime, audio y UI. Este plan parte de una integración Qwen 4B activa,

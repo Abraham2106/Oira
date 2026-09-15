@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Oira · GPU: selección y uso</title>
+<style>
+:root {
+  --bg: #0a0c10;
+  --panel: #11151c;
+  --panel2: #161b24;
+  --border: #232a36;
+  --ink: #e6e9ef;
+  --muted: #8b93a1;
+  --faint: #5b6472;
+  --c-ui: #6cb2ff;
+  --c-qvac: #e7b56b;
+  --c-hw: #7ee0b8;
+  --c-no: #e06c75;
+  --radius: 16px;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 0.95rem/1.55 Inter, system-ui, sans-serif;
+}
+header, main { max-width: 1100px; margin: 0 auto; padding: 32px 28px 0; }
+main { padding-bottom: 64px; }
+.eyebrow {
+  margin: 0 0 8px;
+  font: 0.72rem/1 DM Mono, ui-monospace, Consolas, monospace;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--c-qvac);
+}
+h1 { margin: 0; font-size: 1.85rem; letter-spacing: -0.02em; font-weight: 650; }
+h2 { margin: 36px 0 10px; font-size: 1.15rem; }
+h3 { margin: 18px 0 8px; font-size: 0.95rem; color: var(--muted); font-weight: 600; }
+p { color: var(--muted); max-width: 76ch; }
+code, .mono {
+  font-family: DM Mono, ui-monospace, Consolas, monospace;
+  font-size: 0.82em;
+  color: var(--ink);
+}
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 0; }
+.chip {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+.chip strong { color: var(--ink); font-weight: 600; }
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 24px 0; }
+.stat {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+}
+.stat b { display: block; font-size: 1.6rem; letter-spacing: -0.03em; }
+.stat span { color: var(--muted); font-size: 0.8rem; }
+.warn {
+  background: var(--panel2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--c-ui);
+  border-radius: 12px;
+  padding: 14px 16px;
+  color: var(--muted);
+}
+.lanes { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.lane {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+}
+.lane h3 { margin-top: 0; }
+.lane.ui { border-top: 3px solid var(--c-ui); }
+.lane.qvac { border-top: 3px solid var(--c-qvac); }
+svg.flow { width: 100%; height: auto; margin: 12px 0 8px; }
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  font-size: 0.88rem;
+}
+th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+th { color: var(--faint); font-weight: 600; font-size: 0.75rem; letter-spacing: 0.04em; text-transform: uppercase; }
+tr:last-child td { border-bottom: 0; }
+.ok { color: var(--c-hw); }
+.no { color: var(--c-no); }
+.steps { counter-reset: step; display: grid; gap: 10px; }
+.step {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px 12px 52px;
+  position: relative;
+}
+.step::before {
+  counter-increment: step;
+  content: counter(step);
+  position: absolute; left: 14px; top: 12px;
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  background: var(--panel2);
+  border: 1px solid var(--border);
+  display: grid; place-items: center;
+  font: 0.75rem/1 DM Mono, ui-monospace, monospace;
+  color: var(--c-qvac);
+}
+pre {
+  background: var(--panel2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  overflow: auto;
+  color: var(--ink);
+  font: 0.8rem/1.5 DM Mono, ui-monospace, Consolas, monospace;
+}
+@media (max-width: 800px) {
+  .stats, .lanes { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<header>
+  <p class="eyebrow">R-16 · mapa de ejecución · 2026-09-15</p>
+  <h1>Cómo se escoge y se usa la GPU</h1>
+  <p>
+    Hay <strong>dos decisiones independientes</strong>. Chromium pide una GPU para
+    dibujar la ventana. El worker QVAC pide otra para Whisper y Qwen.
+    El cómputo de modelos se ejecuta en el worker Bare mediante la selección
+    GPU predeterminada del SDK; el backend efectivo se registra tras cargar.
+    La AMD integrada no recibe modelos.
+  </p>
+  <div class="chips">
+    <span class="chip"><strong>SDK</strong> selección predeterminada</span>
+    <span class="chip"><strong>Vulkan</strong> backend del worker</span>
+    <span class="chip"><strong>Chromium</strong> no elige inferencia</span>
+  </div>
+</header>
+<main>
+  <div class="stats">
+    <div class="stat"><b>2</b><span>GPUs enumeradas por QVAC</span></div>
+    <div class="stat"><b>1</b><span>Gateway utilityProcess para inferencia</span></div>
+    <div class="stat"><b>0</b><span>Modelos asignados a la AMD</span></div>
+  </div>
+
+  <p class="warn">
+    Ver GPU 0 junto a <code>Oira.exe</code> no demuestra que la inferencia use la
+    integrada. Optimus puede presentar la imagen por la iGPU aunque la RTX calcule.
+    La evidencia es <code>backendDevice: "gpu"</code> y la memoria NVIDIA en
+    <code>nvidia-smi</code>.
+  </p>
+
+  <h2>Mapa de procesos</h2>
+  <svg class="flow" viewBox="0 0 1040 280" role="img" aria-label="Flujo GPU Oira">
+    <text x="8" y="18" fill="#8b93a1" font-size="11">Oira.exe</text>
+    <rect x="8" y="32" width="150" height="48" rx="8" fill="#161b24" stroke="#6cb2ff"/>
+    <text x="20" y="52" fill="#e6e9ef" font-size="13">force_high_performance_gpu</text>
+    <text x="20" y="70" fill="#8b93a1" font-size="11">Chromium / ventana</text>
+    <line x1="158" y1="56" x2="210" y2="56" stroke="#232a36"/>
+    <rect x="210" y="32" width="150" height="48" rx="8" fill="#161b24" stroke="#232a36"/>
+    <text x="222" y="52" fill="#e6e9ef" font-size="13">Windows / Optimus</text>
+    <text x="222" y="70" fill="#8b93a1" font-size="11">puede scan-out en AMD</text>
+
+    <rect x="8" y="140" width="150" height="48" rx="8" fill="#161b24" stroke="#e7b56b"/>
+    <text x="20" y="160" fill="#e6e9ef" font-size="13">composeApplication</text>
+    <text x="20" y="178" fill="#8b93a1" font-size="11">createInferencePorts</text>
+    <line x1="158" y1="164" x2="210" y2="164" stroke="#232a36"/>
+    <rect x="210" y="140" width="150" height="48" rx="8" fill="#161b24" stroke="#e7b56b"/>
+    <text x="222" y="160" fill="#e6e9ef" font-size="13">QVAC runtime</text>
+    <text x="222" y="178" fill="#8b93a1" font-size="11">resolveGpu</text>
+    <line x1="360" y1="164" x2="412" y2="164" stroke="#232a36"/>
+    <rect x="412" y="140" width="170" height="48" rx="8" fill="#161b24" stroke="#e7b56b"/>
+    <text x="424" y="160" fill="#e6e9ef" font-size="13">selectPreferredGpu</text>
+    <text x="424" y="178" fill="#8b93a1" font-size="11">SDK default GPU</text>
+    <line x1="582" y1="164" x2="634" y2="148" stroke="#232a36"/>
+    <line x1="582" y1="164" x2="634" y2="180" stroke="#232a36"/>
+    <rect x="634" y="116" width="150" height="44" rx="8" fill="#161b24" stroke="#e7b56b"/>
+    <text x="646" y="134" fill="#e6e9ef" font-size="13">Whisper</text>
+    <text x="646" y="150" fill="#8b93a1" font-size="11">backendDevice en stats</text>
+    <rect x="634" y="172" width="150" height="44" rx="8" fill="#161b24" stroke="#e7b56b"/>
+    <text x="646" y="190" fill="#e6e9ef" font-size="13">Qwen</text>
+    <text x="646" y="206" fill="#8b93a1" font-size="11">main-gpu dedicated</text>
+    <line x1="784" y1="138" x2="836" y2="164" stroke="#232a36"/>
+    <line x1="784" y1="194" x2="836" y2="164" stroke="#232a36"/>
+    <rect x="836" y="140" width="180" height="48" rx="8" fill="#161b24" stroke="#7ee0b8"/>
+    <text x="848" y="160" fill="#e6e9ef" font-size="13">Bare worker · Vulkan</text>
+    <text x="848" y="178" fill="#8b93a1" font-size="11">RTX 2050</text>
+    <text x="8" y="250" fill="#5b6472" font-size="12">Carril UI (azul) independiente del carril QVAC (ámbar). Hardware en verde.</text>
+  </svg>
+
+  <div class="lanes">
+    <article class="lane ui">
+      <h3>Carril A — ventana</h3>
+      <p>
+        <code>apps/desktop/src/main/index.ts</code> añade
+        <code>force_high_performance_gpu</code> antes de <code>app.whenReady()</code>.
+        Es una preferencia DXGI de alto rendimiento para Chromium. No selecciona
+        el adaptador Vulkan del worker.
+      </p>
+    </article>
+    <article class="lane qvac">
+      <h3>Carril B — inferencia</h3>
+      <p>
+        <code>composeApplication</code> → <code>createInferencePorts("qvac")</code> →
+        <code>createQvacInferenceRuntime</code>. Un solo modelo residente:
+        Whisper o Qwen. El renderer solo ve eventos de ciclo de vida.
+      </p>
+    </article>
+  </div>
+
+  <h2>Cómo se escoge</h2>
+  <div class="steps">
+    <div class="step">
+      <strong>Inventario.</strong> <code>getSystemResources({ sample: true })</code>
+      vía <code>getSystemResources</code>. Los datos de hardware son diagnósticos;
+      el SDK conserva la decisión de backend y la VRAM puede ser <code>unverified</code>.
+    </div>
+    <div class="step">
+      <strong>Parseo.</strong> <code>extractGpusFromSystemResources</code> guarda el
+      índice QVAC (posición en el array) y metadatos de backend.
+      Archivo: <code>src/main/qvac/device-selection.ts</code>.
+    </div>
+    <div class="step">
+      <strong>Sin filtro duro.</strong> El probe informa el panel de diagnóstico,
+      pero nunca bloquea la carga. El SDK elige el backend predeterminado.
+    </div>
+    <div class="step">
+      <strong>Diagnóstico.</strong> Si se muestran adaptadores, se ordenan por VRAM;
+      el índice no se pasa al modelo. Qwen y Whisper usan defaults del SDK.
+    </div>
+  </div>
+
+  <h3>Sonda de este equipo</h3>
+  <table>
+    <thead><tr><th>Índice QVAC</th><th>Adaptador</th><th>Vulkan</th><th>CUDA</th><th>Decisión</th></tr></thead>
+    <tbody>
+      <tr><td>0</td><td>AMD Radeon(TM) Graphics</td><td>sí</td><td class="no">no</td><td class="no">Descartada</td></tr>
+      <tr><td>1</td><td>NVIDIA GeForce RTX 2050</td><td>sí</td><td class="ok">sí</td><td class="ok">Elegida</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Cómo se usa</h2>
+  <table>
+    <thead><tr><th></th><th>Whisper (STT)</th><th>Qwen (nota)</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Cuándo</td>
+        <td><code>warmTranscription</code> / <code>loadWhisper</code></td>
+        <td>Tras transcribir: <code>handoffToStructuring</code> descarga Whisper y carga Qwen</td>
+      </tr>
+      <tr>
+        <td>Config</td>
+        <td><code>use_gpu: true</code> (sin ordinal)</td>
+        <td><code>device: "gpu"</code>, <code>gpu_layers: 99</code>, <code>split-mode: "none"</code></td>
+      </tr>
+      <tr>
+        <td>Addon</td>
+        <td>whispercpp-transcription</td>
+        <td>llamacpp-completion</td>
+      </tr>
+      <tr>
+        <td>API real</td>
+        <td>Backend elegido por SDK</td>
+        <td>Backend elegido por SDK</td>
+      </tr>
+      <tr>
+        <td>Evidencia</td>
+        <td>evento de ciclo de vida</td>
+        <td><code>stats.backendDevice</code> tras completion</td>
+      </tr>
+      <tr>
+        <td>Archivo</td>
+        <td><code>whisper-stt-config.ts</code></td>
+        <td><code>qwen-llm-config.ts</code></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Archivos del mapa</h2>
+  <table>
+    <thead><tr><th>Ruta</th><th>Rol</th></tr></thead>
+    <tbody>
+      <tr><td><code>src/main/index.ts</code></td><td>Switch de Chromium; arranque de compose</td></tr>
+      <tr><td><code>src/main/composition/compose-application.ts</code></td><td>Inyecta runtime QVAC</td></tr>
+      <tr><td><code>src/main/inference/select.ts</code></td><td>Adapter <code>qvac</code> vs mock</td></tr>
+      <tr><td><code>src/main/qvac/inference-runtime.ts</code></td><td>Probe, carga, handoff, un residente</td></tr>
+      <tr><td><code>src/main/qvac/device-selection.ts</code></td><td>Filtro CUDA + índice QVAC</td></tr>
+      <tr><td><code>src/main/qvac/whisper-stt-config.ts</code></td><td>Parámetros Whisper</td></tr>
+      <tr><td><code>src/main/qvac/qwen-llm-config.ts</code></td><td>Parámetros Qwen</td></tr>
+      <tr><td><code>src/shared/types/model-lifecycle.ts</code></td><td>Eventos requested / effective al renderer</td></tr>
+      <tr><td><code>forge.config.cjs</code></td><td>Worker Bare sin ASAR</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Cómo comprobar la RTX</h2>
+  <p>Aprovisionar ambos pesos en <code>%APPDATA%\Oira\model-cache</code> y:</p>
+  <pre>node apps/desktop/scripts/qvac-packaged-gpu-smoke.mjs "$env:LOCALAPPDATA\Oira\app-0.0.7\Oira.exe"</pre>
+  <p>
+    Debe terminar en <code>PACKAGED_SMOKE_PASS</code>, con
+    <code>backendDevice: "gpu"</code> y memoria RTX al alza en
+    <code>nvidia-smi</code>.
+  </p>
+  <p>
+    Investigación: <a href="./R-16-windows-hybrid-gpu-routing.md">R-16</a>.
+    Atlas general: <a href="../codebase-map.html">docs/codebase-map.html</a>
+    (nodos Whisper STT, QVAC runtime, Ajustes de GPU).
+  </p>
+</main>
+</body>
+</html>
