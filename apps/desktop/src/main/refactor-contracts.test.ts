@@ -34,7 +34,7 @@ describe("OIRA-REF-01 contracts before the fixes", () => {
     await expect(
       runGenerateNote(ENCOUNTER, {
         transcription: { transcribe: async () => ({ segments: SYNTHETIC_TRANSCRIPT }) },
-        structuring: { structure: async () => ({ note }) },
+        structuring: { structure: async () => ({ kind: "note", note }) },
       }),
     ).rejects.toMatchObject(invalidStructuredOutputError())
   })
@@ -64,7 +64,7 @@ describe("OIRA-REF-01 contracts before the fixes", () => {
       await pending
       return { segments: SYNTHETIC_TRANSCRIPT }
     })
-    const structure = vi.fn(async () => ({ note: syntheticClinicalNote() }))
+    const structure = vi.fn(async () => ({ kind: "note" as const, note: syntheticClinicalNote() }))
     const purge = vi.fn()
     const notes = createNotesService({
       transcription: { transcribe },
@@ -83,6 +83,7 @@ describe("OIRA-REF-01 contracts before the fixes", () => {
 
     expect(structure).toHaveBeenCalledTimes(1)
     expect(purge).toHaveBeenCalledTimes(1)
+    if (firstResult.status === "draft_unvalidated" || secondResult.status === "draft_unvalidated") throw new Error("Expected validated drafts")
     firstResult.note.sections.clinical_narrative.text = "Mutaci\u00f3n local"
     expect(secondResult.note.sections.clinical_narrative.text).not.toBe("Mutaci\u00f3n local")
   })
@@ -133,7 +134,7 @@ describe("OIRA-REF-01 contracts before the fixes", () => {
       await pending
       return { segments: SYNTHETIC_TRANSCRIPT }
     })
-    const structure = vi.fn(async () => ({ note: syntheticClinicalNote() }))
+    const structure = vi.fn(async () => ({ kind: "note" as const, note: syntheticClinicalNote() }))
     const purge = vi.fn()
     const notes = createNotesService({
       transcription: { transcribe },

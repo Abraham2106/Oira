@@ -5,6 +5,8 @@ import { addSecondaryFailure, isAppError } from "../errors/core"
 import { encounterNotFoundError } from "../errors/encounters"
 import { invalidStructuredOutputError } from "../errors/notes"
 import { verifySource } from "../notes/verify-source"
+import { runVerification } from "../structure/evidence"
+import type { NoteVerifierPort, NoteVerificationResult } from "../../shared/types/note-verification"
 import type { EncounterPort } from "../ports/inbound"
 import type {
   AudioCapturePort,
@@ -24,6 +26,7 @@ export type GenerateNoteWorkflowDeps = {
   progress?: ProgressPort
   structureAttempts?: number
   inferenceRuntime?: InferenceRuntimePort
+  reviewer?: NoteVerifierPort
   onCleanupFailure?: (input: { encounterId: string; primaryFailure: boolean }) => void
 }
 
@@ -78,16 +81,73 @@ export async function runGenerateNote(
     let lastError: unknown
     for (let attempt = 0; attempt < attempts; attempt++) {
       try {
-        const { note } = await deps.structuring.structure({
+        const result = await deps.structuring.structure({
           transcript: segments,
         })
+        if (result.kind === "draft_unvalidated") {
+          // Nunca un éxito silencioso: el borrador no validado conserva la
+          // transcripción, marca el intento, y el renderer lo muestra como tal.
+          await advanceEncounter(deps.encounters, encounterId, "failed")
+          deps.progress?.emit({
+            encounterId,
+            phase: "failed",
+            stage: "structuring",
+            transcript: segments,
+          })
+          generated = {
+            status: "draft_unvalidated",
+            transcript: segments,
+            draftText: result.draftText,
+            issues: result.issues,
+          }
+          break
+        }
+        const { note } = result
         const parsed = clinicalNoteSchema.safeParse(note)
         if (!parsed.success) throw invalidStructuredOutputError()
         if (!verifySource(parsed.data, segments)) {
           throw invalidStructuredOutputError()
         }
+        // Run heuristic verification on the valid structured output
+        const { warnings: verificationWarnings, blocking } = runVerification(parsed.data, segments)
+
+        // If there are blocking heuristic issues, treat as draft_unvalidated
+        if (blocking.length > 0) {
+          await advanceEncounter(deps.encounters, encounterId, "failed")
+          deps.progress?.emit({
+            encounterId,
+            phase: "failed",
+            stage: "structuring",
+            transcript: segments,
+          })
+          generated = {
+            status: "draft_unvalidated",
+            transcript: segments,
+            draftText: JSON.stringify(parsed.data, null, 2),
+            issues: blocking.map((b) => ({ code: b.code, sectionId: b.sectionId, message: b.message })),
+          }
+          break
+        }
+
+        // Run Qwen reviewer if available (F3)
+        let reviewerResult: NoteVerificationResult | undefined
+        if (deps.reviewer) {
+          deps.progress?.emit({ encounterId, phase: "reviewing" })
+          reviewerResult = await deps.reviewer.verify({ transcript: segments, note: parsed.data })
+        }
+
         await advanceEncounter(deps.encounters, encounterId, "transcribed")
-        generated = { status: "READY", transcript: segments, note: parsed.data }
+        generated = {
+          status: "READY",
+          transcript: segments,
+          note: parsed.data,
+          verificationWarnings: verificationWarnings.map((w) => ({
+            code: w.code,
+            sectionId: w.sectionId,
+            message: w.message,
+          })),
+          reviewerResult,
+        }
         break
       } catch (error) {
         lastError = error
@@ -102,7 +162,6 @@ export async function runGenerateNote(
     try {
       await advanceEncounter(deps.encounters, encounterId, "failed")
     } catch (secondaryError) {
-      // Preserve the generation failure; recovery-state failure is secondary.
       addSecondaryFailure(primaryFailure, "encounter_transition", secondaryError)
     }
     deps.progress?.emit({
@@ -113,26 +172,21 @@ export async function runGenerateNote(
         : { stage: "transcription" as const }),
     })
   }
-
   let cleanupFailed = false
   try {
     deps.audio?.purge(encounterId)
   } catch (cleanupError) {
     cleanupFailed = true
     addSecondaryFailure(primaryFailure, "audio_cleanup", cleanupError)
-    // The observer records only a technical identifier and stage, never audio data.
     deps.onCleanupFailure?.({ encounterId, primaryFailure: primaryFailure !== undefined })
   }
-
   if (primaryFailure !== undefined) throw primaryFailure
   if (!generated) throw invalidStructuredOutputError()
   if (cleanupFailed) {
-    return {
-      status: "CLEANUP_PENDING",
-      transcript: generated.transcript,
-      note: generated.note,
-      cleanup: { retryable: true },
+    if (generated.status === "draft_unvalidated") {
+      return { ...generated, cleanup: { retryable: true } }
     }
+    return { ...generated, status: "CLEANUP_PENDING", cleanup: { retryable: true } }
   }
   return generated
 }

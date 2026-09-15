@@ -259,6 +259,10 @@ async function createAdapter(name) {
     "main/qvac/inference-runtime.ts",
   )
   const { createQwenStructuring } = await importDesktopTs("main/qvac/qwen-structuring.ts")
+  const { SYSTEM_PROMPT } = await importDesktopTs("main/structure/prompt.ts")
+  const { CLINICAL_NOTE_JSON_SCHEMA } = await importDesktopTs(
+    "main/structure/json-schema.ts",
+  )
   const runtime = createQvacInferenceRuntime()
   const structuring = createQwenStructuring({ runtime })
   let lastRaw = null
@@ -295,17 +299,29 @@ async function createAdapter(name) {
         [lastRaw?.text, lastRaw?.rawText, lastRaw?.thinkingText]
           .map((v) => v?.trim() ?? "")
           .find((v) => v.length > 0) ?? null
+      if (result.kind !== "note") {
+        // F1: nunca un éxito silencioso. El borrador no validado aparece como
+        // error explícito con el texto crudo conservado para inspección.
+        return {
+          note: null,
+          error: `draft_unvalidated: ${result.issues
+            .map((issue) => `${issue.code}: ${issue.message}`)
+            .join(" | ")}`,
+          draftText: result.draftText,
+          rawSdkText: result.draftText || rawSdkText,
+          rawCompletion: lastRaw,
+        }
+      }
       return { note: result.note, rawSdkText, rawCompletion: lastRaw }
     },
     async close() {
       await runtime.shutdown()
     },
-    // Fase 4: prompt/schema versioning (opcional — QVAC puede no exponerlos)
     getPromptTemplate() {
-      return "" // TODO: exponer desde QVAC runtime si está disponible
+      return SYSTEM_PROMPT
     },
     getSchema() {
-      return {} // TODO: exponer schema JSON desde QVAC si está disponible
+      return CLINICAL_NOTE_JSON_SCHEMA
     },
   }
 }
@@ -683,6 +699,7 @@ async function main() {
               note = result.note
               rawSdkText = result.rawSdkText ?? null
               rawCompletion = result.rawCompletion ?? null
+              if (result.error) error = result.error
               transcriptForEval = hyp
               // Baseline gold-fed: mismo gold, transcripción gold (columna de
               // comparación del delta). Opcional: si falla, se excluye sin inventar.
@@ -714,6 +731,7 @@ async function main() {
             note = result.note
             rawSdkText = result.rawSdkText ?? null
             rawCompletion = result.rawCompletion ?? null
+            if (result.error) error = result.error
           }
         } catch (failure) {
           error =

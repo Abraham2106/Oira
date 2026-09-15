@@ -5,12 +5,13 @@ import type {
   ClipboardWriteInput,
   ExportNoteInput,
   GenerateNoteInput,
-  RetryAudioCleanupInput,
   SaveNoteInput,
+  RetryAudioCleanupInput,
   StartEncounterInput,
   StopEncounterInput,
 } from "../schemas/ipc.schema"
 import type { InferenceProgress } from "./inference-progress"
+import type { NoteVerificationResult } from "./note-verification"
 import type { ModelLifecycleEvent } from "./model-lifecycle"
 import type { Result } from "./result"
 import type { AppSettings } from "../schemas/settings.schema"
@@ -32,29 +33,44 @@ export type StopEncounterResult = {
   status: EncounterStatus
 }
 
-export type GenerateNoteResult = {
-  status: "READY"
-  transcript: TranscriptSegment[]
-  note: ClinicalNote
-} | {
-  status: "CLEANUP_PENDING"
-  transcript: TranscriptSegment[]
-  note: ClinicalNote
-  cleanup: { retryable: true }
+export type GenerateNoteIssue = {
+  code: string
+  sectionId?: string
+  message: string
 }
 
-export type SaveNoteResult = {
-  status: "SAVED"
-  noteId: string
-} | {
-  status: "PERSISTED_TRANSITION_PENDING"
-  noteId: string
-  recovery: { retryable: true }
-}
+/**
+ * Resultado de la generación. `status: "draft_unvalidated"` significa que el
+ * generador (QVAC) agotó sus reintentos sin pasar el contrato estricto: la
+ * transcripción se conserva, `draftText` es el intento crudo del modelo y
+ * `issues[]` explica el porqué. El renderer debe presentarlo como borrador NO
+ * validado, nunca como nota.
+ */
+export type GenerateNoteResult =
+  | ({
+      status: "READY"
+      cleanup?: never
+    } | {
+      status: "CLEANUP_PENDING"
+      cleanup: { retryable: true }
+    }) & {
+      transcript: TranscriptSegment[]
+      note: ClinicalNote
+      verificationWarnings?: GenerateNoteIssue[]
+      reviewerResult?: NoteVerificationResult
+    }
+  | {
+      status: "draft_unvalidated"
+      transcript: TranscriptSegment[]
+      draftText: string
+      issues: GenerateNoteIssue[]
+      cleanup?: { retryable: true }
+    }
 
-export type RetryAudioCleanupResult = {
-  cleaned: true
+export type SaveNoteResult = { status: "SAVED"; noteId: string } | {
+  status: "PERSISTED_TRANSITION_PENDING"; noteId: string; recovery: { retryable: true }
 }
+export type RetryAudioCleanupResult = { cleaned: true }
 
 export type ExportNoteResult = {
   exported: true
@@ -88,10 +104,8 @@ export type OiraApi = {
   generateNote: (
     input: GenerateNoteInput,
   ) => Promise<Result<GenerateNoteResult>>
+  retryAudioCleanup: (input: RetryAudioCleanupInput) => Promise<Result<RetryAudioCleanupResult>>
   saveNote: (input: SaveNoteInput) => Promise<Result<SaveNoteResult>>
-  retryAudioCleanup: (
-    input: RetryAudioCleanupInput,
-  ) => Promise<Result<RetryAudioCleanupResult>>
   exportNote: (input: ExportNoteInput) => Promise<Result<ExportNoteResult>>
   writeClipboard: (
     input: ClipboardWriteInput,

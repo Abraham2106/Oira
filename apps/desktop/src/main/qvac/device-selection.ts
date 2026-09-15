@@ -123,9 +123,10 @@ function haystack(gpu: GpuDescriptor): string {
 
 function isIntegrated(gpu: GpuDescriptor): boolean {
   const text = haystack(gpu)
+  const intelDedicated = text.includes("intel") && text.includes("arc")
   return (
     text.includes("integrated")
-    || text.includes("intel")
+    || (text.includes("intel") && !intelDedicated)
     || (text.includes("radeon") && (text.includes("graphics") || text.includes("vega")))
   )
 }
@@ -172,8 +173,10 @@ export function selectPreferredGpu(
     llmMainGpu: llamaIndex,
     requestedLabel: `${chosen.name}${vram}`,
     fallbackReason:
-      chosen.vramBytes == null && isIntegrated(chosen)
-        ? "No hay VRAM reportada; se usa la GPU no integrada."
+      chosen.vramBytes == null
+        ? isIntegrated(chosen)
+          ? "Solo se detectó una GPU integrada sin VRAM reportada; el backend elegirá el dispositivo."
+          : "No hay VRAM reportada; se prioriza la GPU no integrada."
         : undefined,
   }
 }

@@ -1,22 +1,25 @@
 import type { TranscriptSegment } from "@oira/types"
 import type { StructuringOutput, StructuringValidation } from "./schema"
+import { runHeuristicVerification } from "./verification"
+import type { GenerationIssue } from "./generation-errors"
 
 export function collectEvidenceIssues(
   output: StructuringOutput,
   transcript: readonly TranscriptSegment[],
 ): string[] {
-  // Draft text may be a faithful paraphrase, so lexical, numeric and
-  // negation comparisons are intentionally advisory rather than blockers.
-  void output
-  void transcript
-  return []
+  const { warnings } = runHeuristicVerification(output, transcript)
+  return warnings.map((w) => w.code)
 }
 
 export function applyEvidenceCheck(
   validation: StructuringValidation,
   transcript: readonly TranscriptSegment[],
 ): StructuringValidation {
-  void transcript
+  if (!validation.ok) return validation
+  const { blocking } = runHeuristicVerification(validation.value, transcript)
+  if (blocking.length > 0) {
+    return { ok: false, issues: blocking.map((b) => b.message) }
+  }
   return validation
 }
 
@@ -32,4 +35,13 @@ export function assertTranscriptGrounded(
   _transcript: readonly TranscriptSegment[],
 ): StructuringValidation {
   return { ok: true, value: output }
+}
+
+/** Run full heuristic verification and return typed issues for consumption by callers. */
+export function runVerification(
+  output: StructuringOutput,
+  transcript: readonly TranscriptSegment[],
+): { blocking: GenerationIssue[]; warnings: GenerationIssue[]; all: GenerationIssue[] } {
+  const { blocking, warnings, issues } = runHeuristicVerification(output, transcript)
+  return { blocking, warnings, all: issues }
 }

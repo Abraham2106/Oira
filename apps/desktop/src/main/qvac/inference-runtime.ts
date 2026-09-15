@@ -39,6 +39,13 @@ export type QvacInferenceRuntime = {
     schema: Record<string, unknown>
     generation: number
   }) => Promise<StructuringCompletion>
+  /**
+   * Completion unificada para Qwen (generador | revisor).
+   * role: "generator" | "reviewer"
+   * prompt: prompt completo listo para enviar
+   * schema: opcional, zod schema para validación de salida estructurada
+   */
+  completeQwen: (input: { role: "generator" | "reviewer"; prompt: string; schema?: unknown }) => Promise<string>
   warmTranscription: () => Promise<void>
   transcribe: (input: { filePath: string }) => Promise<SttSegmentInput[]>
   handoffToStructuring: () => Promise<void>
@@ -62,7 +69,7 @@ export function createQvacInferenceRuntime(deps: QvacInferenceRuntimeDeps = {}):
   let lateLoadPending: Promise<void> | undefined
   let settledLateId: string | undefined
   let completionRequestId: string | undefined
-  let completionPromise: Promise<StructuringCompletion> | undefined
+  let completionPromise: Promise<StructuringCompletion | string> | undefined
   let activeTranscription = false
   let generation = 0
   let gpu: { id: string; name: string; index: number; llmMainGpu: number; vendor?: string; label?: string } | undefined
@@ -339,6 +346,55 @@ export function createQvacInferenceRuntime(deps: QvacInferenceRuntimeDeps = {}):
     }
   }
 
+  const completeQwen = async (input: { role: "generator" | "reviewer"; prompt: string; schema?: unknown }): Promise<string> => {
+    await handoffToStructuring()
+    if (!sdk || !residentId || resident !== "qwen") throw notReady()
+    state = "STRUCTURING"
+    report({
+      model: "qwen",
+      state: "STRUCTURING",
+      device: qwenDeviceInfo(),
+    })
+    const run = sdk.completion({
+      modelId: residentId,
+      history: [{ role: "user", content: input.prompt }],
+      stream: false,
+      captureThinking: false,
+      generationParams: createQwenGenerationParams(),
+      responseFormat:
+        input.schema && typeof input.schema === "object" && Object.keys(input.schema as Record<string, unknown>).length > 0
+          ? {
+              type: "json_schema",
+              json_schema: {
+                name: `review_${input.role}`,
+                schema: input.schema as Record<string, unknown>,
+              },
+            }
+          : { type: "json_object" },
+    })
+    completionRequestId = run.requestId
+    const pending = run.final.then((final) => {
+      report({
+        model: "qwen",
+        state: "READY",
+        device: {
+          ...qwenDeviceInfo(),
+          ...(final.stats?.backendDevice ? { effective: final.stats.backendDevice } : {}),
+        },
+      })
+      return final.contentText
+    })
+    completionPromise = pending
+    try {
+      const output = await pending
+      return output
+    } finally {
+      completionPromise = undefined
+      completionRequestId = undefined
+      if (!closing() && state === "STRUCTURING") state = "QWEN_READY"
+    }
+  }
+
   const transcribe = async (input: { filePath: string }): Promise<SttSegmentInput[]> => {
     if (activeTranscription) throw transcriptionFailedError("INFERENCE_BUSY")
     activeTranscription = true
@@ -374,5 +430,5 @@ export function createQvacInferenceRuntime(deps: QvacInferenceRuntimeDeps = {}):
     return shutdownPromise
   }
 
-  return { beginGeneration, completeStructuring, warmTranscription, transcribe, handoffToStructuring, getState: () => activeTranscription ? "TRANSCRIBING" : state, shutdown }
+  return { beginGeneration, completeStructuring, completeQwen, warmTranscription, transcribe, handoffToStructuring, getState: () => activeTranscription ? "TRANSCRIBING" : state, shutdown }
 }

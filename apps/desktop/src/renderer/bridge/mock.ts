@@ -2,11 +2,11 @@ import {
   type ClinicalNote,
   type FieldValue,
 } from "@oira/types"
-import type { GenerateNoteResult, SaveNoteResult } from "../../shared/types/oira-api"
 
 import { SYNTHETIC_TRANSCRIPT } from "../../shared/fixtures/synthetic-consult"
 import type { InferenceProgress } from "../../shared/types/inference-progress"
 import type { ModelLifecycleEvent } from "../../shared/types/model-lifecycle"
+import type { GenerateNoteResult, SaveNoteResult } from "../../shared/types/oira-api"
 import {
   defaultSettings,
   type AppSettings,
@@ -54,7 +54,7 @@ function field(
   presence: FieldValue["presence"],
   sourceSegmentIds: string[] = [],
 ): FieldValue {
-  return { text, presence, sourceSegmentIds, provenance: "EXTRACTED", reviewed: false }
+  return { text, presence, sourceSegmentIds, reviewed: false, provenance: "EXTRACTED" }
 }
 
 function syntheticNote(): ClinicalNote {
@@ -118,13 +118,37 @@ export function createMockBridge(): DemoBridge {
         status: "READY",
         transcript: SYNTHETIC_TRANSCRIPT,
         note: syntheticNote(),
+        reviewerResult: {
+          status: "completed",
+          observations: [
+            {
+              sectionId: "clinical_narrative",
+              claim: "El dolor se describe como de tres días de evolución.",
+              status: "SUPPORTED",
+              severity: "warning",
+              problemType: "other",
+              evidence: {
+                segmentIds: ["seg-2"],
+                quotes: ["Dolor de rodilla izquierda desde hace tres días, sin golpe."],
+              },
+              explanation: "La cita literal sustenta la afirmación.",
+            },
+          ],
+          omissions: [
+            {
+              sectionId: "relevant_history",
+              missingClaim: "Alergias del paciente",
+              expectedFromSource: "No se mencionan alergias en esta pista sintética.",
+            },
+          ],
+        },
       }
     },
+    async retryAudioCleanup() {},
     async saveNote() {
       await wait(150)
-      return { status: "SAVED", noteId: crypto.randomUUID() }
+      return { status: "SAVED", noteId: activeId ?? "demo-note" }
     },
-    async retryAudioCleanup() {},
     async exportNote() {
       return { exported: true as const }
     },

@@ -30,6 +30,7 @@ import {
 } from "../export"
 import { createInferencePorts } from "../inference"
 import { createNotesService, type NotesPort } from "../notes"
+import type { NoteVerifierPort } from "../../shared/types/note-verification"
 import type {
   AudioCapturePort,
   ClipboardPort,
@@ -55,6 +56,7 @@ export type ApplicationPorts = {
   settings: SettingsPort
   clipboard: ClipboardPort
   inferenceRuntime?: InferenceRuntimePort
+  reviewer?: NoteVerifierPort
 }
 
 export type ComposeApplicationOptions = {
@@ -73,6 +75,7 @@ export type ComposeApplicationOptions = {
   session?: SessionPort
   exportNote?: ExportPort
   inferenceRuntime?: InferenceRuntimePort
+  reviewer?: NoteVerifierPort
 }
 
 function createFileSettingsPort(settingsFile: string): SettingsPort {
@@ -130,6 +133,11 @@ export function composeApplication(
   const inference = createInferencePorts(inferenceAdapter, {
     onModelLifecycle: options.onModelLifecycle,
   })
+  const runtime = options.inferenceRuntime ?? inference.runtime
+  // La segunda pasada Qwen está desactivada por defecto: duplicaba el costo
+  // de inferencia. Un consumidor de evaluación aún puede inyectarla de forma
+  // explícita mediante options.reviewer.
+  const reviewer = options.reviewer
   const notesStore = resolveNoteStore(options)
   const exportDir =
     options.exportDir ??
@@ -148,7 +156,8 @@ export function composeApplication(
       notes: notesStore,
       transcription: options.transcription ?? inference.transcription,
       structuring: options.structuring ?? inference.structuring,
-      inferenceRuntime: options.inferenceRuntime ?? inference.runtime,
+      inferenceRuntime: runtime,
+      reviewer,
     }),
     exportNote:
       options.exportNote ??
@@ -166,7 +175,8 @@ export function composeApplication(
       ({
         writeText: () => undefined,
       } satisfies ClipboardPort),
-    inferenceRuntime: options.inferenceRuntime ?? inference.runtime,
+    inferenceRuntime: runtime,
+    reviewer,
     settings:
       options.settingsFile === undefined
         ? createFileSettingsPort(join(tmpdir(), "oira-dev-settings.json"))

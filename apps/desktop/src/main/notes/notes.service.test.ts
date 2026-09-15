@@ -38,6 +38,15 @@ function createUnavailableQvacPorts(): {
 const ENCOUNTER = "00000000-0000-4000-8000-000000000001"
 const dirs: string[] = []
 
+async function generateOk(
+  notes: ReturnType<typeof createNotesService>,
+  encounterId = ENCOUNTER,
+): Promise<Extract<Awaited<ReturnType<typeof notes.generate>>, { status: "READY" }>> {
+  const generated = await notes.generate(encounterId)
+  if (generated.status !== "READY") throw new Error("Se esperaba un borrador ok")
+  return generated
+}
+
 afterEach(() => {
   for (const dir of dirs.splice(0)) {
     rmSync(dir, { recursive: true, force: true })
@@ -61,7 +70,7 @@ describe("createNotesService", () => {
       transcription: createMockTranscription(),
       structuring: createMockStructuring(),
     })
-    const generated = await notes.generate(ENCOUNTER)
+    const generated = await generateOk(notes)
     expect(generated.transcript).toHaveLength(3)
     expect(Object.keys(generated.note.sections)).toHaveLength(7)
   })
@@ -71,7 +80,7 @@ describe("createNotesService", () => {
       async structure() {
         const note = syntheticClinicalNote()
         note.sections.visit_context.sourceSegmentIds = ["no-such-seg"]
-        return { note }
+        return { kind: "note", note }
       },
     }
     const notes = createNotesService({
@@ -99,7 +108,7 @@ describe("createNotesService", () => {
       structuring: createMockStructuring(),
       progress: { emit: (event) => phases.push(event.phase) },
     })
-    await notes.generate(ENCOUNTER)
+    await generateOk(notes)
     expect(phases).toEqual(["transcribing", "structuring"])
   })
 
@@ -139,7 +148,7 @@ describe("createNotesService", () => {
       structuring: createMockStructuring(),
       audio,
     })
-    await notes.generate(ENCOUNTER)
+    await generateOk(notes)
     expect(existsSync(join(audioTempDir, ENCOUNTER))).toBe(false)
   })
 
@@ -209,6 +218,7 @@ describe("createNotesService", () => {
       },
     })
     const generated = await notes.generate(ENCOUNTER)
+    if (generated.status === "draft_unvalidated") throw new Error("Expected validated draft")
     await expect(notes.save({ encounterId: ENCOUNTER, note: generated.note, clinicianConfirmed: true }))
       .resolves.toMatchObject({ status: "PERSISTED_TRANSITION_PENDING", noteId: expect.any(String) })
     expect(await store.list()).toHaveLength(1)
@@ -238,6 +248,7 @@ describe("createNotesService", () => {
       },
     })
     const generated = await notes.generate(ENCOUNTER)
+    if (generated.status === "draft_unvalidated") throw new Error("Expected validated draft")
     const first = await notes.save({ encounterId: ENCOUNTER, note: generated.note, clinicianConfirmed: true })
     expect(first).toMatchObject({ status: "PERSISTED_TRANSITION_PENDING", noteId: "stable-note-id" })
     failDrafting = false
@@ -285,7 +296,7 @@ describe("createNotesService", () => {
       encounters: createEncounterService({ repository }),
       notes: store,
     })
-    const generated = await notes.generate(encounterId)
+    const generated = await generateOk(notes, encounterId)
     expect((await repository.getById(encounterId))?.status).toBe("transcribed")
     await notes.save({ encounterId, note: generated.note, clinicianConfirmed: true })
     expect((await repository.getById(encounterId))?.status).toBe("drafted")
@@ -300,7 +311,7 @@ describe("createNotesService", () => {
       encounters: createEncounterService({ repository }),
       notes: store,
     })
-    const generated = await notes.generate(encounterId)
+    const generated = await generateOk(notes, encounterId)
     const saved = await notes.save({
       encounterId,
       note: generated.note,
@@ -324,7 +335,7 @@ describe("createNotesService", () => {
       createId: () => "stable-note-id",
       clock: { nowIso: () => "2026-09-11T12:00:00.000Z" },
     })
-    const generated = await notes.generate(encounterId)
+    const generated = await generateOk(notes, encounterId)
     const first = await notes.save({
       encounterId,
       note: generated.note,
@@ -357,7 +368,7 @@ describe("createNotesService", () => {
         return () => `note-${++count}`
       })(),
     })
-    const generated = await notes.generate(ENCOUNTER)
+    const generated = await generateOk(notes)
     const [first, second] = await Promise.all([
       notes.save({ encounterId: ENCOUNTER, note: generated.note, clinicianConfirmed: true }),
       notes.save({ encounterId: ENCOUNTER, note: generated.note, clinicianConfirmed: true }),
@@ -374,7 +385,7 @@ describe("createNotesService", () => {
       structuring: createMockStructuring(),
       notes: store,
     })
-    await notes.generate(ENCOUNTER)
+    await generateOk(notes)
     await expect(
       notes.save({
         encounterId: ENCOUNTER,
@@ -398,7 +409,7 @@ describe("createNotesService", () => {
         remove: vi.fn(async () => undefined),
       },
     })
-    await notes.generate(ENCOUNTER)
+    await generateOk(notes)
     await expect(
       notes.save({
         encounterId: ENCOUNTER,
@@ -413,7 +424,7 @@ describe("createNotesService", () => {
       transcription: createMockTranscription(),
       structuring: createMockStructuring(),
     })
-    await notes.generate(ENCOUNTER)
+    await generateOk(notes)
     await expect(
       notes.save({
         encounterId: ENCOUNTER,
@@ -459,7 +470,7 @@ describe("createNotesService", () => {
         async advance() {},
       },
     })
-    const generated = await notes.generate(ENCOUNTER)
+    const generated = await generateOk(notes)
     present = false
     await expect(
       notes.save({
@@ -491,7 +502,7 @@ describe("createNotesService", () => {
       transcription: createMockTranscription(),
       structuring: createMockStructuring(),
     })
-    await notes.generate(ENCOUNTER)
+    await generateOk(notes)
     await expect(
       notes.save({
         encounterId: ENCOUNTER,
@@ -508,7 +519,7 @@ describe("createNotesService", () => {
       structuring: createMockStructuring(),
       notes: store,
     })
-    const generated = await notes.generate(ENCOUNTER)
+    const generated = await generateOk(notes)
     const firstSegment = generated.transcript[0]
     expect(firstSegment).toBeDefined()
     if (!firstSegment) return
@@ -531,7 +542,7 @@ describe("createNotesService", () => {
       structuring: createMockStructuring(),
       notes: store,
     })
-    const generated = await notes.generate(ENCOUNTER)
+    const generated = await generateOk(notes)
     expect(generated.note.sections.visit_context.reviewed).toBe(false)
     await expect(
       notes.save({
@@ -542,13 +553,35 @@ describe("createNotesService", () => {
     ).resolves.toMatchObject({ noteId: expect.any(String) })
   })
 
+  it("does not allow saving over a draft_unvalidated outcome", async () => {
+    const notes = createNotesService({
+      transcription: createMockTranscription(),
+      structuring: {
+        structure: async () => ({
+          kind: "draft_unvalidated",
+          draftText: "intento crudo",
+          issues: [{ code: "MISSING_SECTION", message: "Falta una sección." }],
+        }),
+      } as unknown as StructuringPort,
+      notes: createMemoryNoteStore(),
+    })
+    await notes.generate(ENCOUNTER)
+    await expect(
+      notes.save({
+        encounterId: ENCOUNTER,
+        note: syntheticClinicalNote(),
+        clinicianConfirmed: true,
+      }),
+    ).rejects.toMatchObject({ code: "INVALID_STATE_TRANSITION" })
+  })
+
   it("rejects save when the note cites a missing draft segment", async () => {
     const notes = createNotesService({
       transcription: createMockTranscription(),
       structuring: createMockStructuring(),
       notes: createMemoryNoteStore(),
     })
-    await notes.generate(ENCOUNTER)
+    await generateOk(notes)
     const broken = syntheticClinicalNote()
     broken.sections.visit_context.sourceSegmentIds = ["missing"]
     await expect(

@@ -1,6 +1,8 @@
 import { useCallback, useMemo, useRef, useState } from "react"
 import type { ClinicalNote, Encounter, ProductState, TranscriptSegment } from "@oira/types"
 import { getBridge } from "../bridge/oira"
+import type { GenerateNoteIssue } from "../../shared/types/oira-api"
+import type { NoteVerificationResult } from "../../shared/types/note-verification"
 import { startMicCapture, type MicCapture } from "../lib/micCapture"
 import {
   canTransition,
@@ -8,6 +10,11 @@ import {
   reduceMachine,
   type MachineSnapshot,
 } from "./encounterMachine"
+
+export type UnvalidatedDraft = {
+  text: string
+  issues: GenerateNoteIssue[]
+}
 
 type EncounterView = {
   productState: ProductState
@@ -19,6 +26,14 @@ type EncounterView = {
   encounter: Encounter | null
   transcript: TranscriptSegment[]
   note: ClinicalNote | null
+  /** Intento crudo del generador que no pasó el contrato estricto. */
+  unvalidatedDraft: UnvalidatedDraft | null
+  /**
+   * Revisión del segundo agente Qwen (F3). Informativa: el borrador NUNCA se
+   * acepta solo por las observaciones; el médico decide (principio invariable).
+   */
+  reviewerResult: NoteVerificationResult | null
+  reviewing: boolean
   errorMessage: string | null
   copied: boolean
   setLabel: (value: string) => void
@@ -45,6 +60,9 @@ export function useEncounter(): EncounterView {
   const [encounter, setEncounter] = useState<Encounter | null>(null)
   const [transcript, setTranscript] = useState<TranscriptSegment[]>([])
   const [note, setNote] = useState<ClinicalNote | null>(null)
+  const [unvalidatedDraft, setUnvalidatedDraft] = useState<UnvalidatedDraft | null>(null)
+  const [reviewerResult, setReviewerResult] = useState<NoteVerificationResult | null>(null)
+  const [reviewing, setReviewing] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const captureRef = useRef<MicCapture | null>(null)
@@ -119,6 +137,7 @@ export function useEncounter(): EncounterView {
         }
         apply("TRANSCRIBE_DONE")
       }
+      if (event.phase === "reviewing") setReviewing(true)
       if (event.phase === "failed") {
         if (event.transcript) {
           transcriptReceived = true
@@ -140,12 +159,24 @@ export function useEncounter(): EncounterView {
       setRecordingStartedAt(null)
       apply("STOP")
       const generated = await bridge.generateNote(encounter.id)
+      setReviewing(false)
       setTranscript(generated.transcript)
-      setNote(generated.note)
-      if (generated.status === "CLEANUP_PENDING") {
-        setErrorMessage(
-          "El borrador está disponible, pero la eliminación local del audio queda pendiente de reintento.",
-        )
+      if (generated.cleanup) setErrorMessage("La eliminación local del audio queda pendiente de reintento.")
+      if (generated.status !== "draft_unvalidated") {
+        setUnvalidatedDraft(null)
+        setNote(generated.note)
+        // F3: la revisión del segundo Qwen es informativa y nunca bloquea la
+        // nota; el médico la ve al revisar y decide.
+        setReviewerResult(generated.reviewerResult ?? null)
+      } else {
+        // Borrador no validado visible: la transcripción ya está en pantalla,
+        // el intento crudo queda expuesto y la máquina ya está en ERROR por el
+        // evento progress "failed" — nunca una nota aparentemente válida.
+        setUnvalidatedDraft({ text: generated.draftText, issues: generated.issues })
+        setNote(null)
+        setReviewerResult(null)
+        fail("El borrador no superó la validación. Revisa la transcripción.")
+        return
       }
       setMachine((current) => {
         let next = current
@@ -154,6 +185,7 @@ export function useEncounter(): EncounterView {
         return next
       })
     } catch {
+      setReviewing(false)
       fail(
         transcriptReceived || transcript.length > 0
           ? "No pudimos organizar el borrador. La transcripción queda disponible para revisión."
@@ -173,9 +205,9 @@ export function useEncounter(): EncounterView {
           [sectionId]: {
             ...current.sections[sectionId],
             text,
-            presence: text.trim() ? "STATED" : current.sections[sectionId].presence,
             provenance: "CLINICIAN_EDITED",
             sourceSegmentIds: [],
+            presence: text.trim() ? "STATED" : current.sections[sectionId].presence,
           },
         },
       }
@@ -211,9 +243,7 @@ export function useEncounter(): EncounterView {
     try {
       const saved = await bridge.saveNote(encounter.id, note, clinicianConfirmed)
       if (saved.status === "PERSISTED_TRANSITION_PENDING") {
-        setErrorMessage(
-          "La nota se guardó, pero su estado de consulta requiere reconciliación. Reintenta guardar sin generar otra nota.",
-        )
+        setErrorMessage("La nota se guardó, pero su estado requiere reconciliación. Reintenta guardar.")
         return
       }
       apply("ACCEPT")
@@ -247,6 +277,9 @@ export function useEncounter(): EncounterView {
     setEncounter(null)
     setTranscript([])
     setNote(null)
+    setUnvalidatedDraft(null)
+    setReviewerResult(null)
+    setReviewing(false)
     setErrorMessage(null)
     setCopied(false)
   }, [])
@@ -261,6 +294,9 @@ export function useEncounter(): EncounterView {
     encounter,
     transcript,
     note,
+    unvalidatedDraft,
+    reviewerResult,
+    reviewing,
     errorMessage,
     copied,
     setLabel,

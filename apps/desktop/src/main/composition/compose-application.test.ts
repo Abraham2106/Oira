@@ -40,6 +40,8 @@ describe("composeApplication", () => {
     )
 
     const generated = await app.notes.generate(started.encounterId)
+    expect(generated.status).toBe("READY")
+    if (generated.status !== "READY") return
     expect(generated.transcript).toHaveLength(3)
     expect(Object.keys(generated.note.sections)).toHaveLength(7)
     expect(existsSync(join(audioTempDir, started.encounterId))).toBe(false)
@@ -85,5 +87,18 @@ describe("composeApplication", () => {
   it("authenticates clinical IPC by default under test", () => {
     const app = composeApplication(createSilentIpcLogger())
     expect(app.session.isAuthenticated()).toBe(true)
+  })
+
+  it("does not enable the second Qwen pass from the runtime by default", () => {
+    const app = composeApplication(createSilentIpcLogger(), {
+      inferenceRuntime: {
+        warmTranscription: async () => undefined,
+        handoffToStructuring: async () => undefined,
+        shutdown: async () => undefined,
+        completeQwen: async () => "{}",
+      },
+    })
+
+    expect(app.reviewer).toBeUndefined()
   })
 })

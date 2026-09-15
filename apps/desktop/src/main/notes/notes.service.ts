@@ -9,6 +9,7 @@ import {
 } from "../errors/notes"
 import { verifySource } from "./verify-source"
 import { clinicalNoteSchema } from "../../shared/schemas/clinical.schema"
+import type { NoteVerifierPort } from "../../shared/types/note-verification"
 import { selectCurrentAcceptedNote } from "../storage/current-note"
 import type { EncounterPort, NotesPort } from "../ports/inbound"
 import type {
@@ -38,9 +39,10 @@ export type NotesPipelineDeps = NotesServiceDeps & {
   clock?: Clock
   structureAttempts?: number
   inferenceRuntime?: InferenceRuntimePort
+  reviewer?: NoteVerifierPort
 }
 
-type GeneratedDraft = Pick<Awaited<ReturnType<typeof runGenerateNote>>, "transcript" | "note">
+type GeneratedDraft = Awaited<ReturnType<typeof runGenerateNote>>
 
 const systemClock: Clock = {
   nowIso: () => new Date().toISOString(),
@@ -98,7 +100,7 @@ export function createNotesService(deps: NotesPipelineDeps): NotesPort {
           cleanupPending.add(failedEncounterId)
         },
       }).then((generated) => {
-        if (generated.status === "CLEANUP_PENDING") cleanupPending.add(encounterId)
+        if (generated.cleanup) cleanupPending.add(encounterId)
         else cleanupPending.delete(encounterId)
         const stored = structuredClone(generated)
         drafts.set(encounterId, stored)
@@ -127,7 +129,7 @@ export function createNotesService(deps: NotesPipelineDeps): NotesPort {
           if (deps.encounters && !record) throw encounterNotFoundError()
 
           const draft = drafts.get(input.encounterId)
-          if (!draft) throw noteDraftRequiredError()
+          if (!draft || draft.status === "draft_unvalidated") throw noteDraftRequiredError()
           const transcript = structuredClone(draft.transcript)
           if (!verifySource(parsed.data, transcript)) {
             throw invalidStructuredOutputError()
@@ -149,6 +151,7 @@ export function createNotesService(deps: NotesPipelineDeps): NotesPort {
             transcript,
           })
           drafts.set(input.encounterId, {
+            status: "READY",
             transcript: structuredClone(transcript),
             note: structuredClone(note),
           })

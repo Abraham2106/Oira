@@ -3,6 +3,7 @@ import { encounterNotFoundError } from "../errors/encounters"
 import { createMockStructuring, createMockTranscription } from "../inference/mock"
 import { runGenerateNote } from "./generate-note"
 import { invalidStructuredOutputError } from "../errors/notes"
+import type { NoteVerifierPort } from "../../shared/types/note-verification"
 
 describe("runGenerateNote", () => {
   it("starts model handoff while the UI is still displaying the transcript", async () => {
@@ -26,6 +27,7 @@ describe("runGenerateNote", () => {
       inferenceRuntime: {
         warmTranscription: async () => {},
         shutdown: async () => {},
+        completeQwen: async () => "",
         handoffToStructuring: () => {
           events.push("handoff-started")
           markHandoffStarted()
@@ -43,7 +45,7 @@ describe("runGenerateNote", () => {
       await handoffStarted
       expect(events).toEqual(["display-started", "handoff-started"])
       finishLoading()
-      await expect(result).resolves.toHaveProperty("note")
+      await expect(result).resolves.toMatchObject({ status: "READY" })
       expect(events).toEqual(["display-started", "handoff-started", "structure-started"])
     } finally {
       finishLoading()
@@ -69,10 +71,41 @@ describe("runGenerateNote", () => {
       structuring: createMockStructuring(),
       progress: { emit: (event) => events.push(event) },
     })
+    expect(result.status).toBe("READY")
+    if (result.status !== "READY") return
     expect(result.transcript).toHaveLength(3)
     expect(Object.keys(result.note.sections)).toHaveLength(7)
     expect(events.map((event) => event.phase)).toEqual(["transcribing", "structuring"])
     expect(events[1]?.transcript).toEqual(result.transcript)
+  })
+
+  it("returns a draft_unvalidated outcome that keeps the transcript and issues", async () => {
+    const events: Array<{ phase: string; transcript?: unknown; stage?: string }> = []
+    const result = await runGenerateNote("00000000-0000-4000-8000-000000000001", {
+      transcription: createMockTranscription(),
+      structuring: {
+        structure: async () => ({
+          kind: "draft_unvalidated",
+          draftText: "{\"sections\": ...crudo",
+          issues: [{ code: "MISSING_SECTION", message: "Falta una sección." }],
+        }),
+      },
+      progress: { emit: (event) => events.push(event) },
+    })
+    expect(result.status).toBe("draft_unvalidated")
+    if (result.status !== "draft_unvalidated") return
+    expect(result.transcript).toHaveLength(3)
+    expect(result.draftText).toContain("sections")
+    expect(result.issues[0]).toMatchObject({
+      code: "MISSING_SECTION",
+      message: "Falta una sección.",
+    })
+    expect(events.map((event) => event.phase)).toEqual([
+      "transcribing",
+      "structuring",
+      "failed",
+    ])
+    expect(events.at(-1)).toMatchObject({ stage: "structuring" })
   })
 
   it("keeps the transcript when structuring fails", async () => {
@@ -86,5 +119,70 @@ describe("runGenerateNote", () => {
     ).rejects.toMatchObject({ code: "INVALID_STRUCTURED_OUTPUT" })
     expect(events.at(-1)).toMatchObject({ phase: "failed", stage: "structuring" })
     expect(events.at(-1)?.transcript).toBeDefined()
+  })
+
+  it("adjunta la revisión del segundo Qwen sin que las observaciones bloqueen la nota", async () => {
+    const events: Array<{ phase: string }> = []
+    const reviewer: NoteVerifierPort = {
+      async verify() {
+        return {
+          status: "completed",
+          observations: [
+            {
+              sectionId: "clinical_narrative",
+              claim: "El dolor se describe como de tres días.",
+              status: "SUPPORTED",
+              severity: "blocking",
+              problemType: "other",
+              evidence: {
+                segmentIds: ["seg-2"],
+                quotes: ["Dolor de rodilla izquierda desde hace tres días"],
+              },
+              explanation: "Cita literal respaldada.",
+            },
+          ],
+          omissions: [],
+        }
+      },
+    }
+    const result = await runGenerateNote(
+      "00000000-0000-4000-8000-000000000001",
+      {
+        transcription: createMockTranscription(),
+        structuring: createMockStructuring(),
+        progress: { emit: (event) => events.push({ phase: event.phase }) },
+        reviewer,
+      },
+    )
+    expect(result.status).toBe("READY")
+    if (result.status !== "READY") return
+    expect(result.reviewerResult?.status).toBe("completed")
+    expect(events.map((event) => event.phase)).toEqual([
+      "transcribing",
+      "structuring",
+      "reviewing",
+    ])
+  })
+
+  it("una revisión incompleta del segundo Qwen nunca bloquea la nota", async () => {
+    const reviewer: NoteVerifierPort = {
+      async verify() {
+        return { status: "not_completed", error: "Timeout en el revisor." }
+      },
+    }
+    const result = await runGenerateNote(
+      "00000000-0000-4000-8000-000000000001",
+      {
+        transcription: createMockTranscription(),
+        structuring: createMockStructuring(),
+        reviewer,
+      },
+    )
+    expect(result.status).toBe("READY")
+    if (result.status !== "READY") return
+    expect(result.reviewerResult).toEqual({
+      status: "not_completed",
+      error: "Timeout en el revisor.",
+    })
   })
 })

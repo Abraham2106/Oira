@@ -4,6 +4,7 @@ import { join } from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
 import { IPC_CHANNELS } from "../../shared/constants/ipc-channels"
 import { syntheticClinicalNote } from "../../shared/fixtures/synthetic-consult"
+import type { GenerateNoteResult } from "../../shared/types/oira-api"
 import type { InferenceProgress } from "../../shared/types/inference-progress"
 import { createAuthStub } from "../auth"
 import { createAudioTempStore } from "../audio"
@@ -57,6 +58,7 @@ describe("I04 registerIpc", () => {
           },
           handoffToStructuring: async () => undefined,
           shutdown: async () => undefined,
+          completeQwen: async () => "",
         },
       }),
     )
@@ -131,13 +133,15 @@ describe("I04 registerIpc", () => {
       encounterId: started.data.encounterId,
     })) as {
       ok: boolean
-      data?: { transcript: unknown[]; note: { sections: Record<string, unknown> } }
+      data?: GenerateNoteResult
       error?: { code: string }
     }
 
     expect(result.ok).toBe(true)
-    expect(result.data?.transcript).toHaveLength(3)
-    expect(Object.keys(result.data?.note.sections ?? {}).sort()).toEqual([
+    expect(result.data?.status).toBe("READY")
+    if (result.data?.status !== "READY") return
+    expect(result.data.transcript).toHaveLength(3)
+    expect(Object.keys(result.data.note.sections).sort()).toEqual([
       "clinical_narrative",
       "clinician_documented_assessment",
       "clinician_documented_plan",
@@ -195,6 +199,52 @@ describe("I04 registerIpc", () => {
     expect(generated.ok).toBe(true)
     expect(phases).toEqual(["transcribing", "structuring"])
     expect(existsSync(join(audioTempDir, encounterId))).toBe(false)
+  })
+
+  it("generateNote no ejecuta una segunda pasada aunque haya runtime Qwen", async () => {
+    const ipc = createMemoryIpc()
+    let reviewCalls = 0
+    registerIpc(
+      ipc.handle,
+      createStubIpcDeps(createSilentIpcLogger(), {
+        inferenceRuntime: {
+          warmTranscription: async () => undefined,
+          handoffToStructuring: async () => undefined,
+          shutdown: async () => undefined,
+          completeQwen: async () => {
+            reviewCalls += 1
+            return ""
+          },
+        },
+      }),
+    )
+    const started = (await ipc.invoke(IPC_CHANNELS.START_ENCOUNTER, {})) as {
+      ok: boolean
+      data: { encounterId: string }
+    }
+    const appended = (await ipc.invoke(IPC_CHANNELS.APPEND_AUDIO, {
+      encounterId: started.data.encounterId,
+      sequence: 0,
+      pcm: Array.from(Buffer.alloc(320)),
+    })) as { ok: boolean }
+    expect(appended.ok).toBe(true)
+    await ipc.invoke(IPC_CHANNELS.STOP_ENCOUNTER, {
+      encounterId: started.data.encounterId,
+    })
+
+    const result = (await ipc.invoke(IPC_CHANNELS.GENERATE_NOTE, {
+      encounterId: started.data.encounterId,
+    })) as {
+      ok: boolean
+      data?: GenerateNoteResult
+    }
+
+    expect(result.ok).toBe(true)
+    expect(result.data?.status).toBe("READY")
+    if (result.data?.status === "READY") {
+      expect(result.data.reviewerResult).toBeUndefined()
+    }
+    expect(reviewCalls).toBe(0)
   })
 
   it("fails generateNote without a wav instead of passing the encounter id as a path", async () => {
