@@ -40,7 +40,7 @@ const statusLabel = (t: (key: string) => string, s: NoteClaimObservation["status
     AMBIGUOUS: t("review.statusAmbiguous"),
   })[s]
 
-function FindingsPanel({ review }: { review: NoteVerificationResult }) {
+function FindingsPanel({ review, onJumpToSource }: { review: NoteVerificationResult; onJumpToSource: (segmentId: string) => void }) {
   const { t } = useI18n()
   if (review.status === "not_completed") {
     return (
@@ -86,6 +86,15 @@ function FindingsPanel({ review }: { review: NoteVerificationResult }) {
                   <span key={i}>{quote}</span>
                 ))}
               </blockquote>
+            ) : null}
+            {observation.evidence.segmentIds.length > 0 ? (
+              <div className="finding-sources">
+                {observation.evidence.segmentIds.map((segmentId) => (
+                  <button key={segmentId} type="button" onClick={() => onJumpToSource(segmentId)}>
+                    {segmentId}
+                  </button>
+                ))}
+              </div>
             ) : null}
           </li>
         ))}
@@ -158,7 +167,7 @@ export function ReviewScreen({
                 onToggleReviewed={(reviewed) => onToggleReviewed(id, reviewed)}
               />
             ))}
-            {reviewerResult ? <FindingsPanel review={reviewerResult} /> : null}
+            {reviewerResult ? <FindingsPanel review={reviewerResult} onJumpToSource={onJumpToSource} /> : null}
           </div>
         </Card>
         <Card title={t("review.transcriptCardTitle")}>

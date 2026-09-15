@@ -50,9 +50,9 @@ describe("createQwenVerifier", () => {
         ],
         omissions: [
           {
-            sectionId: "relevant_history",
-            missingClaim: "Alergias",
-            expectedFromSource: "El paciente menciona alergia a la penicilina.",
+            sectionId: "clinician_documented_assessment",
+            missingClaim: "Diagnóstico no establecido",
+            expectedFromSource: "No hay diagnóstico de este prototipo.",
           },
         ],
       }),
@@ -71,12 +71,12 @@ describe("createQwenVerifier", () => {
     })
     expect(result.observations[0].evidence.quotes[0]).toContain("tres días")
     expect(result.omissions[0]).toMatchObject({
-      sectionId: "relevant_history",
-      missingClaim: "Alergias",
+      sectionId: "clinician_documented_assessment",
+      missingClaim: "Diagnóstico no establecido",
     })
   })
 
-  it("normaliza un sectionId desconocido a clinical_narrative", async () => {
+  it("declara not_completed si una observación refiere una sección desconocida", async () => {
     const reviewer = verifierFor(
       JSON.stringify({
         status: "completed",
@@ -87,16 +87,61 @@ describe("createQwenVerifier", () => {
             status: "AMBIGUOUS",
             severity: "warning",
             problemType: "other",
-            evidence: { segmentIds: [], quotes: [] },
+            evidence: {
+              segmentIds: ["seg-2"],
+              quotes: ["Dolor de rodilla izquierda desde hace tres días"],
+            },
             explanation: "",
           },
         ],
       }),
     )
     const result = await reviewer.verify(input)
-    expect(result.status).toBe("completed")
-    if (result.status !== "completed") return
-    expect(result.observations[0].sectionId).toBe("clinical_narrative")
+    expect(result.status).toBe("not_completed")
+    if (result.status !== "not_completed") return
+    expect(result.error).toContain("sección")
+  })
+
+  it("declara not_completed si la evidencia no corresponde a un segmento real", async () => {
+    const reviewer = verifierFor(
+      JSON.stringify({
+        status: "completed",
+        observations: [
+          {
+            sectionId: "clinical_narrative",
+            claim: "X",
+            status: "SUPPORTED",
+            severity: "warning",
+            problemType: "other",
+            evidence: { segmentIds: ["segmento-inexistente"], quotes: ["X"] },
+            explanation: "",
+          },
+        ],
+      }),
+    )
+    const result = await reviewer.verify(input)
+    expect(result.status).toBe("not_completed")
+    if (result.status !== "not_completed") return
+    expect(result.error).toContain("evidencia")
+  })
+
+  it("declara not_completed si una omisión no cita texto de la transcripción", async () => {
+    const reviewer = verifierFor(
+      JSON.stringify({
+        status: "completed",
+        omissions: [
+          {
+            sectionId: "relevant_history",
+            missingClaim: "Alergias",
+            expectedFromSource: "Texto inexistente en la consulta.",
+          },
+        ],
+      }),
+    )
+    const result = await reviewer.verify(input)
+    expect(result.status).toBe("not_completed")
+    if (result.status !== "not_completed") return
+    expect(result.error).toContain("omisión")
   })
 
   it("propaga not_completed con su error", async () => {

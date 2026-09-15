@@ -38,8 +38,21 @@ export type ReviewerConfig = {
   timeoutMs?: number
 }
 
-function asSectionId(id: string): SectionId {
-  return (SECTION_IDS as readonly string[]).includes(id) ? id as SectionId : "clinical_narrative"
+function isSectionId(id: string): id is SectionId {
+  return (SECTION_IDS as readonly string[]).includes(id)
+}
+
+function hasLiteralEvidence(
+  segmentTexts: Map<string, string>,
+  segmentIds: string[],
+  quotes: string[],
+): boolean {
+  return segmentIds.length > 0 && quotes.length > 0 &&
+    segmentIds.every((id) => segmentTexts.has(id)) &&
+    quotes.every((quote) => {
+      const literal = quote.trim()
+      return literal.length > 0 && segmentIds.some((id) => segmentTexts.get(id)?.includes(literal))
+    })
 }
 
 export function createQwenVerifier(
@@ -55,6 +68,7 @@ export function createQwenVerifier(
         input.note.sections as Record<string, { presence: string; text: string; sourceSegmentIds: string[] }>,
       )
 
+      let timeout: ReturnType<typeof setTimeout> | undefined
       try {
         const response = await Promise.race([
           runtime.completeQwen({
@@ -62,9 +76,9 @@ export function createQwenVerifier(
             prompt,
             schema: undefined, // El revisor valida contra ReviewOutputSchema internamente
           }),
-          new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error("Reviewer timeout")), timeoutMs),
-          ),
+          new Promise<never>((_, reject) => {
+            timeout = setTimeout(() => reject(new Error("Reviewer timeout")), timeoutMs)
+          }),
         ])
 
         // Parsear y validar la salida del revisor
@@ -84,9 +98,33 @@ export function createQwenVerifier(
           return { status: "not_completed", error: validated.data.error ?? "Revisión no completada." }
         }
 
+        const segmentTexts = new Map(input.transcript.map((segment) => [segment.id, segment.text]))
+        const invalidObservation = (validated.data.observations ?? []).find((observation) =>
+          !isSectionId(observation.sectionId) ||
+          !hasLiteralEvidence(segmentTexts, observation.evidence.segmentIds, observation.evidence.quotes),
+        )
+        if (invalidObservation) {
+          return {
+            status: "not_completed",
+            error: "La revisión contiene una sección o evidencia no verificable en la transcripción.",
+          }
+        }
+
+        const invalidOmission = (validated.data.omissions ?? []).find((omission) =>
+          !isSectionId(omission.sectionId) ||
+          !omission.expectedFromSource.trim() ||
+          ![...segmentTexts.values()].some((text) => text.includes(omission.expectedFromSource.trim())),
+        )
+        if (invalidOmission) {
+          return {
+            status: "not_completed",
+            error: "La revisión contiene una omisión no verificable en la transcripción.",
+          }
+        }
+
         // Convertir a tipos del puerto
         const observations: NoteClaimObservation[] = (validated.data.observations ?? []).map((o) => ({
-          sectionId: asSectionId(o.sectionId),
+          sectionId: o.sectionId as SectionId,
           claim: o.claim,
           status: o.status,
           severity: o.severity,
@@ -96,7 +134,7 @@ export function createQwenVerifier(
         }))
 
         const omissions: NoteOmission[] = (validated.data.omissions ?? []).map((o) => ({
-          sectionId: asSectionId(o.sectionId),
+          sectionId: o.sectionId as SectionId,
           missingClaim: o.missingClaim,
           expectedFromSource: o.expectedFromSource,
         }))
@@ -105,6 +143,8 @@ export function createQwenVerifier(
       } catch (error) {
         const message = error instanceof Error ? error.message : "Error desconocido en el revisor."
         return { status: "not_completed", error: message }
+      } finally {
+        if (timeout) clearTimeout(timeout)
       }
     },
   }

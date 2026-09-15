@@ -33,6 +33,7 @@ type EncounterView = {
    * acepta solo por las observaciones; el médico decide (principio invariable).
    */
   reviewerResult: NoteVerificationResult | null
+  reviewing: boolean
   errorMessage: string | null
   copied: boolean
   setLabel: (value: string) => void
@@ -61,6 +62,7 @@ export function useEncounter(): EncounterView {
   const [note, setNote] = useState<ClinicalNote | null>(null)
   const [unvalidatedDraft, setUnvalidatedDraft] = useState<UnvalidatedDraft | null>(null)
   const [reviewerResult, setReviewerResult] = useState<NoteVerificationResult | null>(null)
+  const [reviewing, setReviewing] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const captureRef = useRef<MicCapture | null>(null)
@@ -135,6 +137,7 @@ export function useEncounter(): EncounterView {
         }
         apply("TRANSCRIBE_DONE")
       }
+      if (event.phase === "reviewing") setReviewing(true)
       if (event.phase === "failed") {
         if (event.transcript) {
           transcriptReceived = true
@@ -156,6 +159,7 @@ export function useEncounter(): EncounterView {
       setRecordingStartedAt(null)
       apply("STOP")
       const generated = await bridge.generateNote(encounter.id)
+      setReviewing(false)
       setTranscript(generated.transcript)
       if (generated.cleanup) setErrorMessage("La eliminación local del audio queda pendiente de reintento.")
       if (generated.status !== "draft_unvalidated") {
@@ -181,6 +185,7 @@ export function useEncounter(): EncounterView {
         return next
       })
     } catch {
+      setReviewing(false)
       fail(
         transcriptReceived || transcript.length > 0
           ? "No pudimos organizar el borrador. La transcripción queda disponible para revisión."
@@ -274,6 +279,7 @@ export function useEncounter(): EncounterView {
     setNote(null)
     setUnvalidatedDraft(null)
     setReviewerResult(null)
+    setReviewing(false)
     setErrorMessage(null)
     setCopied(false)
   }, [])
@@ -290,6 +296,7 @@ export function useEncounter(): EncounterView {
     note,
     unvalidatedDraft,
     reviewerResult,
+    reviewing,
     errorMessage,
     copied,
     setLabel,

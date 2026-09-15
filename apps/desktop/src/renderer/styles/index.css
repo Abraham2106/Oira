@@ -606,6 +606,24 @@
   gap: 2px;
 }
 
+.finding-sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.finding-sources button {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--nl-accent);
+  cursor: pointer;
+  font-family: var(--nl-font-mono);
+  font-size: 0.75rem;
+  text-decoration: underline;
+}
+
 /* Clinical note sections */
 .section {
   margin: 0;

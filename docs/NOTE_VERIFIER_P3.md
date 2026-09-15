@@ -192,8 +192,8 @@ operativos. Los resultados de evaluación no son claims clínicos de producto.
 
 - [x] Implementar y probar el contrato estricto de generación y sus fallos.
 - [x] Implementar las heurísticas con casos que detectan y casos que no deben marcar.
-- [ ] Integrar el segundo Qwen mediante el puerto de revisión, con carga secuencial.
-- [ ] Mostrar observaciones, evidencia y revisión incompleta sin aceptación automática.
+- [x] Integrar el segundo Qwen mediante el puerto de revisión, con carga secuencial.
+- [x] Mostrar observaciones, evidencia y revisión incompleta sin aceptación automática.
 - [ ] Crear corpus anotado, harness reproducible y baseline del comportamiento actual.
 - [ ] Fijar umbrales de aceptación antes de la evaluación final; no inventar metas
   numéricas sin una baseline ni tratarlas como resultados obtenidos.

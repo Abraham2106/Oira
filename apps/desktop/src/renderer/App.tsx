@@ -362,7 +362,7 @@ export function App() {
 
         {showFlow &&
         (encounter.productState === "TRANSCRIBING" || encounter.productState === "STRUCTURING") ? (
-          <ProcessingScreen state={encounter.productState} transcript={encounter.transcript} />
+          <ProcessingScreen state={encounter.productState} transcript={encounter.transcript} reviewing={encounter.reviewing} />
         ) : null}
         {showFlow && encounter.productState === "ERROR" && encounter.transcript.length > 0 ? (
           <ProcessingScreen state="STRUCTURING" failed transcript={encounter.transcript} />

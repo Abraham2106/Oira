@@ -7,9 +7,10 @@ type Props = {
   state: Extract<ProductState, "TRANSCRIBING" | "STRUCTURING">
   transcript?: TranscriptSegment[]
   failed?: boolean
+  reviewing?: boolean
 }
 
-export function ProcessingScreen({ state, transcript = [], failed = false }: Props) {
+export function ProcessingScreen({ state, transcript = [], failed = false, reviewing = false }: Props) {
   const { t } = useI18n()
   const transcribing = state === "TRANSCRIBING"
 
@@ -22,14 +23,19 @@ export function ProcessingScreen({ state, transcript = [], failed = false }: Pro
             ? t("processing.structuringFailed")
             : transcribing
               ? t("processing.transcribing")
-              : t("processing.organizing")}
+              : reviewing
+                ? t("processing.reviewing")
+                : t("processing.organizing")}
         </p>
         <ol className="process-steps">
           <li className={transcribing ? "active-step" : "done-step"}>
             <span>1</span> {t("processing.stepTranscribe")}
           </li>
-          <li className={transcribing ? "" : "active-step"}>
+          <li className={transcribing ? "" : reviewing ? "done-step" : "active-step"}>
             <span>2</span> {t("processing.stepStructure")}
+          </li>
+          <li className={reviewing ? "active-step" : ""}>
+            <span>3</span> {t("processing.stepReview")}
           </li>
         </ol>
         <p className="muted">{t("processing.noEstimates")}</p>

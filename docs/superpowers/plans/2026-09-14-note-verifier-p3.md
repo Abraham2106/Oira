@@ -1,7 +1,7 @@
 # NOTE_VERIFIER_P3 — Plan de implementación
 
 > Decide de diseño: [`NOTE_VERIFIER_P3.md`](../../NOTE_VERIFIER_P3.md) (spec completa).
-> Rama: `feature/note-verifier-p3`. Estado: F0 ✅ · F1 ✅ · F2 ✅ · F3–F5 pendientes de cierre.
+> Rama: `feature/note-verifier-p3`. Estado: F0 ✅ · F1 ✅ · F2 ✅ · F3 ✅ · F4–F5 pendientes de cierre.
 > Disciplina: Regla 12 (`medido`/`observado`/`inferido`/`no_probado`) · Regla 16 (medir → analizar → optimizar con autorización).
 
 ## Fases y avance
@@ -11,7 +11,7 @@
 | F0 | Rama + sanity verde + baseline medido | ✅ 2026-09-14 |
 | F1 | Contrato estricto de generación (prompts versionados, validación con códigos, reintentos acotados, borrador no validado visible) | ✅ 2026-09-14 |
 | F2 | Heurísticas deterministas explicables (`structure/rules/`) | ✅ 2026-09-14 |
-| F3 | Segundo agente Qwen de revisión (puerto, prompt, runtime, estados/UI) | ⏳ |
+| F3 | Segundo agente Qwen de revisión (puerto, prompt, runtime, estados/UI) | ✅ 2026-09-14 |
 | F4 | Corpus anotado + harness de procesamiento + comparación de 4 configs | ⏳ |
 | F5 | Selección de GPU endurecida (`device-selection.ts`) | ⏳ |
 
@@ -32,7 +32,11 @@ fijar umbrales (Regla 16 → nunca inventar metas antes del baseline).
 
 ⚠️ Nota del baseline: `unsupportedFactRate` proviene casi todo de `source_not_supported`
 (check **literal normalizado**, cota superior inflada por el parafraseo). La verificación
-semántica queda `no_probado` hasta F3 con modelo local; F2 cubre contratos deterministas, no calidad clínica.
+semántica queda `no_probado` hasta F4 con modelo local y corpus anotado; F2 cubre contratos deterministas y F3 el contrato de revisión, no calidad clínica.
+
+## F3 — revisión independiente y trazable
+
+El segundo Qwen recibe solo transcripción y borrador, emite hallazgos informativos y nunca acepta ni reescribe la nota. Sus secciones, IDs de segmento, citas literales y texto de omisiones se validan contra la transcripción antes de mostrarse; cualquier salida inválida, cancelada o vencida se presenta como `not_completed`. La interfaz marca el paso de revisión y permite saltar desde cada hallazgo al segmento citado. Esta trazabilidad es funcional; la precisión clínica del revisor sigue `no_probado` hasta F4.
 
 ## Integración con main
 
