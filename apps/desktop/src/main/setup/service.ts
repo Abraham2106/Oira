@@ -58,8 +58,8 @@ export function createSetupService(directory: string): SetupService {
     try {
       const current = fs.statSync(file)
       return saved.sha256 === entry.sha256 &&
-        saved.size === current.size &&
-        saved.mtimeMs === current.mtimeMs
+        current.size === entry.expectedBytes &&
+        saved.size === current.size
     } catch {
       return false
     }
@@ -74,9 +74,13 @@ export function createSetupService(directory: string): SetupService {
       detail: `${entry.version} · ${Math.round(entry.expectedBytes / 1_000_000)} MB`,
     }))
     const available = await freeBytes(directory)
-    const ready = models.every((model) => model.status === "ready")
+    const requiredBytes = MODEL_MANIFEST.reduce((total, entry) =>
+      total + (isReadyFromState(entry.id, state) ? 0 : entry.expectedBytes), 0)
+    const storageBlocked = available !== null && available < requiredBytes
+    const blocked = process.platform !== "win32" || storageBlocked
+    const ready = !blocked && models.every((model) => model.status === "ready")
     return {
-      phase: ready ? "ready" : "ready_to_download",
+      phase: blocked ? "blocked" : ready ? "ready" : "ready_to_download",
       ready,
       checks: [
         {
@@ -86,24 +90,31 @@ export function createSetupService(directory: string): SetupService {
         },
         {
           id: "memory",
-          status: "verified",
-          detail: `${Math.round(os.freemem() / 1_000_000_000)} GB libres`,
+          status: "unknown",
+          detail: `${Math.round(os.freemem() / 1_000_000_000)} GB libres; requisito mínimo aún no validado`,
         },
         {
           id: "storage",
-          status: available === null ? "unknown" : "verified",
-          detail: available === null ? undefined : `${Math.round(available / 1_000_000_000)} GB libres`,
+          status: available === null ? "unknown" : storageBlocked ? "blocked" : "verified",
+          detail: available === null ? undefined : `${(available / 1_000_000_000).toFixed(2)} GB libres; ${(requiredBytes / 1_000_000_000).toFixed(2)} GB requeridos para preparar modelos`,
         },
         { id: "network", status: "unknown" },
         { id: "signature", status: "unknown" },
       ],
       models,
+      runtime: {
+        inference: "local",
+        remoteAiProvider: "none",
+        networkUsage: "model_downloads_only",
+      },
     }
   }
 
   const provisionModels = async (
     onProgress?: (progress: SetupProgress) => void,
   ): Promise<SetupStatus> => {
+    const status = await getStatus()
+    if (status.phase === "blocked") return status
     fs.mkdirSync(directory, { recursive: true })
     const state = readState(directory)
     for (const entry of MODEL_MANIFEST) {

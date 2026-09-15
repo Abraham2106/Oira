@@ -14,12 +14,7 @@ export type DownloadProgress = {
 
 async function fileHash(filePath: string): Promise<string> {
   const hash = createHash("sha256")
-  await pipeline(createReadStream(filePath), new Transform({
-    transform(chunk, _encoding, callback) {
-      hash.update(chunk)
-      callback(null, chunk)
-    },
-  }))
+  for await (const chunk of createReadStream(filePath)) hash.update(chunk)
   return hash.digest("hex")
 }
 
@@ -43,6 +38,14 @@ export async function downloadModel(
   let offset = existsSync(partial) ? statSync(partial).size : 0
   if (offset > entry.expectedBytes) {
     await unlink(partial).catch(() => undefined)
+    offset = 0
+  }
+  if (offset === entry.expectedBytes) {
+    if ((await fileHash(partial)) === entry.sha256) {
+      await rename(partial, target)
+      return target
+    }
+    await unlink(partial)
     offset = 0
   }
 

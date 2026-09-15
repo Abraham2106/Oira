@@ -21,11 +21,22 @@ export type SetupModel = {
   detail?: string
 }
 
+/**
+ * Runtime facts reported by Main. These describe Oira's configured execution
+ * path; they do not assert an operating-system privacy or compliance setting.
+ */
+export type RuntimePrivacyFacts = {
+  inference: "local"
+  remoteAiProvider: "none"
+  networkUsage: "model_downloads_only"
+}
+
 export type SetupStatus = {
   phase: SetupPhase
   ready: boolean
   checks: SetupFact[]
   models: SetupModel[]
+  runtime: RuntimePrivacyFacts
   message?: string
 }
 

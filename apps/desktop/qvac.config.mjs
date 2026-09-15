@@ -7,4 +7,8 @@ import path from "node:path"
  */
 export default {
   cacheDirectory: path.join(os.homedir(), "AppData", "Local", "Oira", "qvac-models"),
+  plugins: [
+    "@qvac/sdk/llamacpp-completion/plugin",
+    "@qvac/sdk/whispercpp-transcription/plugin",
+  ],
 }
