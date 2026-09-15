@@ -1,4 +1,4 @@
-import type { AppSettings } from "../../shared/schemas/settings.schema"
+import type { AppSettings, GpuPreference } from "../../shared/schemas/settings.schema"
 import type { Language } from "../../shared/constants/language"
 import type { InferenceProgress } from "../../shared/types/inference-progress"
 
@@ -21,7 +21,7 @@ export type IpcLogPort = {
 }
 
 export type FileWriterPort = {
-  writeFile: (path: string, contents: string) => Promise<void>
+  writeFile: (path: string, contents: string | Uint8Array) => Promise<void>
   mkdir?: (dir: string) => Promise<void>
 }
 
@@ -40,7 +40,7 @@ export type ClipboardPort = {
 
 export type SettingsPort = {
   get: () => Promise<AppSettings>
-  save: (input: { uiLocale: Language }) => Promise<AppSettings>
+  save: (input: { uiLocale?: Language; gpuPreference?: GpuPreference }) => Promise<AppSettings>
 }
 
 export type ProgressPort = {

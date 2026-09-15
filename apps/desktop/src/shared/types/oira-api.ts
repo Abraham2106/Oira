@@ -115,7 +115,8 @@ export type OiraApi = {
   ) => Promise<Result<WriteClipboardResult>>
   getSettings: () => Promise<Result<AppSettings>>
   saveSettings: (input: {
-    uiLocale: AppSettings["uiLocale"]
+    uiLocale?: AppSettings["uiLocale"]
+    gpuPreference?: AppSettings["gpuPreference"]
   }) => Promise<Result<AppSettings>>
   googleSignIn: () => Promise<Result<AuthProfile>>
   signOut: () => Promise<Result<{ signedOut: true }>>
