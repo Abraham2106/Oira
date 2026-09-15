@@ -23,7 +23,8 @@ export const ALLOWED_META_KEYS = {
   cached: "boolean",
   retryable: "boolean",
   qvacNodeOk: "boolean",
-  format: ["txt", "json"],
+  format: ["txt", "json", "pdf", "fhir"],
+  presentation: ["sections", "soap"],
 } as const satisfies Record<
   string,
   "number" | "boolean" | readonly string[]

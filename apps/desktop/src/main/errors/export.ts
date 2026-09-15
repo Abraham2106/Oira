@@ -26,3 +26,11 @@ export function invalidExportInputError(
 ): AppError {
   return createAppError("INVALID_INPUT", message, { retryable: false })
 }
+
+export function exportCancelledError(): AppError {
+  return createAppError(
+    "OPERATION_CANCELLED",
+    "The export was cancelled.",
+    { retryable: false },
+  )
+}

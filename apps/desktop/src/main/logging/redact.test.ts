@@ -23,9 +23,11 @@ describe("logging/redact", () => {
   })
 
   it("allows string values only from the declared closed set", () => {
-    expect(sanitizeMeta({ format: "pdf" })).toBeUndefined()
+    expect(sanitizeMeta({ format: "pdf" })).toEqual({ format: "pdf" })
+    expect(sanitizeMeta({ format: "fhir" })).toEqual({ format: "fhir" })
     expect(sanitizeMeta({ format: "dolor torácico" })).toBeUndefined()
     expect(sanitizeMeta({ format: "json" })).toEqual({ format: "json" })
+    expect(sanitizeMeta({ presentation: "soap" })).toEqual({ presentation: "soap" })
   })
 
   it("rejects wrong types for allow-listed keys", () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { exportFailedError, exportNotImplementedError, invalidExportInputError } from "./export"
+import { exportCancelledError, exportFailedError, exportNotImplementedError, invalidExportInputError } from "./export"
 import { createExportStub } from "../export/export.service"
 
 describe("errors/export", () => {
@@ -7,6 +7,7 @@ describe("errors/export", () => {
     expect(exportNotImplementedError().code).toBe("NOT_IMPLEMENTED")
     expect(exportFailedError(new Error("ENOSPC")).code).toBe("EXPORT_FAILED")
     expect(invalidExportInputError().code).toBe("INVALID_INPUT")
+    expect(exportCancelledError().code).toBe("OPERATION_CANCELLED")
   })
 
   it("export stub never claims success", async () => {

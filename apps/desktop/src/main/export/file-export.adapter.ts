@@ -1,12 +1,20 @@
 import * as fsp from "node:fs/promises"
-import { resolve } from "node:path"
+import { dirname, resolve } from "node:path"
 
 import {
   formatNoteAsJson,
   formatNoteAsText,
+  toDocumentProjection,
+  type ExportAuthorship,
+  type ExportPresentation,
 } from "../../shared/clinical-export"
 import type { ExportNoteInput } from "../../shared/schemas/ipc.schema"
-import { exportFailedError, invalidExportInputError } from "../errors/export"
+import { isAppError } from "../errors/core"
+import {
+  exportCancelledError,
+  exportFailedError,
+  invalidExportInputError,
+} from "../errors/export"
 import { safeJoin } from "../audio/safe-path"
 import { selectCurrentAcceptedNote } from "../storage/current-note"
 import type {
@@ -15,12 +23,24 @@ import type {
   NoteStorePort,
 } from "../ports/outbound"
 import type { ExportPort } from "./export.service"
+import { isAbsoluteExportPath } from "./export-path"
+import {
+  createCanonicalPdfRenderer,
+  createExportDirSaveDialog,
+  type PdfRendererPort,
+  type SaveDialogPort,
+} from "./pdf-renderer"
+import { createFhirBundlePort, type FhirBundlePort } from "./fhir/bundle"
 
 export type FileExportAdapterDeps = {
   notes: NoteStorePort
   writer: FileWriterPort
   exportDir: string
   clock?: Clock
+  pdfRenderer?: PdfRendererPort
+  fhir?: FhirBundlePort
+  saveDialog?: SaveDialogPort
+  authorship?: () => ExportAuthorship
 }
 
 const systemClock: Clock = {
@@ -35,7 +55,11 @@ export const nodeFileWriter: FileWriterPort = {
     await fsp.mkdir(dir, { recursive: true })
   },
   async writeFile(path, contents) {
-    await fsp.writeFile(path, contents, "utf8")
+    if (typeof contents === "string") {
+      await fsp.writeFile(path, contents, "utf8")
+      return
+    }
+    await fsp.writeFile(path, contents)
   },
 }
 
@@ -55,31 +79,26 @@ export function createMemoryFileWriter(): MemoryFileWriter {
       directories.add(dir)
     },
     async writeFile(path, contents) {
-      files.set(path, contents)
+      files.set(
+        path,
+        typeof contents === "string" ? contents : Buffer.from(contents).toString("utf8"),
+      )
     },
   }
 }
 
-function renderExport(
-  input: ExportNoteInput,
-  record: Awaited<ReturnType<NoteStorePort["list"]>>[number],
-  clock: Clock,
-): string {
-  if (input.format === "txt") return formatNoteAsText(record.note)
-  return formatNoteAsJson(record.note, {
-    encounterId: record.encounterId,
-    noteId: record.id,
-    acceptedAt: record.acceptedAt,
-    exportedAt: clock.nowIso(),
-    label: record.label,
-    visitType: record.visitType,
-  })
+function presentationOf(input: ExportNoteInput): ExportPresentation {
+  return input.presentation === "soap" ? "soap" : "sections"
 }
 
 export function createFileExportAdapter(
   deps: FileExportAdapterDeps,
 ): ExportPort {
   const clock = deps.clock ?? systemClock
+  const pdfRenderer = deps.pdfRenderer ?? createCanonicalPdfRenderer()
+  const fhir = deps.fhir ?? createFhirBundlePort()
+  const saveDialog = deps.saveDialog ?? createExportDirSaveDialog(deps.exportDir)
+  const authorshipOf = deps.authorship ?? (() => ({ exportedBy: null }))
 
   return {
     async exportNote(input) {
@@ -101,17 +120,55 @@ export function createFileExportAdapter(
         )
       }
 
-      const exportRoot = resolve(deps.exportDir)
-      const path = safeJoin(exportRoot, `${input.encounterId}.${input.format}`)
-      const contents = renderExport(input, record, clock)
+      const authorship = authorshipOf()
+      const projection = toDocumentProjection(record, authorship)
+
       try {
-        await deps.writer.mkdir?.(exportRoot)
-        await deps.writer.writeFile(path, contents)
+        if (input.format === "txt" || input.format === "json") {
+          const exportRoot = resolve(deps.exportDir)
+          const path = safeJoin(exportRoot, `${input.encounterId}.${input.format}`)
+          const contents = input.format === "txt"
+            ? formatNoteAsText(record.note)
+            : formatNoteAsJson(record.note, {
+                encounterId: record.encounterId,
+                noteId: record.id,
+                acceptedAt: record.acceptedAt,
+                exportedAt: clock.nowIso(),
+                label: record.label,
+                visitType: record.visitType,
+              })
+          await deps.writer.mkdir?.(exportRoot)
+          await deps.writer.writeFile(path, contents)
+          return { exported: true }
+        }
+
+        if (input.format === "pdf") {
+          const path = await saveDialog.choosePath({
+            format: "pdf",
+            defaultFileName: `${input.encounterId}.pdf`,
+          })
+          if (!path) throw exportCancelledError()
+          if (!isAbsoluteExportPath(path)) throw invalidExportInputError()
+          const bytes = await pdfRenderer.render(projection, presentationOf(input))
+          await deps.writer.mkdir?.(dirname(path))
+          await deps.writer.writeFile(path, bytes)
+          return { exported: true }
+        }
+
+        const path = await saveDialog.choosePath({
+          format: "fhir",
+          defaultFileName: `${input.encounterId}.fhir.json`,
+        })
+        if (!path) throw exportCancelledError()
+        if (!isAbsoluteExportPath(path)) throw invalidExportInputError()
+        const bundle = fhir.build(projection, authorship)
+        await deps.writer.mkdir?.(dirname(path))
+        await deps.writer.writeFile(path, `${JSON.stringify(bundle, null, 2)}\n`)
+        return { exported: true }
       } catch (error) {
+        if (isAppError(error)) throw error
         throw exportFailedError(error)
       }
-
-      return { exported: true }
     },
   }
 }
