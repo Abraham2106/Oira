@@ -172,6 +172,11 @@ export async function runGenerateNote(
         : { stage: "transcription" as const }),
     })
   }
+  try {
+    await deps.inferenceRuntime?.releaseStructuring()
+  } catch {
+    /* GPU release must not hide a generated note or the primary failure */
+  }
   let cleanupFailed = false
   try {
     deps.audio?.purge(encounterId)

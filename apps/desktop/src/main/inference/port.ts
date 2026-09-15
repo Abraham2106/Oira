@@ -24,6 +24,11 @@ export type InferenceRuntimePort = {
    * unload must not proceed to Qwen load.
    */
   handoffToStructuring: () => Promise<void>
+  /**
+   * Unloads the structuring model after the note pipeline finishes.
+   * Does not load Whisper; the next **Preparar grabación** warms STT.
+   */
+  releaseStructuring: () => Promise<void>
   shutdown: () => Promise<void>
   /**
    * Completion unificada para Qwen (generador | revisor).

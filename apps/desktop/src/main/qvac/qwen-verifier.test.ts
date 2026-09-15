@@ -13,6 +13,7 @@ function runtimeWith(response: string): InferenceRuntimePort {
   return {
     warmTranscription: async () => undefined,
     handoffToStructuring: async () => undefined,
+    releaseStructuring: async () => undefined,
     shutdown: async () => undefined,
     completeQwen: vi.fn(
       async (_input: CompleteQwenInput): Promise<string> => response,
@@ -182,6 +183,7 @@ describe("createQwenVerifier", () => {
       {
         warmTranscription: async () => undefined,
         handoffToStructuring: async () => undefined,
+        releaseStructuring: async () => undefined,
         shutdown: async () => undefined,
         completeQwen: vi.fn(async () => never),
       },
@@ -200,6 +202,7 @@ describe("createQwenVerifier", () => {
     const reviewer = createQwenVerifier({
       warmTranscription: async () => undefined,
       handoffToStructuring: async () => undefined,
+      releaseStructuring: async () => undefined,
       shutdown: async () => undefined,
       completeQwen,
     })

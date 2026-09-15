@@ -1,16 +1,15 @@
 import { isAppError } from "../errors/core"
 import { transcriptionFailedError } from "../errors/inference"
 import type { TranscriptionPort } from "../inference/port"
-import {
-  createQvacInferenceRuntime,
-  type QvacInferenceRuntime,
-  type QvacInferenceRuntimeDeps,
-} from "./inference-runtime"
 import { mapSttSegments } from "./qvac-transcript-mapper"
-
-export type QvacTranscriptionDeps = QvacInferenceRuntimeDeps & {
-  /** Optional shared runtime, normally created by the composition root. */
+type QvacInferenceRuntime = {
+  transcribe: (input: { filePath: string }) => Promise<import("./qvac-transcript-mapper").SttSegmentInput[]>
+}
+type QvacTranscriptionDeps = {
   runtime?: QvacInferenceRuntime
+  env?: { OIRA_STT_LOAD_TIMEOUT_MS?: string }
+  loadSdk?: () => Promise<unknown>
+  onModelLifecycle?: (event: import("../../shared/types/model-lifecycle").ModelLifecycleEvent) => void
 }
 
 /**
@@ -20,18 +19,20 @@ export type QvacTranscriptionDeps = QvacInferenceRuntimeDeps & {
 export function createQvacTranscription(
   deps: QvacTranscriptionDeps = {},
 ): TranscriptionPort {
-  const runtime =
-    deps.runtime ??
-    createQvacInferenceRuntime({
-      env: deps.env,
-      loadSdk: deps.loadSdk,
-      onModelLifecycle: deps.onModelLifecycle,
-    })
-
+  let runtime = deps.runtime
+  let runtimePromise: Promise<QvacInferenceRuntime> | undefined
   return {
     async transcribe(input) {
       if (!input.filePath) throw transcriptionFailedError()
       try {
+        runtime ??= await (runtimePromise ??= (async () => {
+          const module = await import("./inference-runtime")
+          return module.createQvacInferenceRuntime({
+            env: deps.env,
+            loadSdk: deps.loadSdk as never,
+            onModelLifecycle: deps.onModelLifecycle,
+          })
+        })())
         const raw = await runtime.transcribe({ filePath: input.filePath })
         return { segments: mapSttSegments(raw) }
       } catch (error) {

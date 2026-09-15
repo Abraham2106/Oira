@@ -33,6 +33,7 @@ describe("runGenerateNote", () => {
           markHandoffStarted()
           return loading
         },
+        releaseStructuring: async () => {},
       },
       structuring: {
         structure: (input) => {
@@ -184,5 +185,39 @@ describe("runGenerateNote", () => {
       status: "not_completed",
       error: "Timeout en el revisor.",
     })
+  })
+
+  it("unloads Qwen after the note pipeline finishes", async () => {
+    let released = 0
+    await runGenerateNote("00000000-0000-4000-8000-000000000001", {
+      transcription: createMockTranscription(),
+      structuring: createMockStructuring(),
+      inferenceRuntime: {
+        warmTranscription: async () => {},
+        shutdown: async () => {},
+        completeQwen: async () => "",
+        handoffToStructuring: async () => {},
+        releaseStructuring: async () => { released += 1 },
+      },
+    })
+    expect(released).toBe(1)
+  })
+
+  it("unloads Qwen after structuring fails", async () => {
+    let released = 0
+    await expect(
+      runGenerateNote("00000000-0000-4000-8000-000000000001", {
+        transcription: createMockTranscription(),
+        structuring: { structure: async () => { throw invalidStructuredOutputError() } },
+        inferenceRuntime: {
+          warmTranscription: async () => {},
+          shutdown: async () => {},
+          completeQwen: async () => "",
+          handoffToStructuring: async () => {},
+          releaseStructuring: async () => { released += 1 },
+        },
+      }),
+    ).rejects.toMatchObject({ code: "INVALID_STRUCTURED_OUTPUT" })
+    expect(released).toBe(1)
   })
 })

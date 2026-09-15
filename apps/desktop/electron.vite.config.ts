@@ -9,6 +9,20 @@ export default defineConfig({
     plugins: [externalizeDepsPlugin({ exclude: ["@oira/types", "@qvac/sdk", "zod"] })],
     build: {
       outDir: resolve("dist/main"),
+      // bare-runtime selects its platform package with a computed require().
+      // Forge ships that native package; leave its resolution to Node at runtime.
+      commonjsOptions: { ignoreDynamicRequires: true },
+      rollupOptions: {
+        input: {
+          index: resolve("src/main/index.ts"),
+          gateway: resolve("src/main/qvac/gateway.ts"),
+          "gpu-probe": resolve("src/main/qvac/gpu-probe.ts"),
+        },
+        external: ["node:sqlite"],
+        output: {
+          banner: 'import { createRequire as oiraCreateRequire } from "node:module"; const require = oiraCreateRequire(import.meta.url);',
+        },
+      },
     },
   },
   preload: {

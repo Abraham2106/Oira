@@ -30,6 +30,7 @@ function runtimeFor(values: string[]) {
   return {
     beginGeneration: vi.fn(() => 1),
     handoffToStructuring: vi.fn(async () => undefined),
+    releaseStructuring: vi.fn(async () => undefined),
     completeStructuring: vi.fn(async (_input: {
       history: Array<{ role: string; content: string }>
       schema: Record<string, unknown>
@@ -95,6 +96,9 @@ describe("createQwenStructuring", () => {
     expect(histories[1]?.[0]?.history[2]?.content).toContain(
       "La validación del intento anterior no pasó",
     )
+    expect(histories[1]?.[0]?.history[2]?.content).toContain(
+      'IDs válidos en esta solicitud: ["s1"]',
+    )
   })
 
   it("marks a valid retry attempt as a note instead of an unvalidated draft", async () => {
@@ -128,6 +132,7 @@ describe("createQwenStructuring", () => {
       [{ history: Array<{ role: string; content: string }> }]
     >
     expect(histories[0]?.[0]?.history[1]?.content).toContain("Responde solo con el JSON")
+    expect(histories[0]?.[0]?.history[1]?.content).toContain("IDs válidos en esta solicitud:")
   })
 
   it("accepts an empty all-NOT_STATED draft without repair", async () => {
@@ -192,6 +197,26 @@ describe("createQwenStructuring", () => {
     const note = await noteOf(runtime, [segment("s1", "Dolor de rodilla.")])
     expect(runtime.completeStructuring).toHaveBeenCalledTimes(2)
     expect(note.sections.clinical_narrative.sourceSegmentIds).toEqual(["s1"])
+  })
+
+  it("lists the chunk's real ids and repeats them on retry instead of example ids", async () => {
+    const runtime = runtimeFor([
+      JSON.stringify(output({
+        clinical_narrative: { presence: "STATED", text: "Dolor de garganta.", sourceSegmentIds: ["s2"] },
+      })),
+      JSON.stringify(output({
+        clinical_narrative: { presence: "STATED", text: "Dolor de garganta.", sourceSegmentIds: ["0"] },
+      })),
+    ])
+    const note = await noteOf(runtime, [segment("0", "Dolor de garganta."), segment("1", "Tos seca.")])
+    const histories = vi.mocked(runtime.completeStructuring).mock.calls as Array<
+      [{ history: Array<{ role: string; content: string }> }]
+    >
+    expect(histories[0]?.[0]?.history[1]?.content).toContain('IDs válidos en esta solicitud: ["0","1"]')
+    expect(histories[0]?.[0]?.history[0]?.content).not.toContain('"s2"')
+    expect(histories[1]?.[0]?.history[2]?.content).toContain('IDs válidos en esta solicitud: ["0","1"]')
+    expect(histories[1]?.[0]?.history[2]?.content).toContain("no existe en la transcripción")
+    expect(note.sections.clinical_narrative.sourceSegmentIds).toEqual(["0"])
   })
 
   it("does not promote thinking or raw JSON to a validated note", async () => {

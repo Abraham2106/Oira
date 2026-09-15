@@ -1,6 +1,9 @@
 import type { StructuringPort, StructuringIssue } from "../inference/port"
 import { invalidStructuredOutputError } from "../errors/notes"
-import { buildStructuringMessages } from "../structure/prompt"
+import {
+  allowedSourceIdsInstruction,
+  buildStructuringMessages,
+} from "../structure/prompt"
 import { splitTranscriptChunks } from "../structure/chunk"
 import { CLINICAL_NOTE_JSON_SCHEMA } from "../structure/json-schema"
 import {
@@ -12,13 +15,23 @@ import type { GenerationIssue } from "../structure/generation-errors"
 import { mergeStructuringOutputs } from "../structure/merge"
 import { noteFromStructuringOutput } from "../structure/note-from-output"
 import { SECTION_IDS, SECTION_TITLES, type TranscriptSegment } from "@oira/types"
-import { ContextOverflowError } from "./sdk"
-import type { QvacInferenceRuntime } from "./inference-runtime"
+type QvacInferenceRuntime = {
+  beginGeneration: () => number
+  completeStructuring: (input: {
+    history: Array<{ role: string; content: string }>
+    schema: Record<string, unknown>
+    generation: number
+  }) => Promise<{ text: string; thinkingText?: string; rawText?: string }>
+}
 
 /** Reintentos de generación por chunk tras validación fallida (F1). */
 export const STRUCTURE_GENERATION_ATTEMPTS = 2
 
 type Feedback = readonly (GenerationIssue | string)[]
+
+function isContextOverflowError(error: unknown): boolean {
+  return error instanceof Error && error.constructor.name === "ContextOverflowError"
+}
 
 function messagesFor(
   transcript: readonly TranscriptSegment[],
@@ -33,10 +46,12 @@ function messagesFor(
     const lines = feedback
       .map((issue) => (typeof issue === "string" ? `- ${issue}` : `- ${issue.message}`))
       .join("\n")
+    const allowedIds = transcript.map((segment) => segment.id)
     history.push({
       role: "user",
       content:
         `La validación del intento anterior no pasó por estos motivos:\n${lines}\n` +
+        `${allowedSourceIdsInstruction(allowedIds)}\n` +
         `Corrige el JSON y responde SOLO con el JSON {"sections": {...}}.`,
     })
   }
@@ -147,7 +162,7 @@ export function createQwenStructuring({
         const merged = mergeStructuringOutputs(outputs)
         return { kind: "note", note: noteFromStructuringOutput(merged) }
       } catch (error) {
-        if (error instanceof ContextOverflowError) {
+        if (isContextOverflowError(error)) {
           throw invalidStructuredOutputError(
             "La consulta es demasiado extensa para el modelo local; no se generó un borrador inventado.",
           )

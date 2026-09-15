@@ -16,7 +16,9 @@ vi.mock("./sdk", () => ({
   close: vi.fn(async () => undefined),
   WHISPER_LARGE_V3_TURBO: { name: "WHISPER_LARGE_V3_TURBO" },
   QWEN3_4B_Q4_K_M: { name: "QWEN3_4B_Q4_K_M", expectedSize: 1 },
-  getSystemResources: vi.fn(async () => ({ capabilities: { gpus: { status: "supported", value: [] } } })),
+  getSystemResources: vi.fn(async () => ({ capabilities: { gpus: { status: "supported", value: [
+    { id: "test-gpu", name: { status: "supported", value: "NVIDIA RTX 2050" }, drivers: { cuda: { status: "supported", value: true } } },
+  ] } } })),
   ContextOverflowError: class ContextOverflowError extends Error {},
 }))
 
