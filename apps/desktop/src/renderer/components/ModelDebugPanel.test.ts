@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { reduceModelDebugState } from "./ModelDebugPanel"
+import { liveHeadline, reduceModelDebugState } from "./ModelDebugPanel"
 
 const initial = {
   whisper: "IDLE" as const,
@@ -25,5 +25,11 @@ describe("reduceModelDebugState", () => {
         device: { requested: "RTX 2050", acceleration: "gpu_layers=99" },
       }),
     ).toMatchObject({ qwen: "STRUCTURING", qwenDevice: { requested: "RTX 2050" } })
+  })
+
+  it("prefers the busy model in the compact toast", () => {
+    expect(liveHeadline("LOADING", "UNLOADED")).toEqual({ label: "Cargando", tone: "loading" })
+    expect(liveHeadline("READY", "STRUCTURING")).toEqual({ label: "Estructurando", tone: "loading" })
+    expect(liveHeadline("READY", "UNLOADED")).toEqual({ label: "Cargado", tone: "ready" })
   })
 })

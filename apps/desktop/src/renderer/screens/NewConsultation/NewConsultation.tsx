@@ -2,11 +2,16 @@ import { Button, Card } from "@oira/ui"
 import { ModelStatus } from "../../components/ModelStatus"
 import { PrivacyStatusPanel } from "../../components/PrivacyStatusPanel"
 import { useI18n } from "../../i18n/I18nProvider"
+import { aiEngineStateFromModels } from "../../lib/modelEngineState"
+import type { SetupStatus } from "../../../shared/types/setup"
+import type { QwenLifecycleState, WhisperLifecycleState } from "../../../shared/types/model-lifecycle"
 
 type Props = {
   label: string
   visitType: string
   informed: boolean
+  setupStatus: SetupStatus | null
+  modelState: { whisper: WhisperLifecycleState; qwen: QwenLifecycleState }
   onLabel: (value: string) => void
   onVisitType: (value: string) => void
   onInformed: (value: boolean) => void
@@ -17,6 +22,8 @@ export function NewConsultationScreen({
   label,
   visitType,
   informed,
+  setupStatus,
+  modelState,
   onLabel,
   onVisitType,
   onInformed,
@@ -26,7 +33,7 @@ export function NewConsultationScreen({
 
   return (
     <div className="stack page">
-      <ModelStatus state="LOCAL_INFERENCE_READY" />
+      <ModelStatus state={aiEngineStateFromModels(modelState.whisper, modelState.qwen)} />
       <Card title={t("newConsult.cardTitle")}>
         <ol className="how-steps">
           <li>{t("newConsult.stepInform")}</li>
@@ -65,13 +72,9 @@ export function NewConsultationScreen({
       </Card>
       <Card title={t("privacy.cardTitle")}>
         <PrivacyStatusPanel
-          rows={[
-            { label: t("privacy.recording"), value: t("privacy.notStarted") },
-            { label: t("privacy.processing"), value: t("privacy.unknown") },
-            { label: t("privacy.aiRemote"), value: t("privacy.unknown") },
-            { label: t("privacy.storage"), value: t("privacy.unknown") },
-            { label: t("privacy.network"), value: t("privacy.unknown") },
-          ]}
+          recording="not_started"
+          setupStatus={setupStatus}
+          modelState={modelState}
         />
       </Card>
     </div>

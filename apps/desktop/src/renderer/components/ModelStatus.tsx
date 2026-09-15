@@ -15,5 +15,12 @@ const COPY: Record<AiEngineState, { tone: "ok" | "info" | "warn"; key: string }>
 export function ModelStatus({ state }: Props) {
   const { t } = useI18n()
   const copy = COPY[state]
-  return <StatusBadge tone={copy.tone} icon="●" label={t(copy.key)} />
+  return (
+    <StatusBadge
+      tone={copy.tone}
+      icon="●"
+      label={t(copy.key)}
+      live={state === "MODEL_LOADING"}
+    />
+  )
 }

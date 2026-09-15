@@ -5,6 +5,7 @@ import type {
   QwenLifecycleState,
   WhisperLifecycleState,
 } from "../../shared/types/model-lifecycle"
+import { isQwenBusy, isWhisperBusy } from "../lib/modelEngineState"
 
 type Props = {
   whisper: WhisperLifecycleState
@@ -61,10 +62,22 @@ function qwenTone(state: QwenLifecycleState): "idle" | "loading" | "ready" | "er
   return "idle"
 }
 
+export function liveHeadline(
+  whisper: WhisperLifecycleState,
+  qwen: QwenLifecycleState,
+): { label: string; tone: "idle" | "loading" | "ready" | "error" } {
+  if (isQwenBusy(qwen)) return { label: qwenLabel(qwen), tone: qwenTone(qwen) }
+  if (isWhisperBusy(whisper)) return { label: whisperLabel(whisper), tone: whisperTone(whisper) }
+  if (qwen === "FAILED") return { label: qwenLabel(qwen), tone: "error" }
+  if (whisper === "FAILED") return { label: whisperLabel(whisper), tone: "error" }
+  if (qwen === "READY") return { label: qwenLabel(qwen), tone: "ready" }
+  if (whisper === "READY") return { label: whisperLabel(whisper), tone: "ready" }
+  return { label: "En espera", tone: "idle" }
+}
+
 export function ModelDebugPanel({ whisper, qwen, whisperDevice, qwenDevice }: Props) {
   const [open, setOpen] = useState(false)
-  const liveTone = qwen !== "IDLE" ? qwenTone(qwen) : whisperTone(whisper)
-  const liveLabel = qwen !== "IDLE" ? qwenLabel(qwen) : whisperLabel(whisper)
+  const live = liveHeadline(whisper, qwen)
 
   if (!open) {
     return (
@@ -75,9 +88,9 @@ export function ModelDebugPanel({ whisper, qwen, whisperDevice, qwenDevice }: Pr
         aria-expanded={false}
         onClick={() => setOpen(true)}
       >
-        <strong className={`model-debug-status model-debug-status-${liveTone}`}>
+        <strong className={`model-debug-status model-debug-status-${live.tone}`}>
           <i aria-hidden="true" />
-          {liveLabel}
+          {live.label}
         </strong>
       </button>
     )

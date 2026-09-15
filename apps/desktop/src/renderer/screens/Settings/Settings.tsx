@@ -3,15 +3,19 @@ import { LOCALES, type Locale } from "../../i18n/dictionary"
 import { useI18n } from "../../i18n/I18nProvider"
 import { ModelStatus } from "../../components/ModelStatus"
 import { PrivacyStatusPanel } from "../../components/PrivacyStatusPanel"
+import type { SetupStatus } from "../../../shared/types/setup"
+import type { QwenLifecycleState, WhisperLifecycleState } from "../../../shared/types/model-lifecycle"
+import { aiEngineStateFromModels } from "../../lib/modelEngineState"
 
 type Props = {
   onClose: () => void
   onOpenModelSetup: () => void
+  setupStatus: SetupStatus | null
+  modelState: { whisper: WhisperLifecycleState; qwen: QwenLifecycleState }
 }
 
-export function SettingsScreen({ onClose, onOpenModelSetup }: Props) {
+export function SettingsScreen({ onClose, onOpenModelSetup, setupStatus, modelState }: Props) {
   const { t, locale, setLocale } = useI18n()
-
   return (
     <div className="stack page">
       <header className="config-header">
@@ -45,7 +49,7 @@ export function SettingsScreen({ onClose, onOpenModelSetup }: Props) {
 
       <Card title={t("settings.engineCardTitle")}>
         <div className="status-engine">
-          <ModelStatus state="LOCAL_INFERENCE_READY" />
+          <ModelStatus state={aiEngineStateFromModels(modelState.whisper, modelState.qwen)} />
         </div>
         <p className="muted">{t("settings.engineBody")}</p>
         <Button onClick={onOpenModelSetup}>{t("settings.modelSetupButton")}</Button>
@@ -53,13 +57,9 @@ export function SettingsScreen({ onClose, onOpenModelSetup }: Props) {
 
       <Card title={t("settings.statusCardTitle")}>
         <PrivacyStatusPanel
-          rows={[
-            { label: t("privacy.recording"), value: t("privacy.perCurrentScreen") },
-            { label: t("privacy.processing"), value: t("privacy.unknown") },
-            { label: t("privacy.aiRemote"), value: t("privacy.unknown") },
-            { label: t("privacy.storage"), value: t("privacy.unknown") },
-            { label: t("privacy.network"), value: t("privacy.unknown") },
-          ]}
+          recording="depends_on_screen"
+          setupStatus={setupStatus}
+          modelState={modelState}
         />
         <p className="muted">{t("settings.statusBody")}</p>
       </Card>

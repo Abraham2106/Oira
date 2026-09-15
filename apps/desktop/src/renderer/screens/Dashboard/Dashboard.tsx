@@ -1,11 +1,12 @@
 import { Button, Card } from "@oira/ui"
-import type { ProductState } from "@oira/types"
+import type { AiEngineState, ProductState } from "@oira/types"
 import { Icon } from "../../components/icons"
 import { ModelStatus } from "../../components/ModelStatus"
 import { useI18n } from "../../i18n/I18nProvider"
 
 type Props = {
   productState: ProductState
+  engineState: AiEngineState
   hasDraft: boolean
   onStartNew: () => void
   onOpenNotes: () => void
@@ -14,6 +15,7 @@ type Props = {
 
 export function DashboardScreen({
   productState,
+  engineState,
   hasDraft,
   onStartNew,
   onOpenNotes,
@@ -102,7 +104,7 @@ export function DashboardScreen({
           <section className="nl-card status-card">
             <h2 className="config-card-title">{t("common.systemStatus")}</h2>
             <div className="status-engine">
-              <ModelStatus state="LOCAL_INFERENCE_READY" />
+              <ModelStatus state={engineState} />
             </div>
             <div className="status-actions">
               <Button variant="primary" onClick={onStartNew}>

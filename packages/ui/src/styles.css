@@ -217,6 +217,10 @@ h3 {
   animation: nl-pulse 1.6s ease-in-out infinite;
 }
 
+.nl-badge-info[role="status"] > span[aria-hidden] {
+  animation: nl-pulse 1.2s ease-in-out infinite;
+}
+
 @keyframes nl-pulse {
   0%,
   100% {

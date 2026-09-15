@@ -1419,6 +1419,39 @@ kbd {
   margin: 14px 0 2px;
 }
 
+.gpu-options {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.gpu-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--nl-border);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.gpu-option:has(input:checked) {
+  border-color: var(--nl-accent);
+  background: var(--nl-accent-soft);
+}
+
+.gpu-option input { margin-top: 3px; }
+
+.gpu-option span { display: grid; gap: 2px; }
+
+.gpu-option small { color: var(--nl-text-muted); }
+
+.gpu-option:has(input:disabled) { cursor: wait; opacity: 0.65; }
+
+.settings-gpu-message { margin: 12px 0 0; color: var(--nl-text-muted); }
+
+.settings-gpu-error { color: var(--nl-danger, #a23a26); }
+
 .resume-bar {
   width: min(1180px, calc(100% - 32px));
   margin: 14px auto -4px;
