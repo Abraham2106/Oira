@@ -1,7 +1,7 @@
 # NOTE_VERIFIER_P3 — Plan de implementación
 
 > Decide de diseño: [`NOTE_VERIFIER_P3.md`](../../NOTE_VERIFIER_P3.md) (spec completa).
-> Rama: `feature/note-verifier-p3`. Estado: F0 ✅ · F1 ✅ · F2–F5 pendientes de cierre.
+> Rama: `feature/note-verifier-p3`. Estado: F0 ✅ · F1 ✅ · F2 ✅ · F3–F5 pendientes de cierre.
 > Disciplina: Regla 12 (`medido`/`observado`/`inferido`/`no_probado`) · Regla 16 (medir → analizar → optimizar con autorización).
 
 ## Fases y avance
@@ -10,7 +10,7 @@
 | --- | --- | --- |
 | F0 | Rama + sanity verde + baseline medido | ✅ 2026-09-14 |
 | F1 | Contrato estricto de generación (prompts versionados, validación con códigos, reintentos acotados, borrador no validado visible) | ✅ 2026-09-14 |
-| F2 | Heurísticas deterministas explicables (`structure/rules/`) | ⏳ |
+| F2 | Heurísticas deterministas explicables (`structure/rules/`) | ✅ 2026-09-14 |
 | F3 | Segundo agente Qwen de revisión (puerto, prompt, runtime, estados/UI) | ⏳ |
 | F4 | Corpus anotado + harness de procesamiento + comparación de 4 configs | ⏳ |
 | F5 | Selección de GPU endurecida (`device-selection.ts`) | ⏳ |
@@ -32,7 +32,7 @@ fijar umbrales (Regla 16 → nunca inventar metas antes del baseline).
 
 ⚠️ Nota del baseline: `unsupportedFactRate` proviene casi todo de `source_not_supported`
 (check **literal normalizado**, cota superior inflada por el parafraseo). La verificación
-semántica queda `no_probado` hasta F2/F3.
+semántica queda `no_probado` hasta F3 con modelo local; F2 cubre contratos deterministas, no calidad clínica.
 
 ## Integración con main
 

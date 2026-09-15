@@ -190,8 +190,8 @@ reintentos, tokens, tiempos y errores. Mantener una política explícita para
 almacenar o excluir audio, transcripciones y salidas; evitar volcarlos en logs
 operativos. Los resultados de evaluación no son claims clínicos de producto.
 
-- [ ] Implementar y probar el contrato estricto de generación y sus fallos.
-- [ ] Implementar las heurísticas con casos que detectan y casos que no deben marcar.
+- [x] Implementar y probar el contrato estricto de generación y sus fallos.
+- [x] Implementar las heurísticas con casos que detectan y casos que no deben marcar.
 - [ ] Integrar el segundo Qwen mediante el puerto de revisión, con carga secuencial.
 - [ ] Mostrar observaciones, evidencia y revisión incompleta sin aceptación automática.
 - [ ] Crear corpus anotado, harness reproducible y baseline del comportamiento actual.
