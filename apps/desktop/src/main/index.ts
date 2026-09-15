@@ -82,8 +82,9 @@ function createWindow(trusted: Map<number, TrustedRenderer>): void {
     return { action: "deny" }
   })
 
-  trusted.set(window.webContents.id, { webContentsId: window.webContents.id, url })
-  window.once("closed", () => trusted.delete(window.webContents.id))
+  const webContentsId = window.webContents.id
+  trusted.set(webContentsId, { webContentsId, url })
+  window.once("closed", () => trusted.delete(webContentsId))
   if (process.env.ELECTRON_RENDERER_URL) {
     void window.loadURL(url)
   } else {

@@ -85,7 +85,7 @@ el contrato de Squirrel no dependa de la transformación del `package.json`.
 El instalador regenerado después del cambio produjo:
 
 ```text
-SHA-256: E50E37C794500CD60B3CA39659C4911C667EB39885A49E6C365CF1993B18AFDF
+SHA-256: E4842E044D4B23555092D2D907A4BC4AE4E7F40AAF7F3EC98815665412D72407
 Authenticode: NotSigned
 ```
 
@@ -109,6 +109,10 @@ de renombrarse al archivo final. QVAC recibe las rutas locales del caché.
 La firma Authenticode, la aprobación legal de redistribución y los umbrales
 publicables de hardware siguen bloqueados: el candidato es unsigned y esos
 hechos no se declaran como resueltos.
+
+También se corrigió el cierre de ventana del Main: el identificador de
+`webContents` se captura antes de `BrowserWindow` se destruya, evitando el
+diálogo `Object has been destroyed` al cerrar la aplicación.
 
 ## Cómo repetir la prueba
 

@@ -297,7 +297,7 @@ expected_artifacts:
 - apps/desktop/out/make/squirrel.windows/x64/Oira-Setup-x64.exe unsigned candidate
 - configuración y pruebas de empaquetado
 observed_evidence:
-- candidato 0.0.3 generado; SHA-256 `E50E37C794500CD60B3CA39659C4911C667EB39885A49E6C365CF1993B18AFDF`
+- candidato 0.0.3 generado; SHA-256 `E4842E044D4B23555092D2D907A4BC4AE4E7F40AAF7F3EC98815665412D72407`
 - Authenticode `NotSigned`, esperado hasta T-003
 - bundle Main empaquetado sin imports residuales de `@oira/types` ni paquetes `@qvac/*`
 - `.nupkg` extraído en directorio temporal; DevTools local confirmó `title: Oira` y el `renderer/index.html` empaquetado
