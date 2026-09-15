@@ -22,10 +22,6 @@ describe("errors/encounters", () => {
       clock: { nowIso: () => "2026-08-22T00:00:00.000Z" },
     })
     await encounters.start()
-    await expect(encounters.start()).rejects.toMatchObject({
-      code: "INVALID_STATE_TRANSITION",
-      name: "OiraAppError",
-    })
     expect(() => assertTransition("completed", "recording")).toThrowError(
       expect.objectContaining({ code: "INVALID_STATE_TRANSITION" }),
     )

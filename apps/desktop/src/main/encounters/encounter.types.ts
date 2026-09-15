@@ -24,6 +24,7 @@ export type EncounterPort = {
     visitType?: string
   }) => Promise<{ encounterId: string; startedAt: string }>
   stop: (encounterId: string) => Promise<{ status: EncounterStatus }>
+  discard: (encounterId: string) => Promise<{ status: EncounterStatus }>
   getById: (id: string) => Promise<EncounterRecord | undefined>
   advance: (id: string, to: EncounterStatus) => Promise<void>
 }

@@ -208,6 +208,7 @@ describe("createNotesService", () => {
       encounters: {
         async start() { return { encounterId: ENCOUNTER, startedAt: "" } },
         async stop() { return { status: "recording" as const } },
+        async discard() { return { status: "discarded" as const } },
         async getById() {
           return { id: ENCOUNTER, status: "transcribed" as const, createdAt: "", startedAt: "", endedAt: "", updatedAt: "", completedAt: null, transcriptId: null, label: "", visitType: "" }
         },
@@ -236,6 +237,7 @@ describe("createNotesService", () => {
       encounters: {
         async start() { return { encounterId: ENCOUNTER, startedAt: "" } },
         async stop() { return { status: "recording" as const } },
+        async discard() { return { status: "discarded" as const } },
         async getById() {
           return { id: ENCOUNTER, status, createdAt: "", startedAt: "", endedAt: "", updatedAt: "", completedAt: null, transcriptId: null, label: "", visitType: "" }
         },
@@ -451,6 +453,9 @@ describe("createNotesService", () => {
         },
         async stop() {
           return { status: "recording" as const }
+        },
+        async discard() {
+          return { status: "discarded" as const }
         },
         async getById() {
           if (!present) return undefined

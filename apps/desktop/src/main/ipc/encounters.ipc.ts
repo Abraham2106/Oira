@@ -25,12 +25,7 @@ export function registerEncounterIpc(
       requiresSession: true,
       session: deps.session,
       logger: deps.logger,
-      run: async (input) => {
-        // Start the expensive local warm-up at the same user action that opens
-        // the microphone, but do not delay recording or permission handling.
-        void deps.inferenceRuntime?.warmTranscription().catch(() => undefined)
-        return deps.encounters.start(input)
-      },
+      run: (input) => deps.encounters.start(input),
     })(raw),
   )
 

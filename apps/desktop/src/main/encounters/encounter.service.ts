@@ -1,7 +1,4 @@
-import {
-  encounterAlreadyActiveError,
-  encounterNotFoundError,
-} from "../errors/encounters"
+import { encounterNotFoundError } from "../errors/encounters"
 import type { AudioCapturePort, Clock } from "../ports/outbound"
 import { createMemoryEncounterRepository, type EncounterRepository } from "./encounter.repository"
 import { assertTransition } from "./encounter.state"
@@ -32,11 +29,31 @@ export function createEncounterService(
   const createId = deps.createId ?? (() => crypto.randomUUID())
   const audio = deps.audio
 
+  async function discard(encounterId: string) {
+    const current = await repository.getById(encounterId)
+    if (!current) notFound()
+    if (current.status === "discarded" || current.status === "completed") {
+      return { status: current.status }
+    }
+
+    assertTransition(current.status, "discarded")
+    const now = clock.nowIso()
+    const next: EncounterRecord = {
+      ...current,
+      status: "discarded",
+      endedAt: current.endedAt ?? now,
+      updatedAt: now,
+    }
+    await repository.update(next)
+    audio?.purge(encounterId)
+    return { status: next.status }
+  }
+
   return {
     async start(input = {}) {
       const active = await repository.findActive()
       if (active) {
-        throw encounterAlreadyActiveError()
+        await discard(active.id)
       }
 
       const now = clock.nowIso()
@@ -83,6 +100,8 @@ export function createEncounterService(
       return { status: next.status }
     },
 
+    discard,
+
     async getById(id) {
       return repository.getById(id)
     },
@@ -90,6 +109,7 @@ export function createEncounterService(
     async advance(id, to) {
       const current = await repository.getById(id)
       if (!current) notFound()
+      if (current.status === "discarded") return
       assertTransition(current.status, to)
       await repository.update({
         ...current,
