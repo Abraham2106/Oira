@@ -23,7 +23,8 @@ export type NotesPort = {
 
 export type ExportNoteCommand = {
   encounterId: string
-  format: "txt" | "json"
+  format: "txt" | "json" | "pdf" | "fhir"
+  presentation?: "sections" | "soap"
 }
 
 export type ExportPort = {

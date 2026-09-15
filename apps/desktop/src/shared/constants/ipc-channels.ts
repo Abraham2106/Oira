@@ -4,6 +4,7 @@ export const IPC_CHANNELS = {
   SETUP_GET_STATUS: "notalocal:setup:get-status",
   SETUP_PROVISION: "notalocal:setup:provision",
   STOP_ENCOUNTER: "notalocal:encounters:stop",
+  DISCARD_ENCOUNTER: "notalocal:encounters:discard",
   APPEND_AUDIO: "notalocal:audio:append",
   GENERATE_NOTE: "notalocal:notes:generate",
   RETRY_AUDIO_CLEANUP: "notalocal:notes:retry-audio-cleanup",
