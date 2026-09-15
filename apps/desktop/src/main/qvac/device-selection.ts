@@ -4,12 +4,14 @@ export type GpuDescriptor = {
   vendor?: string
   index: number
   vramBytes?: number
+  cuda?: boolean
 }
 
 export type DeviceSelection = {
   identity: { id: string; name: string; vendor?: string }
-  whisperGpuDevice: number
-  llmMainGpu: number
+  /** Requested backend index; resource metadata alone does not confirm execution. */
+  whisperGpuDevice?: number
+  llmMainGpu: number | "dedicated" | "integrated"
   requestedLabel: string
   fallbackReason?: string
 }
@@ -61,7 +63,7 @@ function readBytes(value: unknown): number | undefined {
 }
 
 function extractVramBytes(record: Record<string, unknown>): number | undefined {
-  for (const key of ["vramBytes", "vram", "dedicatedMemory", "dedicatedVideoMemory", "memoryTotal", "totalMemory"]) {
+  for (const key of ["vramBytes", "vram", "memoryTotalBytes", "dedicatedMemory", "dedicatedVideoMemory", "memoryTotal", "totalMemory"]) {
     const bytes = readBytes(record[key])
     if (bytes != null) return bytes
   }
@@ -70,9 +72,16 @@ function extractVramBytes(record: Record<string, unknown>): number | undefined {
   return (
     readBytes(memory.total)
     ?? readBytes(memory.totalBytes)
+    ?? readBytes(memory.memoryTotalBytes)
     ?? readBytes(memory.dedicated)
     ?? readBytes(memory.free)
   )
+}
+
+function extractCuda(record: Record<string, unknown>): boolean | undefined {
+  const drivers = asRecord(record.drivers)
+  const cuda = metricValue(drivers?.cuda as ResourceMetric<boolean> | boolean | undefined)
+  return typeof cuda === "boolean" ? cuda : undefined
 }
 
 function parseGpuRow(row: unknown, index: number): GpuDescriptor | undefined {
@@ -82,13 +91,15 @@ function parseGpuRow(row: unknown, index: number): GpuDescriptor | undefined {
   const vendor = metricValue(record.vendor as ResourceMetric<string> | string | undefined)
   const id = typeof record.id === "string" && record.id.length > 0 ? record.id : `gpu-${index}`
   const vramBytes = extractVramBytes(record)
-  if (!name && !vendor && vramBytes == null) return undefined
+  const cuda = extractCuda(record)
+  if (!name && !vendor && vramBytes == null && cuda == null) return undefined
   return {
     id,
     name: name ?? vendor ?? id,
     vendor,
     index,
     vramBytes,
+    cuda,
   }
 }
 
@@ -111,6 +122,7 @@ export function extractGpusFromSystemResources(resources: unknown): GpuDescripto
     gpus.push({
       ...parsed,
       vramBytes: parsed.vramBytes ?? sample?.vramBytes,
+      cuda: parsed.cuda ?? sample?.cuda,
     })
   })
   if (gpus.length === 0) return samples
@@ -144,39 +156,25 @@ function formatVram(bytes: number): string {
 }
 
 /**
- * llama.cpp Vulkan usually lists smaller adapters first. The index of the
- * highest-VRAM GPU is the count of GPUs with strictly less VRAM.
- */
-function llamaCppGpuIndex(gpus: readonly GpuDescriptor[], chosen: GpuDescriptor): number {
-  const rank = vramRank(chosen)
-  return gpus.filter((gpu) => vramRank(gpu) < rank).length
-}
-
-/**
- * Pick the GPU with the most VRAM. Vendor-agnostic: no NVIDIA/AMD special case.
+ * Prefer a discrete adapter for Whisper's numeric `gpu_device`.
+ * Qwen uses the addon's class selector (`dedicated` / `integrated`), not CUDA.
  */
 export function selectPreferredGpu(
   gpus: readonly GpuDescriptor[],
 ): DeviceSelection | undefined {
-  if (gpus.length === 0) return undefined
-  const ranked = [...gpus].sort((left, right) => {
+  const discrete = gpus.filter((gpu) => !isIntegrated(gpu))
+  const pool = discrete.length > 0 ? discrete : gpus
+  const ranked = [...pool].sort((left, right) => {
     const delta = vramRank(right) - vramRank(left)
     return delta !== 0 ? delta : left.index - right.index
   })
   const chosen = ranked[0]
   if (!chosen) return undefined
-  const llamaIndex = llamaCppGpuIndex(gpus, chosen)
   const vram = chosen.vramBytes != null ? ` · ${formatVram(chosen.vramBytes)}` : ""
   return {
     identity: { id: chosen.id, name: chosen.name, vendor: chosen.vendor },
-    whisperGpuDevice: llamaIndex,
-    llmMainGpu: llamaIndex,
+    whisperGpuDevice: chosen.index,
+    llmMainGpu: discrete.length > 0 ? "dedicated" : "integrated",
     requestedLabel: `${chosen.name}${vram}`,
-    fallbackReason:
-      chosen.vramBytes == null
-        ? isIntegrated(chosen)
-          ? "Solo se detectó una GPU integrada sin VRAM reportada; el backend elegirá el dispositivo."
-          : "No hay VRAM reportada; se prioriza la GPU no integrada."
-        : undefined,
   }
 }

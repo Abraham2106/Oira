@@ -8,6 +8,7 @@ import { createQwenGenerationParams, createQwenLlmConfig, qwenAccelerationLabel 
 import { createWhisperSttConfig } from "./whisper-stt-config"
 import type { CompletionStats } from "./sdk"
 import { extractGpusFromSystemResources, selectPreferredGpu } from "./device-selection"
+import { pinGgmlVulkanDevice } from "./pin-ggml-vulkan"
 import type { ModelLifecycleEvent } from "../../shared/types/model-lifecycle"
 
 export type QvacSdkModule = typeof import("./sdk")
@@ -50,6 +51,7 @@ export type QvacInferenceRuntime = {
   warmTranscription: () => Promise<void>
   transcribe: (input: { filePath: string }) => Promise<SttSegmentInput[]>
   handoffToStructuring: () => Promise<void>
+  releaseStructuring: () => Promise<void>
   getState: () => QvacInferenceRuntimeState
   shutdown: () => Promise<void>
 }
@@ -64,6 +66,7 @@ export function createQvacInferenceRuntime(deps: QvacInferenceRuntimeDeps = {}):
   let residentId: string | undefined
   let warmPromise: Promise<void> | undefined
   let handoffPromise: Promise<void> | undefined
+  let releasePromise: Promise<void> | undefined
   let shutdownPromise: Promise<void> | undefined
   let pendingLoadRequestId: string | undefined
   let loadSettlement: Promise<void> | undefined
@@ -73,7 +76,7 @@ export function createQvacInferenceRuntime(deps: QvacInferenceRuntimeDeps = {}):
   let completionPromise: Promise<StructuringCompletion | string> | undefined
   let activeTranscription = false
   let generation = 0
-  let gpu: { id: string; name: string; index: number; llmMainGpu: number; vendor?: string; label?: string } | undefined
+  let gpu: { id: string; name: string; index?: number; vulkanIndex?: number; llmMainGpu: number | "dedicated" | "integrated"; vendor?: string; label?: string } | undefined
 
   const getSdk = async (): Promise<QvacSdkModule> =>
     (sdk ??= await (deps.loadSdk ?? (() => import("./sdk")))())
@@ -86,26 +89,28 @@ export function createQvacInferenceRuntime(deps: QvacInferenceRuntimeDeps = {}):
   const resolveGpu = async (current: QvacSdkModule): Promise<typeof gpu> => {
     let resources: Awaited<ReturnType<QvacSdkModule["getSystemResources"]>> | undefined
     try {
-      resources = await current.getSystemResources({ includeSamples: true })
+      resources = await current.getSystemResources({ sample: true })
     } catch {
       return gpu
     }
     const list = extractGpusFromSystemResources(resources)
     const chosen = selectPreferredGpu(list)
-    return (gpu = chosen
-      ? {
-          ...chosen.identity,
-          index: chosen.whisperGpuDevice,
-          llmMainGpu: chosen.llmMainGpu,
-          label: chosen.requestedLabel,
-        }
-      : gpu)
+    if (!chosen) return gpu
+    const physical = chosen.whisperGpuDevice
+    const whisperIndex = typeof physical === "number" ? pinGgmlVulkanDevice(physical) : undefined
+    return (gpu = {
+      ...chosen.identity,
+      ...(whisperIndex === undefined ? {} : { index: whisperIndex }),
+      ...(physical === undefined ? {} : { vulkanIndex: physical }),
+      llmMainGpu: chosen.llmMainGpu,
+      label: chosen.requestedLabel,
+    })
   }
   const requestedDevice = (): string => gpu?.label ?? gpu?.name ?? "GPU no identificada"
-  const selectedGpuIndex = (): number | undefined => gpu?.llmMainGpu
+  const selectedMainGpu = (): number | "dedicated" | "integrated" => gpu?.llmMainGpu ?? "dedicated"
   const qwenDeviceInfo = () => ({
     requested: requestedDevice(),
-    acceleration: qwenAccelerationLabel(selectedGpuIndex() ?? 0),
+    acceleration: qwenAccelerationLabel(selectedMainGpu()),
   })
   const cleanupLate = async (current: QvacSdkModule, id?: string): Promise<void> => {
     pendingLoadRequestId = undefined
@@ -130,6 +135,7 @@ export function createQvacInferenceRuntime(deps: QvacInferenceRuntimeDeps = {}):
     let loaded = false
     let bump = (): void => undefined
     const loading = current.loadModel({
+      modelType: kind === "whisper" ? "whispercpp-transcription" : "llamacpp-completion",
       modelSrc: kind === "whisper"
         ? deps.modelPaths?.whisper ?? modelSrc
         : deps.modelPaths?.qwen ?? modelSrc,
@@ -202,8 +208,7 @@ export function createQvacInferenceRuntime(deps: QvacInferenceRuntimeDeps = {}):
       state: "READY",
       device: {
         requested: requestedDevice(),
-        acceleration: `use_gpu=true${typeof selected?.index === "number" ? `; gpu_device=${selected.index}` : ""}`,
-        ...(selected ? {} : { fallbackReason: "No se detectó una GPU." }),
+        acceleration: `use_gpu=true${typeof selected?.index === "number" ? `; gpu_device=${selected.index}` : ""}${typeof selected?.vulkanIndex === "number" ? `; GGML_VK_VISIBLE_DEVICES=${selected.vulkanIndex}` : ""}`,
       },
     })
   }
@@ -214,20 +219,18 @@ export function createQvacInferenceRuntime(deps: QvacInferenceRuntimeDeps = {}):
     // another SDK resource probe can take seconds and delay the actual Qwen
     // load until after the renderer's transcript reveal has finished.
     // Device metadata is optional; it must never gate this handoff.
-    const selected = gpu
-    const mainGpu = selectedGpuIndex()
+    if (!gpu) await resolveGpu(current)
     state = "QWEN_LOADING"
     report({
       model: "qwen",
       state: "LOADING",
       device: {
         ...qwenDeviceInfo(),
-        ...(selected ? {} : { fallbackReason: "No se detectó una GPU; llama.cpp elige el dispositivo por defecto." }),
       },
     })
-    const id = await load("qwen", current.QWEN3_4B_Q4_K_M, createQwenLlmConfig(
-      mainGpu === undefined ? {} : { mainGpu },
-    ))
+    const id = await load("qwen", current.QWEN3_4B_Q4_K_M, createQwenLlmConfig({
+      mainGpu: selectedMainGpu(),
+    }))
     resident = "qwen"; residentId = id
     state = "QWEN_READY"
     report({
@@ -245,6 +248,7 @@ export function createQvacInferenceRuntime(deps: QvacInferenceRuntimeDeps = {}):
       return Promise.reject(transcriptionFailedError("MODEL_LOAD_PENDING"))
     }
     const run = (async () => {
+      if (releasePromise) await releasePromise.catch(() => undefined)
       if (handoffPromise) await handoffPromise
       if (state === "STRUCTURING") {
         generation++
@@ -274,6 +278,7 @@ export function createQvacInferenceRuntime(deps: QvacInferenceRuntimeDeps = {}):
     if (handoffPromise) return handoffPromise
     if (closing()) return Promise.resolve()
     const run = (async () => {
+      if (releasePromise) await releasePromise.catch(() => undefined)
       if (state === "QWEN_READY" || state === "STRUCTURING") return
       state = "HANDING_OFF"
       if (resident === "whisper" && residentId) await unload("whisper", residentId)
@@ -283,6 +288,24 @@ export function createQvacInferenceRuntime(deps: QvacInferenceRuntimeDeps = {}):
     void run.then(
       () => { if (handoffPromise === run) handoffPromise = undefined },
       () => { if (handoffPromise === run) handoffPromise = undefined },
+    )
+    return run
+  }
+
+  const releaseStructuring = (): Promise<void> => {
+    if (closing()) return Promise.resolve()
+    if (releasePromise) return releasePromise
+    const run = (async () => {
+      if (handoffPromise) await handoffPromise.catch(() => undefined)
+      if (completionPromise) await completionPromise.catch(() => undefined)
+      if (resident !== "qwen" || !residentId) return
+      await unload("qwen", residentId)
+      if (!closing()) state = "IDLE"
+    })()
+    releasePromise = run
+    void run.then(
+      () => { if (releasePromise === run) releasePromise = undefined },
+      () => { if (releasePromise === run) releasePromise = undefined },
     )
     return run
   }
@@ -430,6 +453,7 @@ export function createQvacInferenceRuntime(deps: QvacInferenceRuntimeDeps = {}):
       if (lateLoadPending) await lateLoadPending
       if (warmPromise) await warmPromise.catch(() => undefined)
       if (handoffPromise) await handoffPromise.catch(() => undefined)
+      if (releasePromise) await releasePromise.catch(() => undefined)
       if (sdk && residentId && resident) await unload(resident, residentId).catch(() => undefined)
       if (sdk) await sdk.close().catch(() => undefined)
       state = "CLOSED"
@@ -437,5 +461,5 @@ export function createQvacInferenceRuntime(deps: QvacInferenceRuntimeDeps = {}):
     return shutdownPromise
   }
 
-  return { beginGeneration, completeStructuring, completeQwen, warmTranscription, transcribe, handoffToStructuring, getState: () => activeTranscription ? "TRANSCRIBING" : state, shutdown }
+  return { beginGeneration, completeStructuring, completeQwen, warmTranscription, transcribe, handoffToStructuring, releaseStructuring, getState: () => activeTranscription ? "TRANSCRIBING" : state, shutdown }
 }

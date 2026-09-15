@@ -55,6 +55,7 @@ declare module "@qvac/sdk" {
   }
 
   export function loadModel(input: {
+    modelType?: "whispercpp-transcription" | "llamacpp-completion"
     modelSrc: typeof WHISPER_LARGE_V3_TURBO | typeof QWEN3_4B_Q4_K_M | string
     modelConfig?: WhisperSttModelConfig | LlmModelConfig
     onProgress?: (progress: ModelProgressUpdate) => void
@@ -147,9 +148,14 @@ declare module "@qvac/sdk" {
     vendor?: ResourceMetric<string>
     vram?: ResourceMetric<number> | number
     vramBytes?: ResourceMetric<number> | number
+    memoryTotalBytes?: ResourceMetric<number>
     memory?: {
       total?: ResourceMetric<number> | number
       used?: ResourceMetric<number> | number
+    }
+    drivers?: {
+      cuda?: ResourceMetric<boolean> | boolean
+      vulkan?: ResourceMetric<boolean> | boolean
     }
   }
 
@@ -163,7 +169,7 @@ declare module "@qvac/sdk" {
   }
 
   export function getSystemResources(input?: {
-    includeSamples?: boolean
+    sample?: boolean
   }): Promise<SystemResources>
 
   export function close(): Promise<void>

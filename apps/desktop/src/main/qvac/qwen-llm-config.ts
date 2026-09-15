@@ -7,16 +7,17 @@ export type QwenDeviceOptions = {
   mainGpu?: number | "integrated" | "dedicated"
 }
 
-export function qwenAccelerationLabel(mainGpu: number | "integrated" | "dedicated"): string {
+export function qwenAccelerationLabel(mainGpu: number | "integrated" | "dedicated" = "dedicated"): string {
   return `gpu_layers=${QWEN_GPU_LAYERS}; device=gpu; main-gpu=${mainGpu}`
 }
 
 /**
  * llama.cpp completion config for Qwen. `gpu_layers: 99` requests full GPU
- * residency (SDK default). llama.cpp does not transparently spill leftover
- * layers to system RAM; if VRAM is insufficient the load fails visibly.
+ * residency. `main-gpu` is the addon's hybrid selector: `"dedicated"` prefers
+ * the discrete GPU; omitting it lets Vulkan take GPU 0 (often the iGPU).
  */
 export function createQwenLlmConfig(device: QwenDeviceOptions = {}): LlmModelConfig {
+  const mainGpu = device.mainGpu ?? "dedicated"
   return {
     ctx_size: QWEN_CTX_SIZE,
     gpu_layers: QWEN_GPU_LAYERS,
@@ -27,7 +28,7 @@ export function createQwenLlmConfig(device: QwenDeviceOptions = {}): LlmModelCon
     reasoning_budget: 0,
     predict: 2048,
     "split-mode": "none",
-    ...(device.mainGpu !== undefined ? { "main-gpu": device.mainGpu } : {}),
+    "main-gpu": mainGpu,
   }
 }
 

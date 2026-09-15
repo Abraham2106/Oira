@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { beforeEach, afterEach, describe, expect, it, vi } from "vitest"
 import { createQvacInferenceRuntime } from "./inference-runtime"
 
 vi.mock("./sdk", () => ({
@@ -22,8 +22,8 @@ vi.mock("./sdk", () => ({
       gpus: {
         status: "supported",
         value: [
-          { id: "nvidia-0", name: { status: "supported", value: "NVIDIA RTX 2050" }, vendor: { status: "supported", value: "NVIDIA" } },
-          { id: "amd-1", name: { status: "supported", value: "AMD Radeon Graphics" }, vendor: { status: "supported", value: "AMD" } },
+          { id: "amd-0", name: { status: "supported", value: "AMD Radeon Graphics" }, vendor: { status: "supported", value: "AMD" }, drivers: { cuda: { status: "supported", value: false } }, memoryTotalBytes: { status: "supported", value: 419_430_400, provenance: { source: "test" } } },
+          { id: "nvidia-1", name: { status: "supported", value: "NVIDIA RTX 2050" }, vendor: { status: "supported", value: "NVIDIA" }, drivers: { cuda: { status: "supported", value: true } }, memoryTotalBytes: { status: "supported", value: 4_294_967_296, provenance: { source: "test" } } },
         ],
       },
     },
@@ -34,6 +34,9 @@ vi.mock("./sdk", () => ({
 }))
 
 beforeEach(() => vi.clearAllMocks())
+afterEach(() => {
+  delete process.env.GGML_VK_VISIBLE_DEVICES
+})
 
 async function sdkModule() {
   return import("./sdk")
@@ -44,6 +47,46 @@ async function flushMicrotasks(times = 8): Promise<void> {
 }
 
 describe("createQvacInferenceRuntime", () => {
+  it("supplies SDK model types when loading verified local files", async () => {
+    const sdk = await sdkModule()
+    const runtime = createQvacInferenceRuntime({
+      loadSdk: async () => sdk,
+      modelPaths: { whisper: "C:/models/whisper.bin", qwen: "C:/models/qwen.gguf" },
+    })
+    await runtime.warmTranscription()
+    expect(sdk.getSystemResources).toHaveBeenCalledWith({ sample: true })
+    expect(sdk.loadModel).toHaveBeenLastCalledWith(expect.objectContaining({
+      modelSrc: "C:/models/whisper.bin", modelType: "whispercpp-transcription",
+      modelConfig: expect.objectContaining({
+        contextParams: expect.objectContaining({
+          use_gpu: true,
+          gpu_device: process.platform === "darwin" ? 1 : 0,
+        }),
+      }),
+    }))
+    if (process.platform !== "darwin") {
+      expect(process.env.GGML_VK_VISIBLE_DEVICES).toBe("1")
+    }
+    await runtime.handoffToStructuring()
+    expect(sdk.loadModel).toHaveBeenLastCalledWith(expect.objectContaining({
+      modelSrc: "C:/models/qwen.gguf", modelType: "llamacpp-completion",
+      modelConfig: expect.objectContaining({
+        device: "gpu",
+        gpu_layers: 99,
+        "main-gpu": "dedicated",
+      }),
+    }))
+    await runtime.shutdown()
+  })
+
+  it("loads with SDK defaults when discovery fails", async () => {
+    const sdk = await sdkModule()
+    vi.mocked(sdk.getSystemResources).mockRejectedValueOnce(new Error("probe unavailable"))
+    const runtime = createQvacInferenceRuntime({ loadSdk: async () => sdk })
+    await expect(runtime.warmTranscription()).resolves.toBeUndefined()
+    expect(sdk.loadModel).toHaveBeenCalled()
+    await runtime.shutdown()
+  })
   it("deduplicates concurrent warm calls", async () => {
     const sdk = await sdkModule()
     let finish: (id: string) => void = () => undefined
@@ -69,6 +112,12 @@ describe("createQvacInferenceRuntime", () => {
     const runtime = createQvacInferenceRuntime({ loadSdk: async () => sdk })
 
     await runtime.warmTranscription()
+    expect(sdk.loadModel).toHaveBeenCalledWith(expect.objectContaining({
+      modelSrc: sdk.WHISPER_LARGE_V3_TURBO,
+      modelConfig: expect.objectContaining({
+        contextParams: expect.objectContaining({ use_gpu: true }),
+      }),
+    }))
     await runtime.transcribe({ filePath: "first.wav" })
     await runtime.transcribe({ filePath: "second.wav" })
 
@@ -131,7 +180,9 @@ describe("createQvacInferenceRuntime", () => {
       expect(sdk.loadModel).toHaveBeenLastCalledWith(expect.objectContaining({
         modelSrc: sdk.QWEN3_4B_Q4_K_M,
         modelConfig: expect.objectContaining({
-          "main-gpu": 1,
+          device: "gpu",
+          gpu_layers: 99,
+          "main-gpu": "dedicated",
         }),
       }))
       expect(runtime.getState()).toBe("QWEN_LOADING")
@@ -206,6 +257,23 @@ describe("createQvacInferenceRuntime", () => {
     runtime.beginGeneration()
     finish({ contentText: "{}", raw: { fullText: "{}" } })
     await expect(pending).rejects.toMatchObject({ code: "OPERATION_CANCELLED" })
+  })
+
+  it("unloads Qwen after releaseStructuring and leaves Whisper unloaded", async () => {
+    const sdk = await sdkModule()
+    const runtime = createQvacInferenceRuntime({ loadSdk: async () => sdk })
+    await runtime.warmTranscription()
+    await runtime.handoffToStructuring()
+    expect(runtime.getState()).toBe("QWEN_READY")
+    expect(sdk.unloadModel).toHaveBeenCalledTimes(1)
+    await runtime.releaseStructuring()
+    expect(sdk.unloadModel).toHaveBeenCalledTimes(2)
+    expect(runtime.getState()).toBe("IDLE")
+    expect(sdk.loadModel).toHaveBeenCalledTimes(2)
+    await runtime.warmTranscription()
+    expect(sdk.loadModel).toHaveBeenCalledTimes(3)
+    expect(runtime.getState()).toBe("READY")
+    await runtime.shutdown()
   })
 
   it("rejects concurrent transcriptions as INFERENCE_BUSY", async () => {
