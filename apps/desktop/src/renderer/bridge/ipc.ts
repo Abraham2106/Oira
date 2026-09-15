@@ -19,6 +19,12 @@ export function adaptOiraApi(api: OiraApi): DemoBridge {
     async warmTranscription() {
       await unwrap(api.warmTranscription())
     },
+    async getSetupStatus() {
+      return unwrap(api.getSetupStatus())
+    },
+    async provisionModels() {
+      return unwrap(api.provisionModels())
+    },
     async startEncounter(input) {
       return unwrap(
         api.startEncounter({
@@ -72,6 +78,9 @@ export function adaptOiraApi(api: OiraApi): DemoBridge {
     },
     onModelLifecycle(listener) {
       return api.onModelLifecycle(listener)
+    },
+    onSetupProgress(listener) {
+      return api.onSetupProgress(listener)
     },
   }
 }

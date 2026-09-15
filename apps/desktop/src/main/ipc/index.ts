@@ -9,6 +9,7 @@ import { registerExportIpc } from "./export.ipc"
 import { registerInferenceIpc } from "./inference.ipc"
 import { registerNotesIpc } from "./notes.ipc"
 import { registerSettingsIpc } from "./settings.ipc"
+import { registerSetupIpc } from "./setup.ipc"
 import type { IpcHandle } from "./types"
 import {
   createSilentIpcLogger,
@@ -72,6 +73,12 @@ export function registerIpc(handle: IpcHandle, deps: IpcDeps): void {
     logger: deps.logger,
   })
   registerSettingsIpc(handle, deps)
+  registerSetupIpc(handle, {
+    setup: deps.setup,
+    session: deps.session,
+    logger: deps.logger,
+    onProgress: deps.onSetupProgress,
+  })
 }
 
 export { IPC_CHANNELS } from "./channels"

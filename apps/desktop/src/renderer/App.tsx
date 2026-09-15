@@ -2,11 +2,13 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { Button } from "@oira/ui"
 import type { SectionId } from "@oira/types"
 import type { QwenLifecycleState, WhisperLifecycleState, DeviceLifecycleInfo } from "../shared/types/model-lifecycle"
+import type { SetupProgress, SetupStatus } from "../shared/types/setup"
 import { formatNoteAsText } from "../shared/clinical-export"
 import { getBridge } from "./bridge/oira"
 import { FlowStepper } from "./components/FlowStepper"
 import { Icon, type IconName } from "./components/icons"
 import { ModelDebugPanel, reduceModelDebugState } from "./components/ModelDebugPanel"
+import { ModelSetupScreen } from "./screens/ModelSetup/ModelSetup"
 import { flowStepFromState } from "./lib/consultFlow"
 import { pickTag, sampleHistory, type PatientHistoryEntry } from "./lib/patientTags"
 import { useI18n } from "./i18n/I18nProvider"
@@ -45,6 +47,7 @@ export function App() {
   const { t } = useI18n()
   const encounter = useEncounter()
   const [booting, setBooting] = useState(true)
+  const [setupStatus, setSetupStatus] = useState<SetupStatus | null>(null)
   const [modelDebug, setModelDebug] = useState<{
     whisper: WhisperLifecycleState
     qwen: QwenLifecycleState
@@ -58,6 +61,7 @@ export function App() {
   const [recorderPrepared, setRecorderPrepared] = useState(false)
   const [view, setView] = useState<View>("dashboard")
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [setupOpen, setSetupOpen] = useState(false)
   const [reviewConfirmed, setReviewConfirmed] = useState(false)
   const [activeSectionId, setActiveSectionId] = useState<SectionId | null>(null)
   const [highlightedIds, setHighlightedIds] = useState<string[]>([])
@@ -70,6 +74,13 @@ export function App() {
     const minimumVisible = new Promise<void>((resolve) => window.setTimeout(resolve, 4_500))
     void Promise.all([
       getBridge().getSettings().catch(() => undefined),
+      getBridge().getSetupStatus().then(setSetupStatus).catch(() => setSetupStatus({
+        phase: "error",
+        ready: false,
+        checks: [],
+        models: [],
+        message: t("modelSetup.phase.error"),
+      })),
       minimumVisible,
     ]).finally(() => {
       if (!cancelled) setBooting(false)
@@ -77,7 +88,27 @@ export function App() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [t])
+
+  useEffect(() => getBridge().onSetupProgress((event: SetupProgress) => {
+    setSetupStatus((current) => {
+      if (!current) return current
+      return {
+        ...current,
+        phase: "downloading",
+        models: current.models.map((model) =>
+          model.id === event.model
+            ? {
+                ...model,
+                status: "downloading",
+                downloadedBytes: event.downloadedBytes,
+                totalBytes: event.totalBytes,
+              }
+            : model,
+        ),
+      }
+    })
+  }), [])
 
   useEffect(() => getBridge().onModelLifecycle((event) => {
     setModelDebug((current) => reduceModelDebugState(current, event))
@@ -197,7 +228,39 @@ export function App() {
 
   const showFlow = ready && view === "consult"
 
+  const provisionModels = useCallback(async () => {
+    setSetupStatus((current) => current ? { ...current, phase: "downloading" } : current)
+    try {
+      const next = await getBridge().provisionModels()
+      setSetupStatus(next)
+    } catch (error) {
+      setSetupStatus((current) => current ? {
+        ...current,
+        phase: "error",
+        message: error instanceof Error ? error.message : t("modelSetup.phase.error"),
+      } : current)
+    }
+  }, [t])
+
   if (booting) return <StartupScreen />
+  if (setupStatus && (setupOpen || !setupStatus.ready)) {
+    return (
+      <ModelSetupScreen
+        phase={setupStatus.phase}
+        checks={setupStatus.checks}
+        models={setupStatus.models}
+        message={setupStatus.message}
+        onPrimary={() => {
+          if (setupStatus.phase === "ready") setSetupOpen(false)
+          else void provisionModels()
+        }}
+        onExit={() => {
+          if (!setupStatus.ready) window.close()
+          else setSetupOpen(false)
+        }}
+      />
+    )
+  }
 
   return (
     <div className="shell">
@@ -328,7 +391,15 @@ export function App() {
           />
         ) : null}
 
-        {settingsOpen ? <SettingsScreen onClose={() => setSettingsOpen(false)} /> : null}
+        {settingsOpen ? (
+          <SettingsScreen
+            onClose={() => setSettingsOpen(false)}
+            onOpenModelSetup={() => {
+              setSettingsOpen(false)
+              setSetupOpen(true)
+            }}
+          />
+        ) : null}
 
         {showFlow && encounter.productState === "IDLE" ? (
           <NewConsultationScreen

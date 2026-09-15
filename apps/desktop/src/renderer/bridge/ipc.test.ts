@@ -10,6 +10,8 @@ describe("adaptOiraApi", () => {
     const note = syntheticNote()
     const api: OiraApi = {
       warmTranscription: async () => ({ ok: true, data: { warmed: true } }),
+      getSetupStatus: async () => ({ ok: true, data: { phase: "ready", ready: true, checks: [], models: [] } }),
+      provisionModels: async () => ({ ok: true, data: { phase: "ready", ready: true, checks: [], models: [] } }),
       startEncounter: async () => ({
         ok: true,
         data: { encounterId, startedAt: "2026-01-01T00:00:00.000Z" },
@@ -66,6 +68,7 @@ describe("adaptOiraApi", () => {
       }),
       onInferenceProgress: () => () => {},
       onModelLifecycle: () => () => {},
+      onSetupProgress: () => () => {},
     }
 
     const bridge = adaptOiraApi(api)
@@ -96,6 +99,8 @@ describe("adaptOiraApi", () => {
         ok: false,
         error: { code: "INVALID_INPUT", message: "x", retryable: false },
       }),
+      getSetupStatus: async () => ({ ok: false, error: { code: "INVALID_INPUT", message: "x", retryable: false } }),
+      provisionModels: async () => ({ ok: false, error: { code: "INVALID_INPUT", message: "x", retryable: false } }),
       startEncounter: async () => ({
         ok: false,
         error: {
@@ -151,6 +156,7 @@ describe("adaptOiraApi", () => {
       }),
       onInferenceProgress: () => () => {},
       onModelLifecycle: () => () => {},
+      onSetupProgress: () => () => {},
     }
 
     await expect(

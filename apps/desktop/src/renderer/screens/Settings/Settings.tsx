@@ -6,9 +6,10 @@ import { PrivacyStatusPanel } from "../../components/PrivacyStatusPanel"
 
 type Props = {
   onClose: () => void
+  onOpenModelSetup: () => void
 }
 
-export function SettingsScreen({ onClose }: Props) {
+export function SettingsScreen({ onClose, onOpenModelSetup }: Props) {
   const { t, locale, setLocale } = useI18n()
 
   return (
@@ -47,6 +48,7 @@ export function SettingsScreen({ onClose }: Props) {
           <ModelStatus state="LOCAL_INFERENCE_READY" />
         </div>
         <p className="muted">{t("settings.engineBody")}</p>
+        <Button onClick={onOpenModelSetup}>{t("settings.modelSetupButton")}</Button>
       </Card>
 
       <Card title={t("settings.statusCardTitle")}>

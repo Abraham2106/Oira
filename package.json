@@ -6,6 +6,8 @@
     "atlas:capture": "node scripts/architecture/atlas/capture.mjs",
     "dev": "pnpm install && pnpm dev:desktop",
     "dev:desktop": "pnpm --filter oira-desktop dev",
+    "package:desktop": "pnpm --filter oira-desktop package",
+    "make:desktop": "pnpm --filter oira-desktop make",
     "test": "pnpm --filter oira-desktop test",
     "lint:desktop": "pnpm --filter oira-desktop lint",
     "typecheck": "pnpm --filter @oira/types typecheck && pnpm --filter oira-desktop typecheck",

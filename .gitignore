@@ -3,6 +3,7 @@ node_modules/
 dist/
 out/
 apps/desktop/src/models/
+apps/desktop/qvac/
 *.tsbuildinfo
 .DS_Store
 .codex-local/

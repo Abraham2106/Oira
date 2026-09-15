@@ -10,6 +10,10 @@ import type { OiraApi } from "../shared/types/oira-api"
 const oira: OiraApi = {
   warmTranscription: () =>
     ipcRenderer.invoke(IPC_CHANNELS.WARM_TRANSCRIPTION, {}),
+  getSetupStatus: () =>
+    ipcRenderer.invoke(IPC_CHANNELS.SETUP_GET_STATUS, {}),
+  provisionModels: () =>
+    ipcRenderer.invoke(IPC_CHANNELS.SETUP_PROVISION, {}),
   startEncounter: (input = {}) =>
     ipcRenderer.invoke(IPC_CHANNELS.START_ENCOUNTER, input),
   stopEncounter: (input) =>
@@ -44,6 +48,11 @@ const oira: OiraApi = {
     const wrapped = (_event: unknown, payload: ModelLifecycleEvent) => listener(payload)
     ipcRenderer.on(IPC_EVENTS.MODEL_LIFECYCLE, wrapped)
     return () => ipcRenderer.removeListener(IPC_EVENTS.MODEL_LIFECYCLE, wrapped)
+  },
+  onSetupProgress: (listener) => {
+    const wrapped = (_event: unknown, payload: Parameters<typeof listener>[0]) => listener(payload)
+    ipcRenderer.on(IPC_EVENTS.SETUP_PROGRESS, wrapped)
+    return () => ipcRenderer.removeListener(IPC_EVENTS.SETUP_PROGRESS, wrapped)
   },
 }
 

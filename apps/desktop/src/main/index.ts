@@ -1,6 +1,7 @@
 import { app, BrowserWindow, clipboard, ipcMain, session, shell } from "electron"
-import { join } from "node:path"
-import { pathToFileURL } from "node:url"
+import { spawn } from "node:child_process"
+import { dirname, join } from "node:path"
+import { fileURLToPath, pathToFileURL } from "node:url"
 import { IPC_EVENTS } from "../shared/constants/ipc-channels"
 import { createAudioTempStore, defaultAudioTempDir } from "./audio"
 import { loadAppConfig, resolveAppEnv } from "./config"
@@ -14,6 +15,34 @@ import { withTrustedIpcSender, type TrustedRenderer } from "./ipc/sender-guard"
 import { createLogger, type Logger } from "./logging"
 import { parseEmbeddedRuntime, runtimeLogMeta } from "./runtime"
 import { tmpdir } from "node:os"
+import { createSetupService } from "./setup"
+
+const moduleDir = dirname(fileURLToPath(import.meta.url))
+const SQUIRREL_EVENTS = new Set([
+  "--squirrel-install",
+  "--squirrel-updated",
+  "--squirrel-uninstall",
+  "--squirrel-obsolete",
+])
+const squirrelEvent = process.platform === "win32" &&
+  process.argv.find((argument) => SQUIRREL_EVENTS.has(argument))
+
+function handleSquirrelEvent(event: string): void {
+  const updateExe = join(dirname(process.execPath), "..", "Update.exe")
+  const action = event === "--squirrel-uninstall"
+    ? "--removeShortcut"
+    : event === "--squirrel-install" || event === "--squirrel-updated"
+      ? "--createShortcut"
+      : null
+  if (action) {
+    const child = spawn(updateExe, [action, "Oira.exe"], {
+      detached: true,
+      stdio: "ignore",
+    })
+    child.unref()
+  }
+  app.quit()
+}
 
 function bindIpcMain(trusted: () => readonly TrustedRenderer[]): IpcHandle {
   const handle: IpcHandle = (channel, listener) => {
@@ -31,7 +60,7 @@ function createWindow(trusted: Map<number, TrustedRenderer>): void {
     title: "oira",
     autoHideMenuBar: true,
     webPreferences: {
-      preload: join(__dirname, "../preload/index.cjs"),
+      preload: join(moduleDir, "../preload/index.cjs"),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
@@ -39,7 +68,7 @@ function createWindow(trusted: Map<number, TrustedRenderer>): void {
   })
 
   const url = process.env.ELECTRON_RENDERER_URL ??
-    pathToFileURL(join(__dirname, "../renderer/index.html")).href
+    pathToFileURL(join(moduleDir, "../renderer/index.html")).href
   const blockUnexpectedNavigation = (
     details: { preventDefault: () => void; url: string; isMainFrame: boolean },
   ) => {
@@ -58,7 +87,7 @@ function createWindow(trusted: Map<number, TrustedRenderer>): void {
   if (process.env.ELECTRON_RENDERER_URL) {
     void window.loadURL(url)
   } else {
-    void window.loadFile(join(__dirname, "../renderer/index.html"))
+    void window.loadFile(join(moduleDir, "../renderer/index.html"))
   }
 }
 
@@ -76,7 +105,10 @@ function logEmbeddedRuntime(logger: Logger, versions: NodeJS.ProcessVersions): v
   })
 }
 
-app.whenReady().then(() => {
+if (squirrelEvent) {
+  handleSquirrelEvent(squirrelEvent)
+} else {
+  app.whenReady().then(() => {
   const logger = createLogger()
   logEmbeddedRuntime(logger, process.versions)
 
@@ -100,8 +132,9 @@ app.whenReady().then(() => {
   let inferenceAdapter = env.inferenceAdapter
   let settingsFile = join(tmpdir(), "oira-dev-settings.json")
   let notesFile: string
+  let config: ReturnType<typeof loadAppConfig>
   try {
-    const config = loadAppConfig({
+    config = loadAppConfig({
       userData: app.getPath("userData"),
       temp: app.getPath("temp"),
       isPackaged: app.isPackaged,
@@ -123,6 +156,13 @@ app.whenReady().then(() => {
     inferenceAdapter,
     settingsFile,
     notesFile,
+    modelCacheDir: config.paths.modelCacheDir,
+    setup: createSetupService(config.paths.modelCacheDir),
+    onSetupProgress: (event) => {
+      for (const window of BrowserWindow.getAllWindows()) {
+        window.webContents.send(IPC_EVENTS.SETUP_PROGRESS, event)
+      }
+    },
     clipboard: { writeText: (text) => clipboard.writeText(text) },
     onProgress: (event) => {
       for (const window of BrowserWindow.getAllWindows()) {
@@ -152,6 +192,7 @@ app.whenReady().then(() => {
   })
 })
 
-app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") app.quit()
-})
+  app.on("window-all-closed", () => {
+    if (process.platform !== "darwin") app.quit()
+  })
+}

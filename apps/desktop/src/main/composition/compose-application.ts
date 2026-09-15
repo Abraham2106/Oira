@@ -2,6 +2,7 @@ import { dirname, join } from "node:path"
 import { tmpdir } from "node:os"
 import type { InferenceProgress } from "../../shared/types/inference-progress"
 import type { ModelLifecycleEvent } from "../../shared/types/model-lifecycle"
+import type { SetupProgress } from "../../shared/types/setup"
 import {
   createAudioTempStore,
   defaultAudioTempDir,
@@ -44,6 +45,8 @@ import type {
 } from "../ports"
 import { createMemoryNoteStore } from "../storage/memory.store"
 import { createJsonFileStore } from "../storage/json-file.store"
+import { manifestEntry } from "../setup/manifest"
+import type { SetupService } from "../setup/service"
 
 export type ApplicationPorts = {
   encounters: EncounterPort
@@ -57,6 +60,8 @@ export type ApplicationPorts = {
   clipboard: ClipboardPort
   inferenceRuntime?: InferenceRuntimePort
   reviewer?: NoteVerifierPort
+  setup?: SetupService
+  onSetupProgress?: (event: SetupProgress) => void
 }
 
 export type ComposeApplicationOptions = {
@@ -76,6 +81,9 @@ export type ComposeApplicationOptions = {
   exportNote?: ExportPort
   inferenceRuntime?: InferenceRuntimePort
   reviewer?: NoteVerifierPort
+  modelCacheDir?: string
+  setup?: SetupService
+  onSetupProgress?: (event: SetupProgress) => void
 }
 
 function createFileSettingsPort(settingsFile: string): SettingsPort {
@@ -132,6 +140,12 @@ export function composeApplication(
     }).inferenceAdapter
   const inference = createInferencePorts(inferenceAdapter, {
     onModelLifecycle: options.onModelLifecycle,
+    modelPaths: options.modelCacheDir
+      ? {
+          whisper: join(options.modelCacheDir, manifestEntry("whisper").filename),
+          qwen: join(options.modelCacheDir, manifestEntry("qwen").filename),
+        }
+      : undefined,
   })
   const runtime = options.inferenceRuntime ?? inference.runtime
   // La segunda pasada Qwen está desactivada por defecto: duplicaba el costo
@@ -181,6 +195,8 @@ export function composeApplication(
       options.settingsFile === undefined
         ? createFileSettingsPort(join(tmpdir(), "oira-dev-settings.json"))
         : createFileSettingsPort(options.settingsFile),
+    setup: options.setup,
+    onSetupProgress: options.onSetupProgress,
   }
 }
 

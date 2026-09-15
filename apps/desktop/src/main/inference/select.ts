@@ -10,7 +10,10 @@ export type { InferenceAdapterName }
 
 export function createInferencePorts(
   adapter: InferenceAdapterName,
-  options: { onModelLifecycle?: (event: ModelLifecycleEvent) => void } = {},
+  options: {
+    onModelLifecycle?: (event: ModelLifecycleEvent) => void
+    modelPaths?: { whisper?: string; qwen?: string }
+  } = {},
 ): {
   transcription: TranscriptionPort
   structuring: StructuringPort

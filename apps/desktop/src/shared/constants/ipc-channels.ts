@@ -1,6 +1,8 @@
 export const IPC_CHANNELS = {
   START_ENCOUNTER: "notalocal:encounters:start",
   WARM_TRANSCRIPTION: "notalocal:inference:warm-transcription",
+  SETUP_GET_STATUS: "notalocal:setup:get-status",
+  SETUP_PROVISION: "notalocal:setup:provision",
   STOP_ENCOUNTER: "notalocal:encounters:stop",
   APPEND_AUDIO: "notalocal:audio:append",
   GENERATE_NOTE: "notalocal:notes:generate",
@@ -21,6 +23,7 @@ export const IPC_CHANNELS = {
 export const IPC_EVENTS = {
   INFERENCE_PROGRESS: "notalocal:inference:progress",
   MODEL_LIFECYCLE: "notalocal:inference:model-lifecycle",
+  SETUP_PROGRESS: "notalocal:setup:progress",
 } as const
 
 export type IpcChannel = (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS]

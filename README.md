@@ -374,6 +374,8 @@ Revisa [I1 — afirmaciones sobre datos de salud](docs/research/I1-R6-health-dat
 | `pnpm lint:desktop` | ESLint del renderer y Main. |
 | `pnpm typecheck` | TypeScript de `@oira/types` y del desktop. |
 | `pnpm --filter oira-desktop build` | Bundle de producción. |
+| `pnpm package:desktop` | Empaqueta la aplicación Windows x64 sin instalador. |
+| `pnpm make:desktop` | Genera el candidato local sin firma en `apps/desktop/out/make/squirrel.windows/x64/Oira-Setup-x64.exe`. |
 
 El renderer solo habla con el resto del sistema a través de `apps/desktop/src/renderer/bridge/`. En Electron usa `window.oira`; si el API no existe, usa `mock.ts`.
 
@@ -426,6 +428,7 @@ Oira/
 | [Actualización de Abraham — 12/09/2026](docs/UPDATE_ABRAHAM_2026-09-12.md) | Avances del día, motivación, evidencia y próximos pasos. |
 | [Kit de investigación](docs/research/README.md) | Prompts y decisiones con fuentes. |
 | [R-13 — invariantes de dominio e IPC](docs/research/R-13-domain-invariants-and-ipc.md) | Procedencia, generación compartida, resultados parciales y guardia de emisor. |
+| [R-15 — prueba Warden/QVAC y Squirrel](docs/research/R-15-warden-qvac-electron-proof.md) | Empaquetado Electron, worker QVAC, primer arranque y diagnóstico del instalador Windows. |
 
 Un ítem marcado como investigación pendiente **no** se publica como claim de producto hasta que exista el write-up.
 

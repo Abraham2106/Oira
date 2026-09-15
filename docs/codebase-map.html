@@ -446,6 +446,8 @@ const NODES = [
   { id: "whisper", layer: "puertos", name: "Whisper STT", kind: "TranscriptionPort", role: "Voz → segmentos.", detail: "QVAC Whisper sobre runtime persistente; mock en test. El warm-up arranca al preparar la consulta.", path: "main/qvac/transcription.ts" },
   { id: "structuring", layer: "puertos", name: "StructuringPort", kind: "Qwen · mock · heurística", role: "Transcript → nota.", detail: "Producto: Qwen; test: mock; eval: heurística. Mismo puerto siempre.", path: "main/inference/select.ts · qwen-structuring.ts" },
   { id: "runtime", layer: "puertos", name: "QVAC runtime", kind: "InferenceRuntimePort", role: "Modelos locales.", detail: "warmTranscription, transcribe, handoffToStructuring, shutdown. El renderer solo ve eventos.", path: "main/qvac/inference-runtime.ts" },
+  { id: "distribution", layer: "salida", name: "Distribución Windows", kind: "Forge · Squirrel · QVAC", role: "Paquete instalable x64.", detail: "electron-vite produce dist; QvacForgePlugin genera y verifica el worker Bare; Forge empaqueta sin ASAR y Squirrel crea el instalador. La firma queda fuera del renderer y se aplica en release.", path: "forge.config.cjs · scripts/prepare-squirrel.mjs" },
+  { id: "setup", layer: "salida", name: "Model provisioning", kind: "HTTPS · Range · SHA-256", role: "Prepara Whisper y Qwen.", detail: "Main descarga modelos fijados al caché del usuario, reanuda parciales, verifica tamaño/hash y solo entonces expone ready mediante IPC.", path: "main/setup/ · shared/types/setup.ts" },
   { id: "audio", layer: "salida", name: "AudioTempStore", kind: "WAV + purge", role: "Audio efímero.", detail: "prepare / append / finalize / purge. Limpieza tras generar, con reintento explícito.", path: "main/audio/temp-store.ts" },
   { id: "storage", layer: "salida", name: "NoteStore + export", kind: "memoria / JSON / fs", role: "Persistencia aceptada.", detail: "Solo notas aceptadas. Memoria por defecto, JSON si hay notesFile. Export local txt/json, sin cloud.", path: "main/storage/ · main/export/" }
 ];
@@ -468,6 +470,9 @@ const EDGES = [
   ["generate", "whisper", "inference", "transcribe con"], ["generate", "structuring", "inference", "estructura con"],
   ["generate", "runtime", "inference", "coordina"], ["generate", "verify", "", "verifica con"],
   ["whisper", "runtime", "inference", "corre en"], ["structuring", "runtime", "inference", "corre en"],
+  ["distribution", "runtime", "inference", "incluye worker"],
+  ["ipc", "setup", "storage", "provisiona modelos con"],
+  ["setup", "runtime", "inference", "entrega rutas locales a"],
   ["ipc", "audio", "storage", "entrega PCM a"], ["notes", "storage", "storage", "persiste en"], ["generate", "audio", "storage", "lee WAV y purga"], ["verify", "types", "", "cita"]
 ];
 const EDGE_STYLE = {
@@ -997,6 +1002,10 @@ const TOURS = [
     ["verify", "Segunda verificación tras las ediciones del médico"],
     ["storage", "Persiste la nota aceptada (memoria o JSON)"],
     ["types", "El contrato que toda nota debe cumplir"]
+  ]},
+  { id: "package", name: "Empaquetar Windows", steps: [
+    ["distribution", "Forge ensambla la aplicación x64 y Squirrel genera el instalador"],
+    ["runtime", "El plugin QVAC incorpora y verifica el worker Bare requerido"]
   ]}
 ];
 let tour = null, tourIdx = 0, navIdx = 0;

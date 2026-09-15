@@ -15,6 +15,7 @@ import type { NoteVerificationResult } from "./note-verification"
 import type { ModelLifecycleEvent } from "./model-lifecycle"
 import type { Result } from "./result"
 import type { AppSettings } from "../schemas/settings.schema"
+import type { SetupProgress, SetupStatus } from "./setup"
 import type {
   AuthProfile,
   AuthSessionState,
@@ -94,6 +95,8 @@ export type SaveSettingsResult = AppSettings
  */
 export type OiraApi = {
   warmTranscription: () => Promise<Result<WarmTranscriptionResult>>
+  getSetupStatus: () => Promise<Result<SetupStatus>>
+  provisionModels: () => Promise<Result<SetupStatus>>
   startEncounter: (
     input?: StartEncounterInput,
   ) => Promise<Result<StartEncounterResult>>
@@ -121,4 +124,5 @@ export type OiraApi = {
     listener: (event: InferenceProgress) => void,
   ) => () => void
   onModelLifecycle: (listener: (event: ModelLifecycleEvent) => void) => () => void
+  onSetupProgress: (listener: (event: SetupProgress) => void) => () => void
 }

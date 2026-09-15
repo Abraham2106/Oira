@@ -55,7 +55,7 @@ declare module "@qvac/sdk" {
   }
 
   export function loadModel(input: {
-    modelSrc: typeof WHISPER_LARGE_V3_TURBO | typeof QWEN3_4B_Q4_K_M
+    modelSrc: typeof WHISPER_LARGE_V3_TURBO | typeof QWEN3_4B_Q4_K_M | string
     modelConfig?: WhisperSttModelConfig | LlmModelConfig
     onProgress?: (progress: ModelProgressUpdate) => void
   }): Promise<string> & { requestId?: string }

@@ -6,6 +6,7 @@ import {
 import { SYNTHETIC_TRANSCRIPT } from "../../shared/fixtures/synthetic-consult"
 import type { InferenceProgress } from "../../shared/types/inference-progress"
 import type { ModelLifecycleEvent } from "../../shared/types/model-lifecycle"
+import type { SetupProgress, SetupStatus } from "../../shared/types/setup"
 import type { GenerateNoteResult, SaveNoteResult } from "../../shared/types/oira-api"
 import {
   defaultSettings,
@@ -16,6 +17,8 @@ import { DEMO_AUTH_PROFILE, type AuthProfile, type AuthSessionState } from "../.
 /** UI fixture for the renderer prototype — not the Main IPC contract. */
 export type DemoBridge = {
   warmTranscription: () => Promise<void>
+  getSetupStatus: () => Promise<SetupStatus>
+  provisionModels: () => Promise<SetupStatus>
   startEncounter: (input: {
     label: string
     visitType: string
@@ -45,6 +48,7 @@ export type DemoBridge = {
   getAuthSession: () => Promise<AuthSessionState>
   onInferenceProgress: (listener: (event: InferenceProgress) => void) => () => void
   onModelLifecycle: (listener: (event: ModelLifecycleEvent) => void) => () => void
+  onSetupProgress: (listener: (event: SetupProgress) => void) => () => void
 }
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
@@ -94,6 +98,20 @@ export function createMockBridge(): DemoBridge {
 
   return {
     async warmTranscription() {},
+    async getSetupStatus() {
+      return {
+        phase: "ready",
+        ready: true,
+        checks: [],
+        models: [
+          { id: "whisper", status: "ready" },
+          { id: "qwen", status: "ready" },
+        ],
+      }
+    },
+    async provisionModels() {
+      return this.getSetupStatus()
+    },
     async startEncounter() {
       activeId = crypto.randomUUID()
       return { encounterId: activeId, startedAt: new Date().toISOString() }
@@ -108,6 +126,9 @@ export function createMockBridge(): DemoBridge {
       return () => {}
     },
     onModelLifecycle() {
+      return () => {}
+    },
+    onSetupProgress() {
       return () => {}
     },
     async generateNote(encounterId) {

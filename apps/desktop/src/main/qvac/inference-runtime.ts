@@ -22,6 +22,7 @@ export type QvacInferenceRuntimeDeps = {
   env?: { OIRA_STT_LOAD_TIMEOUT_MS?: string }
   loadSdk?: () => Promise<QvacSdkModule>
   onModelLifecycle?: (event: ModelLifecycleEvent) => void
+  modelPaths?: { whisper?: string; qwen?: string }
 }
 
 export type StructuringCompletion = {
@@ -128,7 +129,13 @@ export function createQvacInferenceRuntime(deps: QvacInferenceRuntimeDeps = {}):
     let settled = false
     let loaded = false
     let bump = (): void => undefined
-    const loading = current.loadModel({ modelSrc, modelConfig: config, onProgress: () => bump() }) as LoadModelHandle
+    const loading = current.loadModel({
+      modelSrc: kind === "whisper"
+        ? deps.modelPaths?.whisper ?? modelSrc
+        : deps.modelPaths?.qwen ?? modelSrc,
+      modelConfig: config,
+      onProgress: () => bump(),
+    }) as LoadModelHandle
     pendingLoadRequestId = loading.requestId
     loadSettlement = loading.then(
       (id) => { settledLateId = id },
