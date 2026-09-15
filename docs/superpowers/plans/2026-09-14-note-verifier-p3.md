@@ -1,7 +1,7 @@
 # NOTE_VERIFIER_P3 — Plan de implementación
 
 > Decide de diseño: [`NOTE_VERIFIER_P3.md`](../../NOTE_VERIFIER_P3.md) (spec completa).
-> Rama: `feature/note-verifier-p3`. Estado: F0 ✅ · F1 ✅ · F2 ✅ · F3 ✅ · F4–F5 pendientes de cierre.
+> Rama: `feature/note-verifier-p3`. Estado: F0 ✅ · F1 ✅ · F2 ✅ · F3 ✅ · F5 ✅ · F4 pendiente de evaluación real.
 > Disciplina: Regla 12 (`medido`/`observado`/`inferido`/`no_probado`) · Regla 16 (medir → analizar → optimizar con autorización).
 
 ## Fases y avance
@@ -13,7 +13,7 @@
 | F2 | Heurísticas deterministas explicables (`structure/rules/`) | ✅ 2026-09-14 |
 | F3 | Segundo agente Qwen de revisión (puerto, prompt, runtime, estados/UI) | ✅ 2026-09-14 |
 | F4 | Corpus anotado + harness de procesamiento + comparación de 4 configs | ⏳ |
-| F5 | Selección de GPU endurecida (`device-selection.ts`) | ⏳ |
+| F5 | Selección de GPU endurecida (`device-selection.ts`) | ✅ 2026-09-14 |
 
 ## Baseline — **medido** (F0)
 
@@ -37,6 +37,10 @@ semántica queda `no_probado` hasta F4 con modelo local y corpus anotado; F2 cub
 ## F3 — revisión independiente y trazable
 
 El segundo Qwen recibe solo transcripción y borrador, emite hallazgos informativos y nunca acepta ni reescribe la nota. Sus secciones, IDs de segmento, citas literales y texto de omisiones se validan contra la transcripción antes de mostrarse; cualquier salida inválida, cancelada o vencida se presenta como `not_completed`. La interfaz marca el paso de revisión y permite saltar desde cada hallazgo al segmento citado. Esta trazabilidad es funcional; la precisión clínica del revisor sigue `no_probado` hasta F4.
+
+## F5 — selección de GPU
+
+La selección maneja VRAM desconocida, ausencia de recursos, empates deterministas e Intel Arc como GPU dedicada; conserva el índice que usan Whisper y llama.cpp. El comportamiento está probado con dobles de recursos. El único mapeo observado en hardware real sigue siendo el equipo de referencia, por lo que su generalización a otros backends permanece `no_probado`.
 
 ## Integración con main
 

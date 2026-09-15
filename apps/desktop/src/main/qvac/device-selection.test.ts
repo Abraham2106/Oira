@@ -40,6 +40,35 @@ describe("selectPreferredGpu", () => {
     ])
     expect(selected?.identity.id).toBe("nvidia-1")
     expect(selected?.llmMainGpu).toBe(1)
+    expect(selected?.fallbackReason).toContain("no integrada")
+  })
+
+  it("does not classify a dedicated Intel Arc GPU as integrated", () => {
+    const selected = selectPreferredGpu([
+      { id: "intel-igpu", name: "Intel Iris Xe Graphics", vendor: "Intel", index: 0 },
+      { id: "intel-arc", name: "Intel Arc A370M", vendor: "Intel", index: 1 },
+    ])
+    expect(selected?.identity.id).toBe("intel-arc")
+    expect(selected?.llmMainGpu).toBe(1)
+    expect(selected?.fallbackReason).toContain("no integrada")
+  })
+
+  it("keeps ties deterministic and maps the highest tier after lower-VRAM adapters", () => {
+    const selected = selectPreferredGpu([
+      { id: "integrated", name: "AMD Radeon Graphics", vendor: "AMD", index: 0, vramBytes: mib(512) },
+      { id: "first-tie", name: "NVIDIA RTX A", vendor: "NVIDIA", index: 1, vramBytes: mib(4096) },
+      { id: "second-tie", name: "NVIDIA RTX B", vendor: "NVIDIA", index: 2, vramBytes: mib(4096) },
+    ])
+    expect(selected?.identity.id).toBe("first-tie")
+    expect(selected?.llmMainGpu).toBe(1)
+  })
+
+  it("reports the safe backend fallback when only an unknown integrated GPU exists", () => {
+    const selected = selectPreferredGpu([
+      { id: "intel-igpu", name: "Intel UHD Graphics", vendor: "Intel", index: 0 },
+    ])
+    expect(selected?.llmMainGpu).toBe(0)
+    expect(selected?.fallbackReason).toContain("backend")
   })
 
   it("returns undefined when no GPU is reported", () => {
