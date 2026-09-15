@@ -88,4 +88,17 @@ describe("composeApplication", () => {
     const app = composeApplication(createSilentIpcLogger())
     expect(app.session.isAuthenticated()).toBe(true)
   })
+
+  it("does not enable the second Qwen pass from the runtime by default", () => {
+    const app = composeApplication(createSilentIpcLogger(), {
+      inferenceRuntime: {
+        warmTranscription: async () => undefined,
+        handoffToStructuring: async () => undefined,
+        shutdown: async () => undefined,
+        completeQwen: async () => "{}",
+      },
+    })
+
+    expect(app.reviewer).toBeUndefined()
+  })
 })

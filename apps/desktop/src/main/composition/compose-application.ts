@@ -29,7 +29,6 @@ import {
   type ExportPort,
 } from "../export"
 import { createInferencePorts } from "../inference"
-import { createQwenVerifier } from "../qvac/qwen-verifier"
 import { createNotesService, type NotesPort } from "../notes"
 import type { NoteVerifierPort } from "../../shared/types/note-verification"
 import type {
@@ -134,12 +133,11 @@ export function composeApplication(
   const inference = createInferencePorts(inferenceAdapter, {
     onModelLifecycle: options.onModelLifecycle,
   })
-  // El revisor comparte el runtime Qwen del generador: completa una pasada
-  // secuencial (structuring → review) sobre el mismo modelo ya cargado.
-  // En modo mock no hay runtime, así que no hay revisor.
   const runtime = options.inferenceRuntime ?? inference.runtime
-  const reviewer =
-    options.reviewer ?? (runtime ? createQwenVerifier(runtime) : undefined)
+  // La segunda pasada Qwen está desactivada por defecto: duplicaba el costo
+  // de inferencia. Un consumidor de evaluación aún puede inyectarla de forma
+  // explícita mediante options.reviewer.
+  const reviewer = options.reviewer
   const notesStore = resolveNoteStore(options)
   const exportDir =
     options.exportDir ??

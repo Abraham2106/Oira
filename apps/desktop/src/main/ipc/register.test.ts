@@ -201,8 +201,9 @@ describe("I04 registerIpc", () => {
     expect(existsSync(join(audioTempDir, encounterId))).toBe(false)
   })
 
-  it("generateNote inyecta la revisión F3 cuando hay runtime Qwen", async () => {
+  it("generateNote no ejecuta una segunda pasada aunque haya runtime Qwen", async () => {
     const ipc = createMemoryIpc()
+    let reviewCalls = 0
     registerIpc(
       ipc.handle,
       createStubIpcDeps(createSilentIpcLogger(), {
@@ -210,7 +211,10 @@ describe("I04 registerIpc", () => {
           warmTranscription: async () => undefined,
           handoffToStructuring: async () => undefined,
           shutdown: async () => undefined,
-          completeQwen: async () => "",
+          completeQwen: async () => {
+            reviewCalls += 1
+            return ""
+          },
         },
       }),
     )
@@ -237,14 +241,10 @@ describe("I04 registerIpc", () => {
 
     expect(result.ok).toBe(true)
     expect(result.data?.status).toBe("READY")
-    // El runtime stub entrega "" al revisor → JSON inválido → not_completed.
-    // Informativo: la nota sigue siendo ok; el revisor nunca la bloquea.
     if (result.data?.status === "READY") {
-      expect(result.data.reviewerResult).toEqual({
-        status: "not_completed",
-        error: expect.stringContaining("JSON"),
-      })
+      expect(result.data.reviewerResult).toBeUndefined()
     }
+    expect(reviewCalls).toBe(0)
   })
 
   it("fails generateNote without a wav instead of passing the encounter id as a path", async () => {
