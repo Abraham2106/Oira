@@ -49,8 +49,8 @@ export function adaptOiraApi(api: OiraApi): DemoBridge {
     async retryAudioCleanup(encounterId) {
       await unwrap(api.retryAudioCleanup({ encounterId }))
     },
-    async exportNote(encounterId, format = "txt") {
-      return unwrap(api.exportNote({ encounterId, format }))
+    async exportNote(encounterId, format = "txt", presentation) {
+      return unwrap(api.exportNote({ encounterId, format, presentation }))
     },
     async writeClipboard(text: string) {
       await unwrap(api.writeClipboard({ text }))

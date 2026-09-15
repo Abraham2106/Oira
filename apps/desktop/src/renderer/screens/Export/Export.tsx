@@ -1,34 +1,38 @@
 import { useMemo, useState } from "react"
 import { Button, Card, StatusBadge } from "@oira/ui"
-import { SECTION_TITLES } from "@oira/types"
+import type { ClinicalNote } from "@oira/types"
+import {
+  formatExportPreview,
+  pdfPresentationForPreview,
+  type ExportPreviewFormat,
+} from "../../../shared/clinical-export"
 import { useI18n } from "../../i18n/I18nProvider"
 
-const TITLE_LINES: ReadonlySet<string> = new Set(Object.values(SECTION_TITLES))
-
-export type ExportFormat = "sections" | "plain"
-
-/**
- * Quita las líneas cuyo contenido es exactamente un título de sección y
- * colapsa los saltos sobrantes para que los párrafos queden separados por
- * una línea en blanco. El texto no cambia en nada más.
- */
-export function toPlainText(preview: string): string {
-  const withoutTitles = preview.split("\n").filter((line) => !TITLE_LINES.has(line))
-  return withoutTitles.join("\n").replace(/\n{3,}/g, "\n\n").trim()
-}
+export type ExportFormat = ExportPreviewFormat
+export { toPlainText } from "../../../shared/clinical-export"
 
 type Props = {
-  preview: string
+  note: ClinicalNote
   copied: boolean
+  fileError: string | null
   onCopy: (text: string) => Promise<void>
+  onExportPdf: (presentation: "sections" | "soap") => Promise<void>
+  onExportFhir: () => Promise<void>
   onReset: () => void
 }
 
-export function ExportScreen({ preview, copied, onCopy, onReset }: Props) {
+export function ExportScreen({
+  note,
+  copied,
+  fileError,
+  onCopy,
+  onExportPdf,
+  onExportFhir,
+  onReset,
+}: Props) {
   const { t } = useI18n()
-  const [format, setFormat] = useState<ExportFormat>("sections")
-  const plain = useMemo(() => toPlainText(preview), [preview])
-  const shown = format === "sections" ? preview : plain
+  const [format, setFormat] = useState<ExportPreviewFormat>("sections")
+  const shown = useMemo(() => formatExportPreview(note, format), [note, format])
 
   return (
     <div className="stack page">
@@ -62,21 +66,44 @@ export function ExportScreen({ preview, copied, onCopy, onReset }: Props) {
               <span className="format-option-hint">{t("export.formatPlainHint")}</span>
             </span>
           </label>
+          <label className="format-option">
+            <input
+              type="radio"
+              name="nl-export-format"
+              value="soap"
+              checked={format === "soap"}
+              onChange={() => setFormat("soap")}
+            />
+            <span className="format-option-text">
+              {t("export.formatSoap")}
+              <span className="format-option-hint">{t("export.formatSoapHint")}</span>
+            </span>
+          </label>
         </div>
         <pre className="preview">{shown}</pre>
         <div className="actions">
           <Button variant="primary" onClick={() => void onCopy(shown)}>
             {t("export.copyButton")}
           </Button>
+          <Button onClick={() => void onExportPdf(pdfPresentationForPreview(format))}>
+            {t("export.pdfButton")}
+          </Button>
+          <Button onClick={() => void onExportFhir()}>
+            {t("export.fhirButton")}
+          </Button>
           <Button onClick={onReset}>{t("action.newConsult")}</Button>
         </div>
+        <p className="muted">{t("export.fhirHint")}</p>
         {copied ? (
           <p role="status" className="copied">
             {t("export.copiedNotice")}
           </p>
-        ) : (
-          <p className="muted">{t("export.pdfComingSoon")}</p>
-        )}
+        ) : null}
+        {fileError ? (
+          <p role="status" className="muted">
+            {fileError}
+          </p>
+        ) : null}
       </Card>
     </div>
   )

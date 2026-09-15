@@ -38,11 +38,15 @@ export type DemoBridge = {
   retryAudioCleanup: (encounterId: string) => Promise<void>
   exportNote: (
     encounterId: string,
-    format?: "txt" | "json",
+    format?: "txt" | "json" | "pdf" | "fhir",
+    presentation?: "sections" | "soap",
   ) => Promise<{ exported: true }>
   writeClipboard: (text: string) => Promise<void>
   getSettings: () => Promise<AppSettings>
-  saveSettings: (input: { uiLocale: AppSettings["uiLocale"] }) => Promise<AppSettings>
+  saveSettings: (input: {
+    uiLocale?: AppSettings["uiLocale"]
+    gpuPreference?: AppSettings["gpuPreference"]
+  }) => Promise<AppSettings>
   googleSignIn: () => Promise<AuthProfile>
   signOut: () => Promise<{ signedOut: true }>
   getAuthSession: () => Promise<AuthSessionState>
@@ -107,6 +111,11 @@ export function createMockBridge(): DemoBridge {
           { id: "whisper", status: "ready" },
           { id: "qwen", status: "ready" },
         ],
+        runtime: {
+          inference: "local",
+          remoteAiProvider: "none",
+          networkUsage: "model_downloads_only",
+        },
       }
     },
     async provisionModels() {

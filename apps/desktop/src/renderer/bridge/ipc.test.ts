@@ -10,8 +10,8 @@ describe("adaptOiraApi", () => {
     const note = syntheticNote()
     const api: OiraApi = {
       warmTranscription: async () => ({ ok: true, data: { warmed: true } }),
-      getSetupStatus: async () => ({ ok: true, data: { phase: "ready", ready: true, checks: [], models: [] } }),
-      provisionModels: async () => ({ ok: true, data: { phase: "ready", ready: true, checks: [], models: [] } }),
+      getSetupStatus: async () => ({ ok: true, data: { phase: "ready", ready: true, checks: [], models: [], runtime: { inference: "local", remoteAiProvider: "none", networkUsage: "model_downloads_only" } } }),
+      provisionModels: async () => ({ ok: true, data: { phase: "ready", ready: true, checks: [], models: [], runtime: { inference: "local", remoteAiProvider: "none", networkUsage: "model_downloads_only" } } }),
       startEncounter: async () => ({
         ok: true,
         data: { encounterId, startedAt: "2026-01-01T00:00:00.000Z" },
@@ -40,6 +40,7 @@ describe("adaptOiraApi", () => {
           noteRetention: "forever",
           sttModelId: null,
           uiLocale: "en",
+          gpuPreference: "dedicated",
         },
       }),
       saveSettings: async () => ({
@@ -50,6 +51,7 @@ describe("adaptOiraApi", () => {
           noteRetention: "forever",
           sttModelId: null,
           uiLocale: "es",
+          gpuPreference: "dedicated",
         },
       }),
       googleSignIn: async () => ({

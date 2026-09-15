@@ -5,8 +5,8 @@ import type { OiraApi } from "../../shared/types/oira-api"
 function stubApi(): OiraApi {
   return {
     warmTranscription: async () => ({ ok: true, data: { warmed: true } }),
-    getSetupStatus: async () => ({ ok: true, data: { phase: "ready", ready: true, checks: [], models: [] } }),
-    provisionModels: async () => ({ ok: true, data: { phase: "ready", ready: true, checks: [], models: [] } }),
+    getSetupStatus: async () => ({ ok: true, data: { phase: "ready", ready: true, checks: [], models: [], runtime: { inference: "local", remoteAiProvider: "none", networkUsage: "model_downloads_only" } } }),
+    provisionModels: async () => ({ ok: true, data: { phase: "ready", ready: true, checks: [], models: [], runtime: { inference: "local", remoteAiProvider: "none", networkUsage: "model_downloads_only" } } }),
     startEncounter: async () => ({
       ok: true,
       data: {
@@ -41,6 +41,7 @@ function stubApi(): OiraApi {
         noteRetention: "forever",
         sttModelId: null,
         uiLocale: "en",
+        gpuPreference: "dedicated",
       },
     }),
     saveSettings: async () => ({
