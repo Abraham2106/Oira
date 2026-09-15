@@ -28,7 +28,9 @@ test("the UML view cannot disappear silently", () => {
 });
 
 test("a node needs a source reference", () => {
-  const broken = html.replace('path: "renderer/App.tsx"', 'path: ""');
+  const match = html.match(/path: "[^"]+"/);
+  assert.ok(match, "atlas must declare at least one node path");
+  const broken = html.replace(match[0], 'path: ""');
   assert.notEqual(broken, html);
   assert.throws(() => checkAtlas(broken), /Missing path/);
 });
