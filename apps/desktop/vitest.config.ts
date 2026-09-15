@@ -9,5 +9,6 @@ export default defineConfig({
       "src/preload/**/*.test.ts",
       "src/shared/**/*.test.ts",
     ],
+    execArgv: ["--experimental-sqlite"],
   },
 })

@@ -8,8 +8,8 @@ describe("resolveAppDirectories", () => {
     const dirs = resolveAppDirectories(userData, join("tmp"))
     expect(dirs.audioTempDir).toBe(join(userData, `tmp-audio-${process.pid}`))
     expect(dirs.databaseFile).toBe(
-      join(userData, "notes", "accepted-notes.json"),
+      join(userData, "notes", "accepted-notes.sqlite"),
     )
-    expect(dirs.databaseFile).not.toMatch(/\.sqlite$/)
+    expect(dirs.databaseFile).toMatch(/\.sqlite$/)
   })
 })
