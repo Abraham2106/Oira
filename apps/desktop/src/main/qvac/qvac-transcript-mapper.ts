@@ -19,7 +19,9 @@ export function mapSttSegments(raw: SttSegmentInput[]): TranscriptSegment[] {
     return {
       id: rawId.length > 0 ? rawId : `seg-${index + 1}`,
       speaker: null,
-      startMs: segment.startMs,
+      startMs: Number.isFinite(segment.startMs)
+        ? Math.max(0, Math.round(segment.startMs))
+        : 0,
       text: segment.text,
     }
   })

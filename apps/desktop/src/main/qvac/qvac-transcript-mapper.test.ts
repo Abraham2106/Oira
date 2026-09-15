@@ -37,4 +37,12 @@ describe("mapSttSegments", () => {
     ])
     expect(segments.every((segment) => segment.speaker === null)).toBe(true)
   })
+
+  it("rounds fractional Whisper timestamps to integer milliseconds", () => {
+    const segments = mapSttSegments([
+      { id: "w1", text: "Hola.", startMs: 12.4 },
+      { id: "w2", text: "Adiós.", startMs: 1400.72 },
+    ])
+    expect(segments.map((segment) => segment.startMs)).toEqual([12, 1401])
+  })
 })
