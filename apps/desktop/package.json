@@ -1,12 +1,13 @@
 {
   "name": "oira-desktop",
   "private": true,
-  "version": "0.0.3",
+  "version": "0.1.0",
   "productName": "Oira",
   "description": "Local-first desktop assistant for clinician-reviewed consultation notes.",
   "author": "Oira contributors",
   "type": "module",
   "main": "./dist/main/index.js",
+  "files": ["dist", "qvac"],
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build",
@@ -14,6 +15,7 @@
     "make": "node scripts/prepare-squirrel.mjs && electron-vite build && electron-forge make --platform=win32 --arch=x64",
     "typecheck": "tsc -p tsconfig.node.json --noEmit && tsc -p tsconfig.web.json --noEmit",
     "test": "vitest run",
+    "test:packaging": "node scripts/verify-packaged-runtime.cjs",
     "lint": "eslint src/renderer src/main --max-warnings=0",
     "runtime:versions": "node scripts/print-runtime.mjs",
     "qvac:smoke": "node scripts/qvac-smoke.mjs",
