@@ -6,15 +6,22 @@ import { IPC_EVENTS } from "../shared/constants/ipc-channels"
 import { createAudioTempStore, defaultAudioTempDir } from "./audio"
 import { loadAppConfig, resolveAppEnv } from "./config"
 import { composeApplication } from "./composition"
+import { createElectronPdfRenderer } from "./export/print-to-pdf.adapter"
+import { createElectronSaveDialog } from "./export/save-dialog"
 import {
   createIpcLogger,
   registerIpc,
   type IpcHandle,
 } from "./ipc"
 import { withTrustedIpcSender, type TrustedRenderer } from "./ipc/sender-guard"
+import {
+  canonicalDocumentUrl,
+  isAllowedRendererNavigation,
+} from "./ipc/trusted-url"
 import { createLogger, type Logger } from "./logging"
 import { parseEmbeddedRuntime, runtimeLogMeta } from "./runtime"
 import { tmpdir } from "node:os"
+import { requestWindowsHighPerformanceGpu, resolveHighPerformanceExecutables } from "./qvac/windows-gpu-preference"
 import { createSetupService } from "./setup"
 
 const moduleDir = dirname(fileURLToPath(import.meta.url))
@@ -26,6 +33,11 @@ const SQUIRREL_EVENTS = new Set([
 ])
 const squirrelEvent = process.platform === "win32" &&
   process.argv.find((argument) => SQUIRREL_EVENTS.has(argument))
+
+// Chromium's renderer has its own GPU selection, independent from the QVAC
+// compute backends. On hybrid Windows systems, force it onto the high-
+// performance adapter so the integrated GPU is not kept active by the UI.
+app.commandLine.appendSwitch("force_high_performance_gpu")
 
 function handleSquirrelEvent(event: string): void {
   const updateExe = join(dirname(process.execPath), "..", "Update.exe")
@@ -69,10 +81,19 @@ function createWindow(trusted: Map<number, TrustedRenderer>): void {
 
   const url = process.env.ELECTRON_RENDERER_URL ??
     pathToFileURL(join(moduleDir, "../renderer/index.html")).href
+  const webContentsId = window.webContents.id
+  const rememberTrustedUrl = (loaded: string): void => {
+    if (!isAllowedRendererNavigation(loaded, url)) return
+    trusted.set(webContentsId, {
+      webContentsId,
+      url: canonicalDocumentUrl(loaded) ?? loaded,
+    })
+  }
   const blockUnexpectedNavigation = (
     details: { preventDefault: () => void; url: string; isMainFrame: boolean },
   ) => {
-    if (!details.isMainFrame || details.url !== url) details.preventDefault()
+    if (!details.isMainFrame || isAllowedRendererNavigation(details.url, url)) return
+    details.preventDefault()
   }
   window.webContents.on("will-navigate", blockUnexpectedNavigation)
   window.webContents.on("will-frame-navigate", blockUnexpectedNavigation)
@@ -82,8 +103,10 @@ function createWindow(trusted: Map<number, TrustedRenderer>): void {
     return { action: "deny" }
   })
 
-  const webContentsId = window.webContents.id
-  trusted.set(webContentsId, { webContentsId, url })
+  rememberTrustedUrl(url)
+  window.webContents.on("did-finish-load", () => {
+    rememberTrustedUrl(window.webContents.getURL())
+  })
   window.once("closed", () => trusted.delete(webContentsId))
   if (process.env.ELECTRON_RENDERER_URL) {
     void window.loadURL(url)
@@ -112,6 +135,11 @@ if (squirrelEvent) {
   app.whenReady().then(() => {
   const logger = createLogger()
   logEmbeddedRuntime(logger, process.versions)
+  requestWindowsHighPerformanceGpu(resolveHighPerformanceExecutables({
+    execPath: process.execPath,
+    resourcesPath: process.resourcesPath,
+    appPath: app.getAppPath(),
+  }))
 
   session.defaultSession.setPermissionRequestHandler(
     (_contents, permission, callback) => {
@@ -157,6 +185,8 @@ if (squirrelEvent) {
     inferenceAdapter,
     settingsFile,
     notesFile,
+    pdfRenderer: createElectronPdfRenderer(),
+    saveDialog: createElectronSaveDialog(),
     modelCacheDir: config.paths.modelCacheDir,
     setup: createSetupService(config.paths.modelCacheDir),
     onSetupProgress: (event) => {

@@ -28,6 +28,8 @@ import {
   createFileExportAdapter,
   nodeFileWriter,
   type ExportPort,
+  type PdfRendererPort,
+  type SaveDialogPort,
 } from "../export"
 import { createInferencePorts } from "../inference"
 import { createNotesService, type NotesPort } from "../notes"
@@ -44,7 +46,7 @@ import type {
   InferenceRuntimePort,
 } from "../ports"
 import { createMemoryNoteStore } from "../storage/memory.store"
-import { createJsonFileStore } from "../storage/json-file.store"
+import { createNoteStoreForPath } from "../storage"
 import { manifestEntry } from "../setup/manifest"
 import type { SetupService } from "../setup/service"
 
@@ -79,6 +81,8 @@ export type ComposeApplicationOptions = {
   structuring?: StructuringPort
   session?: SessionPort
   exportNote?: ExportPort
+  pdfRenderer?: PdfRendererPort
+  saveDialog?: SaveDialogPort
   inferenceRuntime?: InferenceRuntimePort
   reviewer?: NoteVerifierPort
   modelCacheDir?: string
@@ -99,7 +103,7 @@ function createFileSettingsPort(settingsFile: string): SettingsPort {
 
 function resolveNoteStore(options: ComposeApplicationOptions): NoteStorePort {
   if (options.notesStore) return options.notesStore
-  if (options.notesFile) return createJsonFileStore(options.notesFile)
+  if (options.notesFile) return createNoteStoreForPath(options.notesFile)
   return createMemoryNoteStore()
 }
 
@@ -179,6 +183,20 @@ export function composeApplication(
         notes: notesStore,
         writer: nodeFileWriter,
         exportDir,
+        pdfRenderer: options.pdfRenderer,
+        saveDialog: options.saveDialog,
+        authorship: () => {
+          const session = googleAuth.session()
+          if (!session.authenticated || !session.profile) {
+            return { exportedBy: null }
+          }
+          return {
+            exportedBy: {
+              displayName: session.profile.displayName,
+              email: session.profile.email,
+            },
+          }
+        },
       }),
     session: defaultSession(googleAuth, options.session),
     googleAuth,

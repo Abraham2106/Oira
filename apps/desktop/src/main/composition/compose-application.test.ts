@@ -94,6 +94,7 @@ describe("composeApplication", () => {
       inferenceRuntime: {
         warmTranscription: async () => undefined,
         handoffToStructuring: async () => undefined,
+        releaseStructuring: async () => undefined,
         shutdown: async () => undefined,
         completeQwen: async () => "{}",
       },
