@@ -9,7 +9,7 @@
 | Fase | Entrega | Estado |
 | --- | --- | --- |
 | F0 | Rama + sanity verde + baseline medido | ✅ 2026-09-14 |
-| F1 | Contrato estricto de generación (prompts versionados, validación con códigos, reintentos acotados, borrador no validado visible) | 🔧 |
+| F1 | Contrato estricto de generación (prompts versionados, validación con códigos, reintentos acotados, borrador no validado visible) | ✅ 2026-09-14 |
 | F2 | Heurísticas deterministas explicables (`structure/rules/`) | ⏳ |
 | F3 | Segundo agente Qwen de revisión (puerto, prompt, runtime, estados/UI) | ⏳ |
 | F4 | Corpus anotado + harness de procesamiento + comparación de 4 configs | ⏳ |

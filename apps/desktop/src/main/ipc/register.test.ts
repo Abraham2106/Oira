@@ -218,6 +218,15 @@ describe("I04 registerIpc", () => {
       ok: boolean
       data: { encounterId: string }
     }
+    const appended = (await ipc.invoke(IPC_CHANNELS.APPEND_AUDIO, {
+      encounterId: started.data.encounterId,
+      sequence: 0,
+      pcm: Array.from(Buffer.alloc(320)),
+    })) as { ok: boolean }
+    expect(appended.ok).toBe(true)
+    await ipc.invoke(IPC_CHANNELS.STOP_ENCOUNTER, {
+      encounterId: started.data.encounterId,
+    })
 
     const result = (await ipc.invoke(IPC_CHANNELS.GENERATE_NOTE, {
       encounterId: started.data.encounterId,
