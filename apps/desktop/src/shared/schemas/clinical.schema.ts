@@ -27,7 +27,10 @@ export const transcriptSegmentSchema = z
   .object({
     id: z.string().min(1),
     speaker: z.enum(["Médico", "Paciente"]).nullable(),
-    startMs: z.number().int().nonnegative(),
+    startMs: z
+      .number()
+      .nonnegative()
+      .transform((value) => Math.round(value)),
     text: z.string(),
   })
   .strict()

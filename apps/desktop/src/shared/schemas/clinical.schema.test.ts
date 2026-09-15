@@ -23,4 +23,15 @@ describe("transcriptSegmentSchema", () => {
       }).speaker,
     ).toBe("Médico")
   })
+
+  it("rounds Whisper fractional timestamps so accepted notes can be reloaded", () => {
+    expect(
+      transcriptSegmentSchema.parse({
+        id: "seg-1",
+        speaker: null,
+        startMs: 1400.72,
+        text: "consulta sintética",
+      }).startMs,
+    ).toBe(1401)
+  })
 })
