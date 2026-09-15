@@ -39,13 +39,13 @@ type EncounterView = {
   setLabel: (value: string) => void
   setVisitType: (value: string) => void
   setInformed: (value: boolean) => void
-  prepareRecording: () => void
+  prepareRecording: () => Promise<void>
   startRecording: () => Promise<void>
   stopRecording: () => Promise<void>
   editNote: (sectionId: keyof ClinicalNote["sections"], text: string) => void
   toggleReviewed: (sectionId: keyof ClinicalNote["sections"], reviewed: boolean) => void
   acceptNote: (clinicianConfirmed: true) => Promise<void>
-  exportNote: () => Promise<void>
+  exportNote: (format?: "txt" | "json" | "pdf" | "fhir", presentation?: "sections" | "soap") => Promise<void>
   reset: () => void
 }
 
@@ -120,9 +120,7 @@ export function useEncounter(): EncounterView {
   }, [apply, bridge, captureStarting, fail, label, visitType])
 
   const prepareRecording = useCallback(() => {
-    // Loading is deliberately non-blocking: only the dedicated record button
-    // may request microphone access and create the encounter.
-    void bridge.warmTranscription().catch(() => undefined)
+    return bridge.warmTranscription()
   }, [bridge])
 
   const stopRecording = useCallback(async () => {
@@ -252,16 +250,19 @@ export function useEncounter(): EncounterView {
     }
   }, [apply, bridge, encounter, fail, note])
 
-  const exportNote = useCallback(async () => {
+  const exportNote = useCallback(async (
+    format: "txt" | "json" | "pdf" | "fhir" = "txt",
+    presentation?: "sections" | "soap",
+  ) => {
     if (encounter) {
       try {
-        await bridge.exportNote(encounter.id, "txt")
-      } catch {
-        // File export requires an accepted note; clipboard copy still proceeds.
+        await bridge.exportNote(encounter.id, format, presentation)
+      } catch (error) {
+        if (format !== "txt") throw error
       }
     }
     apply("EXPORT")
-    setCopied(true)
+    if (format === "txt") setCopied(true)
   }, [apply, bridge, encounter])
 
   const reset = useCallback(() => {

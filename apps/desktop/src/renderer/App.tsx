@@ -10,6 +10,7 @@ import { Icon, type IconName } from "./components/icons"
 import { ModelDebugPanel, reduceModelDebugState } from "./components/ModelDebugPanel"
 import { ModelSetupScreen } from "./screens/ModelSetup/ModelSetup"
 import { flowStepFromState } from "./lib/consultFlow"
+import { aiEngineStateFromModels } from "./lib/modelEngineState"
 import { pickTag, sampleHistory, type PatientHistoryEntry } from "./lib/patientTags"
 import { useI18n } from "./i18n/I18nProvider"
 import { DashboardScreen } from "./screens/Dashboard/Dashboard"
@@ -67,6 +68,7 @@ export function App() {
   const [highlightedIds, setHighlightedIds] = useState<string[]>([])
   const [history, setHistory] = useState<PatientHistoryEntry[]>(() => sampleHistory())
   const [copyError, setCopyError] = useState<string | null>(null)
+  const [fileError, setFileError] = useState<string | null>(null)
   const recordedExportRef = useRef<string | null>(null)
 
   useEffect(() => {
@@ -79,6 +81,11 @@ export function App() {
         ready: false,
         checks: [],
         models: [],
+        runtime: {
+          inference: "local",
+          remoteAiProvider: "none",
+          networkUsage: "model_downloads_only",
+        },
         message: t("modelSetup.phase.error"),
       })),
       minimumVisible,
@@ -127,7 +134,19 @@ export function App() {
       setCopyError(t("export.copyFailed"))
       return
     }
-    await encounter.exportNote()
+    await encounter.exportNote("txt")
+  }
+
+  const exportFile = async (format: "pdf" | "fhir", presentation?: "sections" | "soap") => {
+    setFileError(null)
+    try {
+      await encounter.exportNote(format, presentation)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : ""
+      setFileError(
+        message.includes("cancelled") ? t("export.cancelled") : t("export.fileFailed"),
+      )
+    }
   }
 
   const focusSection = (sectionId: SectionId) => {
@@ -145,6 +164,7 @@ export function App() {
     setActiveSectionId(null)
     setHighlightedIds([])
     setCopyError(null)
+    setFileError(null)
   }, [])
 
   const startNewConsult = useCallback(() => {
@@ -393,6 +413,8 @@ export function App() {
 
         {settingsOpen ? (
           <SettingsScreen
+            setupStatus={setupStatus}
+            modelState={modelDebug}
             onClose={() => setSettingsOpen(false)}
             onOpenModelSetup={() => {
               setSettingsOpen(false)
@@ -401,8 +423,10 @@ export function App() {
           />
         ) : null}
 
-        {showFlow && encounter.productState === "IDLE" ? (
+        {showFlow && encounter.productState === "IDLE" && !recorderPrepared ? (
           <NewConsultationScreen
+            setupStatus={setupStatus}
+            modelState={modelDebug}
             label={encounter.label}
             visitType={encounter.visitType}
             informed={encounter.informed}
@@ -410,14 +434,24 @@ export function App() {
             onVisitType={encounter.setVisitType}
             onInformed={encounter.setInformed}
             onPrepare={() => {
-              encounter.prepareRecording()
+              setModelDebug((current) => (
+                current.whisper === "READY" || current.whisper === "LOADING"
+                  ? current
+                  : { ...current, whisper: "LOADING" }
+              ))
               setRecorderPrepared(true)
+              void encounter.prepareRecording().catch(() => {
+                setModelDebug((current) => ({ ...current, whisper: "FAILED" }))
+                setRecorderPrepared(false)
+              })
             }}
           />
         ) : null}
 
         {showFlow && (encounter.productState === "RECORDING" || (encounter.productState === "IDLE" && recorderPrepared)) ? (
           <RecordingScreen
+            setupStatus={setupStatus}
+            modelState={modelDebug}
             isRecording={encounter.productState === "RECORDING"}
             starting={encounter.captureStarting}
             startedAtMs={encounter.recordingStartedAt ?? undefined}
@@ -464,9 +498,12 @@ export function App() {
 
         {showFlow && encounter.productState === "EXPORTED" && encounter.note ? (
           <ExportScreen
-            preview={formatNoteAsText(encounter.note)}
+            note={encounter.note}
             copied={encounter.copied}
+            fileError={fileError ?? copyError}
             onCopy={copyPreview}
+            onExportPdf={(presentation) => exportFile("pdf", presentation)}
+            onExportFhir={() => exportFile("fhir")}
             onReset={() => {
               resetReviewChrome()
               encounter.reset()
@@ -478,6 +515,7 @@ export function App() {
         {ready && !settingsOpen && view === "dashboard" ? (
           <DashboardScreen
             productState={encounter.productState}
+            engineState={aiEngineStateFromModels(modelDebug.whisper, modelDebug.qwen)}
             hasDraft={Boolean(encounter.note)}
             onStartNew={startNewConsult}
             onOpenNotes={() => setView("notes")}
