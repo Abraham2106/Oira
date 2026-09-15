@@ -57,6 +57,7 @@ describe("I04 registerIpc", () => {
             warmCalls += 1
           },
           handoffToStructuring: async () => undefined,
+          releaseStructuring: async () => undefined,
           shutdown: async () => undefined,
           completeQwen: async () => "",
         },
@@ -210,6 +211,7 @@ describe("I04 registerIpc", () => {
         inferenceRuntime: {
           warmTranscription: async () => undefined,
           handoffToStructuring: async () => undefined,
+          releaseStructuring: async () => undefined,
           shutdown: async () => undefined,
           completeQwen: async () => {
             reviewCalls += 1

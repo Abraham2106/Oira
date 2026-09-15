@@ -1,10 +1,27 @@
 import { toSerializableError } from "../errors/core"
 import { ipcSenderUnauthorizedError } from "../errors/ipc"
+import { isSameTrustedDocument } from "./trusted-url"
 import type { IpcHandle } from "./types"
+import type { IpcMainInvokeEvent } from "electron"
 
-export type IpcSenderEvent = {
-  sender?: { id?: number; getURL?: () => string }
-  senderFrame?: { isMainFrame?: boolean; url?: string }
+type FrameIdentity = {
+  url: string
+  processId?: number
+  routingId?: number
+}
+
+export type IpcSenderEvent = Pick<IpcMainInvokeEvent, "sender" | "senderFrame">
+
+function isMainFrame(frame: FrameIdentity | null | undefined, main: FrameIdentity | null | undefined): boolean {
+  if (!frame || !main || !isSameTrustedDocument(frame.url, main.url)) return false
+  if (frame === main) return true
+
+  // Electron may expose distinct JS wrappers for the same WebFrameMain in a
+  // packaged process. The process/routing pair is the stable frame identity.
+  return typeof frame.processId === "number" &&
+    typeof frame.routingId === "number" &&
+    frame.processId === main.processId &&
+    frame.routingId === main.routingId
 }
 
 export type TrustedRenderer = {
@@ -17,13 +34,15 @@ function isTrustedEvent(event: unknown, trusted: () => readonly TrustedRenderer[
   const candidate = event as IpcSenderEvent
   const senderId = candidate.sender?.id
   const senderUrl = candidate.sender?.getURL?.()
-  const frame = candidate.senderFrame
+  const frame = candidate.senderFrame as FrameIdentity | null | undefined
+  const mainFrame = candidate.sender?.mainFrame as FrameIdentity | null | undefined
   return typeof senderId === "number" &&
     typeof senderUrl === "string" &&
-    frame?.isMainFrame === true &&
-    frame.url === senderUrl &&
+    isMainFrame(frame, mainFrame) &&
+    typeof frame?.url === "string" &&
+    isSameTrustedDocument(frame.url, senderUrl) &&
     trusted().some((renderer) =>
-      renderer.webContentsId === senderId && renderer.url === senderUrl,
+      renderer.webContentsId === senderId && isSameTrustedDocument(renderer.url, senderUrl),
     )
 }
 
