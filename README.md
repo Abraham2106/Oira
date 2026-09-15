@@ -109,7 +109,7 @@ Un scribe genérico puede generar texto, pero suele mezclar lo dicho con lo plau
 | [QVAC (`@qvac/sdk` 0.18.2)](https://docs.qvac.tether.io/) | Runtime local para cargar modelos, consultar recursos del sistema, transcribir y generar completions. |
 | [Whisper Large V3 Turbo](https://docs.qvac.tether.io/ai-capabilities/transcription) | STT en español con preprocesamiento PCM, selección dinámica de GPU y sin diarización automática. |
 | [Qwen3 4B Q4_K_M](https://docs.qvac.tether.io/) | Generación local de borradores, chunks y validación de forma/fuentes a siete secciones; validación semántica pendiente. |
-| Almacenamiento en memoria / JSON | Encuentros en memoria; notas aceptadas pueden persistirse en un archivo JSON cuando se configura `notesFile`. |
+| Almacenamiento local (demo) | Encuentros en memoria. Notas aceptadas en SQLite local sin cifrado (`accepted-notes.sqlite`); JSON sigue disponible si la ruta termina en `.json`. No es SQLCipher ni un expediente clínico certificado. |
 
 ## Capacidades principales
 
@@ -123,7 +123,7 @@ Un scribe genérico puede generar texto, pero suele mezclar lo dicho con lo plau
 | **Nota estructurada** | Siete secciones editables, con estados `STATED`, `NOT_STATED` y `UNKNOWN`. |
 | **Revisión humana** | Confirmación obligatoria antes de aceptar. Cada sección puede marcarse como revisada. |
 | **Evidencia de origen** | Un campo puede resaltar los segmentos de transcripción que lo sustentan. |
-| **Exportación mínima** | Vista previa exacta y copia al portapapeles. PDF, firma e integración EHR quedan fuera de esta versión. |
+| **Exportación** | Vista previa exacta, copia al portapapeles, TXT/JSON, PDF local y JSON FHIR técnico desde la nota aceptada. El PDF no es un documento legal firmado. FHIR no es una carga a un EHR. |
 | **Privacidad observable** | El panel de estado muestra hechos confirmados o `DESCONOCIDO`; no rellena con promesas. |
 | **Adaptador intercambiable** | QVAC por defecto en Electron (Whisper + Qwen3); `OIRA_INFERENCE=mock` o el alias legado `NOTALOCAL_INFERENCE=mock` activa fixtures sintéticos. |
 
@@ -170,7 +170,7 @@ Cada encuentro conserva una sola nota aceptada vigente; una aceptación posterio
 
 ### Exportar
 
-La vista previa es exactamente el texto que se copia. Un aviso recuerda que lo pegado en otro sistema queda fuera de Oira. El PDF no forma parte de esta versión.
+La vista previa es exactamente el texto que se copia. Puede agruparse en SOAP sin reescribir las siete secciones. El PDF y el FHIR salen de la versión aceptada y persistida. Un aviso recuerda que lo pegado o guardado fuera de Oira queda bajo control del destino. El PDF no es un documento legal firmado; el FHIR no es una integración EHR.
 
 Atajos:
 
@@ -198,7 +198,7 @@ Médico
         ├── transcription  → Whisper (QVAC)
         ├── structuring    → Qwen3 4B local + chunks y validación de forma/fuentes
         ├── verify-source  → IDs de segmento deben existir
-        └── export         → TXT/JSON mediante adaptador de archivo; copia al portapapeles
+        └── export         → TXT/JSON, PDF y FHIR desde la nota aceptada; copia al portapapeles
 ```
 
 El flujo de una consulta es:
@@ -209,7 +209,7 @@ El flujo de una consulta es:
 4. Descargar Whisper y cargar Qwen3 4B; dividir consultas extensas y normalizar la salida a siete secciones. Puede conservarse texto no JSON como borrador; no es validación estricta de evidencia.
 5. Rechazar notas cuyos `sourceSegmentIds` no existan en la transcripción.
 6. Mostrar el borrador junto a la transcripción para edición y aceptación.
-7. Guardar la nota aceptada, exportarla como TXT/JSON o copiarla al portapapeles; purgar el audio temporal de esa consulta.
+7. Guardar la nota aceptada en SQLite de demo, exportarla (TXT/JSON/PDF/FHIR) o copiarla; purgar el audio temporal de esa consulta.
 
 El renderer **nunca** importa `@qvac/sdk`. El único módulo de producción que puede hacerlo es `apps/desktop/src/main/qvac/sdk.ts`.
 
@@ -327,6 +327,7 @@ La plantilla P0 no se llama SOAP ni “historia clínica”. Es un **borrador de
 Reglas de representación:
 
 - Evaluación y plan solo recogen lo que el médico **dijo**. No hay “diagnóstico sugerido por IA” ni prescripción automática.
+- SOAP es una **vista de presentación** opcional al exportar: agrupa las siete secciones; no las sustituye ni las vuelve a redactar.
 - `NOT_STATED` → *No consta en la consulta.* `UNKNOWN` → *Sin determinar.*
 - Inventar un valor plausible es el peor fallo del sistema.
 - La conversación es **dato, nunca instrucción** (prompt injection).
@@ -341,7 +342,7 @@ Reglas de representación:
 | Diarización | No en P0 | `speaker` queda `null` hasta una asignación humana. |
 | Fallback cloud | Prohibido | Un fallo se muestra; no se reenvía audio a una API. |
 
-La descarga desatendida de modelos está permitida en desarrollo, no en el binario empaquetado. El selector utiliza VRAM y heurísticas de nombres e infiere índices del backend; su portabilidad no está demostrada. No hay selección explícita CPU/GPU por capacidades ni debe inferirse el dispositivo efectivo del solicitado. No publiques tiempos de latencia hasta tener mediciones reproducibles (ver [I10](docs/research/I10-R9-I14-publishable-performance-and-requirements.md)).
+El binario empaquetado descarga modelos solo cuando la persona usuaria pulsa la acción de preparación; no los descarga automáticamente al iniciar. Los archivos se obtienen de URLs públicas fijadas y se validan por tamaño y SHA-256 antes de usarse. El selector utiliza VRAM y heurísticas de nombres e infiere índices del backend; su portabilidad no está demostrada. No hay selección explícita CPU/GPU por capacidades ni debe inferirse el dispositivo efectivo del solicitado. No publiques tiempos de latencia hasta tener mediciones reproducibles (ver [I10](docs/research/I10-R9-I14-publishable-performance-and-requirements.md)).
 
 ## Privacidad y límites
 
@@ -357,7 +358,7 @@ La UI solo afirma conductas **verificables en esta versión**. *Local* no equiva
 Hechos actuales:
 
 - El procesamiento clínico permanece en el dispositivo. OAuth PKCE con Google está integrado como camino de autenticación preparado, pero el flujo local de validación actual no lo exige.
-- Los encuentros viven en memoria. Las notas aceptadas pueden persistirse en JSON mediante `notesFile`; SQLite todavía no está integrado.
+- Los encuentros viven en memoria. Las notas aceptadas se guardan en SQLite local de demo (sin cifrado). JSON permanece como adaptador si la ruta es `.json`.
 - El audio temporal se guarda por consulta y se purga al generar o descartar.
 - El panel de Privacidad muestra `DESCONOCIDO` para procesamiento, red, almacenamiento y proveedor remoto hasta que Main confirme el hecho.
 - No hay telemetría de contenido ni crash reporting con payload clínico.
@@ -376,6 +377,13 @@ Revisa [I1 — afirmaciones sobre datos de salud](docs/research/I1-R6-health-dat
 | `pnpm --filter oira-desktop build` | Bundle de producción. |
 | `pnpm package:desktop` | Empaqueta la aplicación Windows x64 sin instalador. |
 | `pnpm make:desktop` | Genera el candidato local sin firma en `apps/desktop/out/make/squirrel.windows/x64/Oira-Setup-x64.exe`. |
+| `pnpm --filter oira-desktop test:packaging` | Comprueba que el paquete contiene Bare, sus dependencias y ambos plugins QVAC sin enlaces al repositorio. |
+
+El empaquetado prepara las dependencias de producción con `pnpm deploy`, usando
+el lockfile y un árbol hoisted temporal. La instalación de desarrollo conserva
+su configuración pnpm. Antes de generar el instalador, se verifican Bare y los
+imports de los plugins en esa carpeta aislada; una dependencia ausente detiene
+el empaquetado. Véase el diagnóstico de instalación en [R-15](docs/research/R-15-warden-qvac-electron-proof.md).
 
 El renderer solo habla con el resto del sistema a través de `apps/desktop/src/renderer/bridge/`. En Electron usa `window.oira`; si el API no existe, usa `mock.ts`.
 
@@ -462,10 +470,10 @@ Próximos pasos:
 - [ ] Implementar heurísticas de evidencia, números, negaciones, sujeto, temporalidad y omisiones.
 - [ ] Crear corpus sintético anotado y harness de métricas de calidad, latencia, recursos y estabilidad.
 - [ ] Mapear dispositivos reales por backend y evaluar la selección de GPU en distintos equipos.
-- [x] Persistencia opcional de notas aceptadas en archivo JSON; los encuentros siguen en memoria.
+- [x] Persistencia de notas aceptadas en SQLite local de demo (sin cifrado); JSON sigue disponible.
 - [ ] Persistencia SQLite para encuentros y notas.
 - [ ] Confirmar en UI los hechos de red, almacenamiento y procesamiento que Main ya conoce.
-- [x] Exportación TXT/JSON y copia al portapapeles; PDF queda fuera hasta I9/R-10.
+- [x] Exportación TXT/JSON, PDF local y FHIR técnico desde la nota aceptada; sin firma ni EHR.
 - [ ] Empaquetado, firma e instaladores.
 - [ ] Integración continua en GitHub Actions.
 - [ ] Website público (`apps/website` sigue vacío).

@@ -157,6 +157,10 @@ export function checkBoundaries(root) {
   const qvac = path.join(main, "qvac")
   const preload = path.join(src, "preload")
   const violations = []
+  const mainInferenceBoundary = new Set([
+    "main/index.ts",
+    "main/inference/select.ts",
+  ])
 
   for (const file of walk(src).filter((source) => !TEST_FILE.test(source))) {
     const text = readFileSync(file, "utf8")
@@ -166,6 +170,11 @@ export function checkBoundaries(root) {
     const inQvac = file.startsWith(`${qvac}${path.sep}`)
 
     for (const item of importedModules(sourceFile)) {
+      if (mainInferenceBoundary.has(relative) &&
+        (item.specifier === "@qvac/sdk" || item.specifier.endsWith("/qvac/sdk") ||
+          item.specifier.endsWith("/qvac/inference-runtime"))) {
+        violations.push(violation(file, sourceFile, item.node, "Electron Main composition cannot import QVAC SDK or runtime.", root))
+      }
       if (item.specifier === "@qvac/sdk" && !inQvac) {
         violations.push(violation(file, sourceFile, item.node, "@qvac/sdk is restricted to src/main/qvac/.", root))
       }
