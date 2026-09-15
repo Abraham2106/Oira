@@ -40,8 +40,8 @@ describe("composeApplication", () => {
     )
 
     const generated = await app.notes.generate(started.encounterId)
-    expect(generated.status).toBe("ok")
-    if (generated.status !== "ok") return
+    expect(generated.status).toBe("READY")
+    if (generated.status !== "READY") return
     expect(generated.transcript).toHaveLength(3)
     expect(Object.keys(generated.note.sections)).toHaveLength(7)
     expect(existsSync(join(audioTempDir, started.encounterId))).toBe(false)

@@ -1,0 +1,94 @@
+name: Architecture atlas
+
+on:
+  pull_request:
+    paths:
+      - "apps/desktop/src/**"
+      - "packages/**/src/**"
+      - "docs/codebase-map.html"
+      - "scripts/architecture/atlas/**"
+      - ".github/workflows/architecture-atlas.yml"
+      - "AGENTS.md"
+      - "README.md"
+  push:
+    branches: [main]
+    paths:
+      - "apps/desktop/src/**"
+      - "packages/**/src/**"
+      - "docs/codebase-map.html"
+      - "scripts/architecture/atlas/**"
+      - ".github/workflows/architecture-atlas.yml"
+      - "AGENTS.md"
+      - "README.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: architecture-atlas-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.17.0
+          cache: npm
+          cache-dependency-path: scripts/architecture/atlas/package-lock.json
+      - name: Install isolated capture tools
+        run: npm ci --prefix scripts/architecture/atlas
+      - name: Install Chromium
+        run: npm --prefix scripts/architecture/atlas exec -- playwright install --with-deps chromium
+      - name: Validate and capture the atlas
+        run: |
+          node --test scripts/architecture/atlas/check.test.mjs
+          node scripts/architecture/atlas/capture.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: architecture-atlas
+          path: docs/assets/codebase-map.png
+          if-no-files-found: error
+          retention-days: 14
+
+  update-preview:
+    needs: render
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/download-artifact@v4
+        with:
+          name: architecture-atlas
+          path: docs/assets
+      - name: Commit only the generated preview
+        env:
+          SNAPSHOT_SHA: ${{ github.sha }}
+        run: |
+          # A newer atlas may have landed while the capture was rendering.
+          if ! git diff --quiet "$SNAPSHOT_SHA" HEAD -- docs/codebase-map.html scripts/architecture/atlas; then
+            echo "Skipping stale preview; a newer atlas/tooling revision exists."
+            exit 0
+          fi
+          git add -- docs/assets/codebase-map.png
+          if git diff --cached --quiet; then
+            echo "Preview is already current."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "docs: refresh architecture atlas preview"
+          # Normal push only: branch protections are respected; no force or bypass.
+          git push origin HEAD:main

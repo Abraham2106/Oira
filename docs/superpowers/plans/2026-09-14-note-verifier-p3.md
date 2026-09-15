@@ -1,7 +1,7 @@
 # NOTE_VERIFIER_P3 — Plan de implementación
 
 > Decide de diseño: [`NOTE_VERIFIER_P3.md`](../../NOTE_VERIFIER_P3.md) (spec completa).
-> Rama: `feature/note-verifier-p3`. Estado: F0 ✅ · F1 en curso · F2–F5 pendientes.
+> Rama: `feature/note-verifier-p3`. Estado: F0 ✅ · F1 ✅ · F2–F5 pendientes de cierre.
 > Disciplina: Regla 12 (`medido`/`observado`/`inferido`/`no_probado`) · Regla 16 (medir → analizar → optimizar con autorización).
 
 ## Fases y avance
@@ -33,3 +33,7 @@ fijar umbrales (Regla 16 → nunca inventar metas antes del baseline).
 ⚠️ Nota del baseline: `unsupportedFactRate` proviene casi todo de `source_not_supported`
 (check **literal normalizado**, cota superior inflada por el parafraseo). La verificación
 semántica queda `no_probado` hasta F2/F3.
+
+## Integración con main
+
+F1 conserva `draft_unvalidated` y adopta `READY` / `CLEANUP_PENDING` para notas válidas. Se mantienen la recuperación de limpieza, las transiciones de guardado y la procedencia clínica de main. El contenido de thinking/raw no se promueve a nota. Atlas actualizado con generación estricta, heurísticas y revisión Qwen.

@@ -157,7 +157,8 @@ export function useEncounter(): EncounterView {
       apply("STOP")
       const generated = await bridge.generateNote(encounter.id)
       setTranscript(generated.transcript)
-      if (generated.status === "ok") {
+      if (generated.cleanup) setErrorMessage("La eliminación local del audio queda pendiente de reintento.")
+      if (generated.status !== "draft_unvalidated") {
         setUnvalidatedDraft(null)
         setNote(generated.note)
         // F3: la revisión del segundo Qwen es informativa y nunca bloquea la
@@ -170,6 +171,8 @@ export function useEncounter(): EncounterView {
         setUnvalidatedDraft({ text: generated.draftText, issues: generated.issues })
         setNote(null)
         setReviewerResult(null)
+        fail("El borrador no superó la validación. Revisa la transcripción.")
+        return
       }
       setMachine((current) => {
         let next = current
@@ -197,6 +200,8 @@ export function useEncounter(): EncounterView {
           [sectionId]: {
             ...current.sections[sectionId],
             text,
+            provenance: "CLINICIAN_EDITED",
+            sourceSegmentIds: [],
             presence: text.trim() ? "STATED" : current.sections[sectionId].presence,
           },
         },
@@ -231,7 +236,11 @@ export function useEncounter(): EncounterView {
   const acceptNote = useCallback(async (clinicianConfirmed: true) => {
     if (!encounter || !note) return
     try {
-      await bridge.saveNote(encounter.id, note, clinicianConfirmed)
+      const saved = await bridge.saveNote(encounter.id, note, clinicianConfirmed)
+      if (saved.status === "PERSISTED_TRANSITION_PENDING") {
+        setErrorMessage("La nota se guardó, pero su estado requiere reconciliación. Reintenta guardar.")
+        return
+      }
       apply("ACCEPT")
     } catch {
       fail("No se pudo guardar el borrador.")

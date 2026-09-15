@@ -16,6 +16,10 @@ export type AppError = {
   retryable: boolean
   /** Local diagnostics only; stripped before IPC. */
   cause?: unknown
+  secondaryFailures?: Array<{
+    stage: "encounter_transition" | "audio_cleanup"
+    code: AppErrorCode
+  }>
 }
 
 export type CreateAppErrorOptions = {
@@ -55,5 +59,20 @@ export function toSerializableError(error: AppError): SerializableError {
     message: error.message,
     hint: error.hint,
     retryable: error.retryable,
+    secondaryFailures: error.secondaryFailures,
   }
+}
+
+/** Attach a safe stage/code marker without replacing the primary failure. */
+export function addSecondaryFailure(
+  primary: unknown,
+  stage: "encounter_transition" | "audio_cleanup",
+  secondary: unknown,
+): void {
+  if (!isAppError(primary)) return
+  primary.secondaryFailures ??= []
+  primary.secondaryFailures.push({
+    stage,
+    code: isAppError(secondary) ? secondary.code : "INTERNAL_ERROR",
+  })
 }

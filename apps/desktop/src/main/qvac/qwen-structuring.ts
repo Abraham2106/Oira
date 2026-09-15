@@ -48,14 +48,7 @@ function parseCompletionJson(completion: {
   thinkingText?: string
   rawText?: string
 }): ReturnType<typeof parseModelJson> {
-  const issues: string[] = []
-  for (const candidate of [completion.text, completion.thinkingText, completion.rawText]) {
-    if (!candidate?.trim()) continue
-    const parsed = parseModelJson(candidate)
-    if (parsed.ok) return parsed
-    issues.push(...parsed.issues)
-  }
-  return { ok: false, issues: issues.length > 0 ? issues : ["La salida del modelo está vacía."] }
+  return parseModelJson(completion.text)
 }
 
 function rawFallbackText(completion: {
@@ -63,7 +56,7 @@ function rawFallbackText(completion: {
   thinkingText?: string
   rawText?: string
 }): string {
-  return [completion.text, completion.thinkingText, completion.rawText]
+  return [completion.text]
     .map((value) => value?.trim() ?? "")
     .find((value) => value.length > 0) ?? ""
 }

@@ -6,7 +6,7 @@ import {
 import { SYNTHETIC_TRANSCRIPT } from "../../shared/fixtures/synthetic-consult"
 import type { InferenceProgress } from "../../shared/types/inference-progress"
 import type { ModelLifecycleEvent } from "../../shared/types/model-lifecycle"
-import type { GenerateNoteResult } from "../../shared/types/oira-api"
+import type { GenerateNoteResult, SaveNoteResult } from "../../shared/types/oira-api"
 import {
   defaultSettings,
   type AppSettings,
@@ -31,7 +31,8 @@ export type DemoBridge = {
     encounterId: string,
     note: ClinicalNote,
     clinicianConfirmed: true,
-  ) => Promise<void>
+  ) => Promise<SaveNoteResult>
+  retryAudioCleanup: (encounterId: string) => Promise<void>
   exportNote: (
     encounterId: string,
     format?: "txt" | "json",
@@ -53,7 +54,7 @@ function field(
   presence: FieldValue["presence"],
   sourceSegmentIds: string[] = [],
 ): FieldValue {
-  return { text, presence, sourceSegmentIds, reviewed: false }
+  return { text, presence, sourceSegmentIds, reviewed: false, provenance: "EXTRACTED" }
 }
 
 function syntheticNote(): ClinicalNote {
@@ -114,7 +115,7 @@ export function createMockBridge(): DemoBridge {
         throw new Error("Consulta desconocida")
       }
       return {
-        status: "ok",
+        status: "READY",
         transcript: SYNTHETIC_TRANSCRIPT,
         note: syntheticNote(),
         reviewerResult: {
@@ -143,8 +144,10 @@ export function createMockBridge(): DemoBridge {
         },
       }
     },
+    async retryAudioCleanup() {},
     async saveNote() {
       await wait(150)
+      return { status: "SAVED", noteId: activeId ?? "demo-note" }
     },
     async exportNote() {
       return { exported: true as const }

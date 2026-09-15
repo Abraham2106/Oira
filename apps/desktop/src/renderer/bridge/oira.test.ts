@@ -24,6 +24,10 @@ function stubApi(): OiraApi {
       ok: false,
       error: { code: "NOT_IMPLEMENTED", message: "x", retryable: false },
     }),
+    retryAudioCleanup: async () => ({
+      ok: false,
+      error: { code: "NOT_IMPLEMENTED", message: "x", retryable: false },
+    }),
     exportNote: async () => ({ ok: true, data: { exported: true } }),
     writeClipboard: async () => ({ ok: true, data: { written: true } }),
     appendAudio: async () => ({ ok: true, data: { accepted: true } }),

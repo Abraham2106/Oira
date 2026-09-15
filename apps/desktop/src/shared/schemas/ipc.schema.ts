@@ -48,6 +48,12 @@ export const generateNoteInputSchema = z
   })
   .strict()
 
+export const retryAudioCleanupInputSchema = z
+  .object({
+    encounterId: z.string().uuid(),
+  })
+  .strict()
+
 export const saveNoteInputSchema = z
   .object({
     encounterId: z.string().uuid(),
@@ -81,6 +87,7 @@ export type AppendAudioInput = z.infer<typeof appendAudioInputSchema>
 export type StartEncounterInput = z.infer<typeof startEncounterInputSchema>
 export type StopEncounterInput = z.infer<typeof stopEncounterInputSchema>
 export type GenerateNoteInput = z.infer<typeof generateNoteInputSchema>
+export type RetryAudioCleanupInput = z.infer<typeof retryAudioCleanupInputSchema>
 export type SaveNoteInput = z.infer<typeof saveNoteInputSchema>
 export type ExportNoteInput = z.infer<typeof exportNoteInputSchema>
 export type ClipboardWriteInput = z.infer<typeof clipboardWriteInputSchema>

@@ -5,6 +5,10 @@ export type SerializableError = {
   message: string
   hint?: string
   retryable: boolean
+  secondaryFailures?: Array<{
+    stage: "encounter_transition" | "audio_cleanup"
+    code: AppErrorCode
+  }>
 }
 
 export type Result<T> =

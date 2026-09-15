@@ -1,0 +1,9 @@
+{
+  "name": "oira-architecture-atlas",
+  "private": true,
+  "type": "module",
+  "description": "Isolated documentation capture tooling; no Electron or QVAC dependencies.",
+  "devDependencies": {
+    "playwright": "1.58.2"
+  }
+}

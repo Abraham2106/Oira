@@ -7,6 +7,11 @@ export function verifySource(
 ): boolean {
   const ids = new Set(transcript.map((segment) => segment.id))
   for (const field of Object.values(note.sections)) {
+    if (
+      field.provenance === "EXTRACTED" &&
+      field.presence === "STATED" &&
+      field.sourceSegmentIds.length === 0
+    ) return false
     for (const sourceId of field.sourceSegmentIds) {
       if (!ids.has(sourceId)) return false
     }

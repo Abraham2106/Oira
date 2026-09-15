@@ -138,8 +138,8 @@ describe("I04 registerIpc", () => {
     }
 
     expect(result.ok).toBe(true)
-    expect(result.data?.status).toBe("ok")
-    if (result.data?.status !== "ok") return
+    expect(result.data?.status).toBe("READY")
+    if (result.data?.status !== "READY") return
     expect(result.data.transcript).toHaveLength(3)
     expect(Object.keys(result.data.note.sections).sort()).toEqual([
       "clinical_narrative",
@@ -236,10 +236,10 @@ describe("I04 registerIpc", () => {
     }
 
     expect(result.ok).toBe(true)
-    expect(result.data?.status).toBe("ok")
+    expect(result.data?.status).toBe("READY")
     // El runtime stub entrega "" al revisor → JSON inválido → not_completed.
     // Informativo: la nota sigue siendo ok; el revisor nunca la bloquea.
-    if (result.data?.status === "ok") {
+    if (result.data?.status === "READY") {
       expect(result.data.reviewerResult).toEqual({
         status: "not_completed",
         error: expect.stringContaining("JSON"),

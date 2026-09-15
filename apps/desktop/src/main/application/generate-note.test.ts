@@ -45,7 +45,7 @@ describe("runGenerateNote", () => {
       await handoffStarted
       expect(events).toEqual(["display-started", "handoff-started"])
       finishLoading()
-      await expect(result).resolves.toMatchObject({ status: "ok" })
+      await expect(result).resolves.toMatchObject({ status: "READY" })
       expect(events).toEqual(["display-started", "handoff-started", "structure-started"])
     } finally {
       finishLoading()
@@ -71,8 +71,8 @@ describe("runGenerateNote", () => {
       structuring: createMockStructuring(),
       progress: { emit: (event) => events.push(event) },
     })
-    expect(result.status).toBe("ok")
-    if (result.status !== "ok") return
+    expect(result.status).toBe("READY")
+    if (result.status !== "READY") return
     expect(result.transcript).toHaveLength(3)
     expect(Object.keys(result.note.sections)).toHaveLength(7)
     expect(events.map((event) => event.phase)).toEqual(["transcribing", "structuring"])
@@ -154,8 +154,8 @@ describe("runGenerateNote", () => {
         reviewer,
       },
     )
-    expect(result.status).toBe("ok")
-    if (result.status !== "ok") return
+    expect(result.status).toBe("READY")
+    if (result.status !== "READY") return
     expect(result.reviewerResult?.status).toBe("completed")
     expect(events.map((event) => event.phase)).toEqual([
       "transcribing",
@@ -178,8 +178,8 @@ describe("runGenerateNote", () => {
         reviewer,
       },
     )
-    expect(result.status).toBe("ok")
-    if (result.status !== "ok") return
+    expect(result.status).toBe("READY")
+    if (result.status !== "READY") return
     expect(result.reviewerResult).toEqual({
       status: "not_completed",
       error: "Timeout en el revisor.",

@@ -151,7 +151,7 @@ describe("createQwenStructuring", () => {
     })
   })
 
-  it("pastes flat section strings into the matching fields", async () => {
+  it("keeps flat section strings without citations unvalidated", async () => {
     const runtime = runtimeFor([JSON.stringify({
       visit_context: "Control de rodilla.",
       clinical_narrative: "Dolor de rodilla recurrente.",
@@ -161,10 +161,9 @@ describe("createQwenStructuring", () => {
       clinician_documented_plan: "",
       follow_up: "",
     })])
-    const note = await noteOf(runtime, [segment("s1", "Dolor de rodilla recurrente. Control.")])
-    expect(note.sections.visit_context.text).toBe("Control de rodilla.")
-    expect(note.sections.clinical_narrative.text).toBe("Dolor de rodilla recurrente.")
-    expect(note.sections.follow_up.presence).toBe("NOT_STATED")
+    const result = await structure(runtime, [segment("s1", "Dolor de rodilla recurrente. Control.")])
+    expect(result.kind).toBe("draft_unvalidated")
+    expect(runtime.completeStructuring).toHaveBeenCalledTimes(STRUCTURE_GENERATION_ATTEMPTS)
   })
 
   it("rejects a STATED-without-text on first try and repairs on retry", async () => {
@@ -193,6 +192,21 @@ describe("createQwenStructuring", () => {
     const note = await noteOf(runtime, [segment("s1", "Dolor de rodilla.")])
     expect(runtime.completeStructuring).toHaveBeenCalledTimes(2)
     expect(note.sections.clinical_narrative.sourceSegmentIds).toEqual(["s1"])
+  })
+
+  it("does not promote thinking or raw JSON to a validated note", async () => {
+    const runtime = runtimeFor([""])
+    const hidden = JSON.stringify(output({
+      clinical_narrative: { presence: "STATED", text: "Dolor.", sourceSegmentIds: ["s1"] },
+    }))
+    vi.mocked(runtime.completeStructuring).mockResolvedValue({
+      text: "", thinkingText: hidden, rawText: hidden,
+    } as Awaited<ReturnType<QvacInferenceRuntime["completeStructuring"]>>)
+    const result = await structure(runtime, [segment("s1", "Dolor.")])
+    expect(result.kind).toBe("draft_unvalidated")
+    if (result.kind !== "draft_unvalidated") throw new Error("Expected unvalidated draft")
+    expect(result.draftText).not.toContain(hidden)
+    expect(runtime.completeStructuring).toHaveBeenCalledTimes(STRUCTURE_GENERATION_ATTEMPTS)
   })
 
   it("forwards CLINICAL_NOTE_JSON_SCHEMA to completeStructuring", async () => {

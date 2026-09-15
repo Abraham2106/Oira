@@ -1,4 +1,5 @@
 import type { ClinicalNote } from "@oira/types"
+import { clinicalNoteSchema } from "../../shared/schemas/clinical.schema"
 import type { InferenceProgress } from "../../shared/types/inference-progress"
 import type { OiraApi } from "../../shared/types/oira-api"
 import type { Result } from "../../shared/types/result"
@@ -33,7 +34,14 @@ export function adaptOiraApi(api: OiraApi): DemoBridge {
       return unwrap(api.generateNote({ encounterId }))
     },
     async saveNote(encounterId, note: ClinicalNote, clinicianConfirmed: true) {
-      await unwrap(api.saveNote({ encounterId, note, clinicianConfirmed }))
+      const parsed = clinicalNoteSchema.safeParse(note)
+      if (!parsed.success) {
+        throw new Error("La nota requiere revisión clínica antes de guardarse.")
+      }
+      return unwrap(api.saveNote({ encounterId, note: parsed.data, clinicianConfirmed }))
+    },
+    async retryAudioCleanup(encounterId) {
+      await unwrap(api.retryAudioCleanup({ encounterId }))
     },
     async exportNote(encounterId, format = "txt") {
       return unwrap(api.exportNote({ encounterId, format }))

@@ -14,6 +14,15 @@ export function notAuthenticatedError(
   return createAppError("NOT_AUTHENTICATED", message, { retryable: false })
 }
 
+/** IPC must originate in the trusted top-level renderer document. */
+export function ipcSenderUnauthorizedError(): AppError {
+  return createAppError(
+    "IPC_SENDER_UNAUTHORIZED",
+    "The request did not originate from the trusted application window.",
+    { retryable: false },
+  )
+}
+
 /**
  * Catch-all at the IPC boundary for non-AppError throws.
  * Must never claim DATABASE_ERROR — that code is reserved for storage.

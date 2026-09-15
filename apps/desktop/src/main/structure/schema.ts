@@ -71,15 +71,13 @@ function readPresence(raw: unknown): FieldPresence | undefined {
   return undefined
 }
 
-function asSection(raw: unknown, known: Set<string>): StructuringSection {
+function asSection(raw: unknown): StructuringSection {
   const text = extractText(raw)
   let sourceSegmentIds: string[] = []
   if (typeof raw === "object" && raw !== null && !Array.isArray(raw)) {
     const ids = (raw as { sourceSegmentIds?: unknown }).sourceSegmentIds
     if (Array.isArray(ids)) {
-      sourceSegmentIds = ids.filter(
-        (id): id is string => typeof id === "string" && known.has(id),
-      )
+      sourceSegmentIds = ids.filter((id): id is string => typeof id === "string")
     }
   }
 
@@ -102,9 +100,8 @@ function emptyNote(): StructuringOutput {
 /** Temporary: never reject a draft for schema shape. Paste whatever JSON arrived. */
 export function normalizeStructuringOutput(
   raw: unknown,
-  knownSegmentIds: readonly string[] = [],
+  _knownSegmentIds: readonly string[] = [],
 ): StructuringOutput {
-  const known = new Set(knownSegmentIds)
   const { sections } = emptyNote()
 
   if (typeof raw === "string" || typeof raw === "number") {
@@ -130,7 +127,7 @@ export function normalizeStructuringOutput(
     if (key === "sections") continue
     const id = lookupSectionId(key)
     if (id) {
-      sections[id] = asSection(value, known)
+      sections[id] = asSection(value)
       continue
     }
     const text = extractText(value)
@@ -148,7 +145,48 @@ export function validateStructuringOutput(
   raw: unknown,
   knownSegmentIds: readonly string[],
 ): StructuringValidation {
-  return { ok: true, value: normalizeStructuringOutput(raw, knownSegmentIds) }
+  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
+    return { ok: false, issues: ["La salida estructurada debe ser un objeto JSON."] }
+  }
+  const root = raw as Record<string, unknown>
+  const nested = root.sections
+  if (nested !== undefined && (typeof nested !== "object" || nested === null || Array.isArray(nested))) {
+    return { ok: false, issues: ["sections debe ser un objeto JSON."] }
+  }
+  const bag = (nested ?? root) as Record<string, unknown>
+  let recognizedSections = 0
+  for (const [key, section] of Object.entries(bag)) {
+    const sectionId = lookupSectionId(key)
+    if (!sectionId) {
+      return { ok: false, issues: [`Sección desconocida: ${key}.`] }
+    }
+    recognizedSections += 1
+    const parsedSection = structuringSectionSchema.safeParse(section)
+    if (!parsedSection.success) {
+      return { ok: false, issues: [`${sectionId} no tiene el formato requerido.`] }
+    }
+    if (
+      (parsedSection.data.presence === "STATED" && !parsedSection.data.text.trim()) ||
+      parsedSection.data.presence === "NOT_STATED" &&
+      (parsedSection.data.text.trim() || parsedSection.data.sourceSegmentIds.length > 0)
+    ) {
+      return { ok: false, issues: [`${sectionId} tiene presencia, texto o citas inconsistentes.`] }
+    }
+  }
+  if (recognizedSections === 0) {
+    return { ok: false, issues: ["La salida estructurada no contiene secciones clínicas."] }
+  }
+  const value = normalizeStructuringOutput(raw, knownSegmentIds)
+  const known = new Set(knownSegmentIds)
+  for (const [sectionId, section] of Object.entries(value.sections)) {
+    if (section.presence === "STATED" && section.sourceSegmentIds.length === 0) {
+      return { ok: false, issues: [`${sectionId} declarado sin fuente.`] }
+    }
+    if (section.sourceSegmentIds.some((id) => !known.has(id))) {
+      return { ok: false, issues: [`${sectionId} cita un segmento inexistente.`] }
+    }
+  }
+  return { ok: true, value }
 }
 
 export type StrictStructuringValidation =
@@ -250,7 +288,9 @@ export function validateCompleteStructuringOutput(
   }
 
   if (issues.length > 0) return { ok: false, issues }
-  return { ok: true, value: normalizeStructuringOutput(raw, knownSegmentIds), issues: [] }
+  const validated = validateStructuringOutput(raw, knownSegmentIds)
+  if (!validated.ok) return { ok: false, issues: validated.issues.map((message) => ({ code: "INVALID_SOURCE_ID" as const, message })) }
+  return { ok: true, value: validated.value, issues: [] }
 }
 
 export function parseModelJson(text: string): { ok: true; value: unknown } | { ok: false; issues: string[] } {

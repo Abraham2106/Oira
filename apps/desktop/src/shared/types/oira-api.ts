@@ -6,6 +6,7 @@ import type {
   ExportNoteInput,
   GenerateNoteInput,
   SaveNoteInput,
+  RetryAudioCleanupInput,
   StartEncounterInput,
   StopEncounterInput,
 } from "../schemas/ipc.schema"
@@ -46,8 +47,13 @@ export type GenerateNoteIssue = {
  * validado, nunca como nota.
  */
 export type GenerateNoteResult =
-  | {
-      status: "ok"
+  | ({
+      status: "READY"
+      cleanup?: never
+    } | {
+      status: "CLEANUP_PENDING"
+      cleanup: { retryable: true }
+    }) & {
       transcript: TranscriptSegment[]
       note: ClinicalNote
       verificationWarnings?: GenerateNoteIssue[]
@@ -58,11 +64,13 @@ export type GenerateNoteResult =
       transcript: TranscriptSegment[]
       draftText: string
       issues: GenerateNoteIssue[]
+      cleanup?: { retryable: true }
     }
 
-export type SaveNoteResult = {
-  noteId: string
+export type SaveNoteResult = { status: "SAVED"; noteId: string } | {
+  status: "PERSISTED_TRANSITION_PENDING"; noteId: string; recovery: { retryable: true }
 }
+export type RetryAudioCleanupResult = { cleaned: true }
 
 export type ExportNoteResult = {
   exported: true
@@ -96,6 +104,7 @@ export type OiraApi = {
   generateNote: (
     input: GenerateNoteInput,
   ) => Promise<Result<GenerateNoteResult>>
+  retryAudioCleanup: (input: RetryAudioCleanupInput) => Promise<Result<RetryAudioCleanupResult>>
   saveNote: (input: SaveNoteInput) => Promise<Result<SaveNoteResult>>
   exportNote: (input: ExportNoteInput) => Promise<Result<ExportNoteResult>>
   writeClipboard: (
