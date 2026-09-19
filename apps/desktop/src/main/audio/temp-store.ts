@@ -43,7 +43,10 @@ export function createAudioTempStore(options: {
       if (pcm.length === 0 || pcm.length % 2 !== 0) {
         throw audioFormatUnsupportedError()
       }
-      const expected = (sequences.get(encounterId) ?? -1) + 1
+      const last = sequences.get(encounterId) ?? -1
+      const expected = last + 1
+      // Duplicate delivery of the last chunk (renderer retry): idempotent no-op.
+      if (sequence === last && last >= 0) return
       if (sequence !== expected) {
         throw audioCaptureFailedError("Audio chunks arrived out of order.")
       }
@@ -86,11 +89,21 @@ export function createAudioTempStore(options: {
     sweepOrphans() {
       sequences.clear()
       if (!fs.existsSync(options.audioTempDir)) return
-      for (const name of fs.readdirSync(options.audioTempDir)) {
-        fs.rmSync(path.join(options.audioTempDir, name), {
-          recursive: true,
-          force: true,
-        })
+      let names: string[]
+      try {
+        names = fs.readdirSync(options.audioTempDir)
+      } catch {
+        return
+      }
+      for (const name of names) {
+        try {
+          fs.rmSync(path.join(options.audioTempDir, name), {
+            recursive: true,
+            force: true,
+          })
+        } catch {
+          // EBUSY/EPERM on Windows (file still held): leave for next start.
+        }
       }
     },
   }

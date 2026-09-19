@@ -8,7 +8,11 @@ import type { DemoBridge } from "./mock"
 async function unwrap<T>(resultPromise: Promise<Result<T>>): Promise<T> {
   const result = await resultPromise
   if (!result.ok) {
-    throw new Error(result.error.message)
+    // Preserve the machine-readable code: UI copy distinguishes
+    // user-cancelled exports from real failures via error.code.
+    const error = new Error(result.error.message) as Error & { code?: string }
+    error.code = result.error.code
+    throw error
   }
   return result.data
 }

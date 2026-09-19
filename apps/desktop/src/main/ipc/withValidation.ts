@@ -33,30 +33,32 @@ export function withValidation<TIn, TOut>(options: {
 
   return async (raw: unknown): Promise<Result<TOut>> => {
     const started = Date.now()
-    const parsed = schema.safeParse(raw ?? {})
-    if (!parsed.success) {
-      const error = invalidInputError()
-      logger.call({
-        channel,
-        status: "error",
-        latencyMs: Date.now() - started,
-        errorCode: error.code,
-      })
-      return failedResult(error)
-    }
-
-    if (requiresSession && !session.isAuthenticated()) {
-      const error = notAuthenticatedError()
-      logger.call({
-        channel,
-        status: "error",
-        latencyMs: Date.now() - started,
-        errorCode: error.code,
-      })
-      return failedResult(error)
-    }
-
     try {
+      const parsed = schema.safeParse(raw ?? {})
+      if (!parsed.success) {
+        const error = invalidInputError()
+        logger.call({
+          channel,
+          status: "error",
+          latencyMs: Date.now() - started,
+          errorCode: error.code,
+        })
+        return failedResult(error)
+      }
+
+      // Session check inside try: a throwing isAuthenticated() must produce
+      // a Result + log line, never an unhandled IPC rejection.
+      if (requiresSession && !session.isAuthenticated()) {
+        const error = notAuthenticatedError()
+        logger.call({
+          channel,
+          status: "error",
+          latencyMs: Date.now() - started,
+          errorCode: error.code,
+        })
+        return failedResult(error)
+      }
+
       const data = await run(parsed.data)
       logger.call({
         channel,

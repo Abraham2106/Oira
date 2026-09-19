@@ -28,6 +28,14 @@ export function createEncounterService(
   const clock = deps.clock ?? systemClock
   const createId = deps.createId ?? (() => crypto.randomUUID())
   const audio = deps.audio
+  // Serialize start() so two concurrent START_ENCOUNTER calls cannot both
+  // observe "no active encounter" and create two active recordings.
+  let startChain: Promise<unknown> = Promise.resolve()
+
+  function sanitizeLabel(value: string | undefined): string {
+    if (typeof value !== "string") return ""
+    return value.trim().slice(0, 200)
+  }
 
   async function discard(encounterId: string) {
     const current = await repository.getById(encounterId)
@@ -45,42 +53,65 @@ export function createEncounterService(
       updatedAt: now,
     }
     await repository.update(next)
-    audio?.purge(encounterId)
+    // Audio purge is best-effort: the encounter is already discarded, and
+    // orphan sweeps handle leftovers. Never fail discard() on purge errors.
+    try {
+      audio?.purge(encounterId)
+    } catch {
+      /* orphan audio is swept on startup */
+    }
     return { status: next.status }
   }
 
   return {
     async start(input = {}) {
-      const active = await repository.findActive()
-      if (active) {
-        await discard(active.id)
-      }
+      const run = startChain
+        .catch(() => undefined)
+        .then(async () => {
+          const active = await repository.findActive()
+          if (active) {
+            await discard(active.id)
+          }
 
-      const now = clock.nowIso()
-      const created: EncounterRecord = {
-        id: createId(),
-        status: "created",
-        createdAt: now,
-        startedAt: null,
-        endedAt: null,
-        updatedAt: now,
-        completedAt: null,
-        transcriptId: null,
-        label: input.label ?? "",
-        visitType: input.visitType ?? "",
-      }
-      await repository.insert(created)
+          const now = clock.nowIso()
+          const created: EncounterRecord = {
+            id: createId(),
+            status: "created",
+            createdAt: now,
+            startedAt: null,
+            endedAt: null,
+            updatedAt: now,
+            completedAt: null,
+            transcriptId: null,
+            label: sanitizeLabel(input.label),
+            visitType: sanitizeLabel(input.visitType),
+          }
+          await repository.insert(created)
 
-      assertTransition(created.status, "recording")
-      const recording: EncounterRecord = {
-        ...created,
-        status: "recording",
-        startedAt: now,
-        updatedAt: now,
-      }
-      await repository.update(recording)
-      audio?.prepare(recording.id)
-      return { encounterId: recording.id, startedAt: now }
+          assertTransition(created.status, "recording")
+          const recording: EncounterRecord = {
+            ...created,
+            status: "recording",
+            startedAt: now,
+            updatedAt: now,
+          }
+          await repository.update(recording)
+          try {
+            audio?.prepare(recording.id)
+          } catch (prepareError) {
+            // Compensate: DB already moved to recording, roll back to
+            // discarded so no orphan active encounter remains.
+            try {
+              await discard(recording.id)
+            } catch {
+              /* discard is best-effort here */
+            }
+            throw prepareError
+          }
+          return { encounterId: recording.id, startedAt: now }
+        })
+      startChain = run
+      return run
     },
 
     async stop(encounterId) {
@@ -109,13 +140,17 @@ export function createEncounterService(
     async advance(id, to) {
       const current = await repository.getById(id)
       if (!current) notFound()
+      if (current.status === to) return
+      // The generate pipeline may still try to mark a discarded encounter as
+      // failed; treat it as a terminal no-op instead of crashing the pipeline.
       if (current.status === "discarded") return
       assertTransition(current.status, to)
+      const now = clock.nowIso()
       await repository.update({
         ...current,
         status: to,
-        updatedAt: clock.nowIso(),
-        ...(to === "completed" ? { completedAt: clock.nowIso() } : {}),
+        updatedAt: now,
+        ...(to === "completed" ? { completedAt: now } : {}),
       })
     },
   }

@@ -1,4 +1,7 @@
-export const LOCALES = ["en", "es"] as const
+import { LANGUAGE_VALUES } from "../../shared/constants/language"
+
+/** Single source of truth lives in shared/constants/language (backend schema). */
+export const LOCALES = LANGUAGE_VALUES
 
 export type Locale = (typeof LOCALES)[number]
 

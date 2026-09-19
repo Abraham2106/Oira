@@ -18,8 +18,8 @@ export {
 
 export const startEncounterInputSchema = z
   .object({
-    label: z.string().optional(),
-    visitType: z.string().optional(),
+    label: z.string().trim().max(200).optional(),
+    visitType: z.string().trim().max(200).optional(),
   })
   .strict()
 

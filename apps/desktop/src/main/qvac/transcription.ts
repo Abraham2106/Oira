@@ -25,14 +25,20 @@ export function createQvacTranscription(
     async transcribe(input) {
       if (!input.filePath) throw transcriptionFailedError()
       try {
-        runtime ??= await (runtimePromise ??= (async () => {
-          const module = await import("./inference-runtime")
-          return module.createQvacInferenceRuntime({
-            env: deps.env,
-            loadSdk: deps.loadSdk as never,
-            onModelLifecycle: deps.onModelLifecycle,
-          })
-        })())
+        try {
+          runtime ??= await (runtimePromise ??= (async () => {
+            const module = await import("./inference-runtime")
+            return module.createQvacInferenceRuntime({
+              env: deps.env,
+              loadSdk: deps.loadSdk as never,
+              onModelLifecycle: deps.onModelLifecycle,
+            })
+          })())
+        } catch (bootError) {
+          // Never reuse a rejected boot promise: the next call must retry.
+          runtimePromise = undefined
+          throw bootError
+        }
         const raw = await runtime.transcribe({ filePath: input.filePath })
         return { segments: mapSttSegments(raw) }
       } catch (error) {

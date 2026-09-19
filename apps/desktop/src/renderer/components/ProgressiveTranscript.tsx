@@ -7,7 +7,10 @@ type Props = { segments: TranscriptSegment[]; immediate?: boolean }
 
 export function ProgressiveTranscript({ segments, immediate = false }: Props) {
   // Equal results delivered again by IPC must not restart the presentation.
-  return <TranscriptReveal key={JSON.stringify(segments)} segments={segments} immediate={immediate} />
+  // Key on ids + text lengths (not full JSON): cheap, stable for equal
+  // content, and restarts only when the transcript actually changes.
+  const stableKey = segments.map((segment) => `${segment.id}:${segment.text.length}`).join("|")
+  return <TranscriptReveal key={stableKey} segments={segments} immediate={immediate} />
 }
 
 function TranscriptReveal({ segments, immediate }: Props) {
@@ -29,6 +32,8 @@ function TranscriptReveal({ segments, immediate }: Props) {
   )
   const scroller = useRef<HTMLDivElement>(null)
   const following = useRef(true)
+  const wordsLengthRef = useRef(words.length)
+  wordsLengthRef.current = words.length
   const shown = immediate || reducedMotion ? words.length : count
   const revealing = shown < words.length
 
@@ -36,11 +41,11 @@ function TranscriptReveal({ segments, immediate }: Props) {
     const media = window.matchMedia("(prefers-reduced-motion: reduce)")
     const update = () => {
       setReducedMotion(media.matches)
-      if (media.matches) setCount(words.length)
+      if (media.matches) setCount(wordsLengthRef.current)
     }
     media.addEventListener("change", update)
     return () => media.removeEventListener("change", update)
-  }, [words.length])
+  }, [])
 
   useEffect(() => {
     if (!revealing) return

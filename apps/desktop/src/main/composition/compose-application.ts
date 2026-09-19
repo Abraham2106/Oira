@@ -64,6 +64,8 @@ export type ApplicationPorts = {
   reviewer?: NoteVerifierPort
   setup?: SetupService
   onSetupProgress?: (event: SetupProgress) => void
+  /** Release resources (sqlite handle, inference runtime). Idempotent. */
+  shutdown: () => Promise<void>
 }
 
 export type ComposeApplicationOptions = {
@@ -164,6 +166,7 @@ export function composeApplication(
       : join(tmpdir(), "oira-exports"))
   const googleAuth = options.googleAuth ?? createGoogleAuthPortFromEnv(process.env)
   const encounters = createEncounterService({ repository, audio })
+  let shutDown = false
 
   return {
     encounters,
@@ -215,6 +218,15 @@ export function composeApplication(
         : createFileSettingsPort(options.settingsFile),
     setup: options.setup,
     onSetupProgress: options.onSetupProgress,
+    shutdown: async () => {
+      if (shutDown) return
+      shutDown = true
+      await runtime?.shutdown().catch(() => undefined)
+      const maybeClosable = notesStore as Partial<{ close: () => void }>
+      if (typeof maybeClosable.close === "function") {
+        maybeClosable.close()
+      }
+    },
   }
 }
 

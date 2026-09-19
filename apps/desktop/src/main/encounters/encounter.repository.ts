@@ -20,6 +20,7 @@ export function createMemoryEncounterRepository(): EncounterRepository {
       return found ? { ...found } : undefined
     },
     async update(record) {
+      if (!byId.has(record.id)) throw new Error(`Encounter not found: ${record.id}`)
       byId.set(record.id, { ...record })
     },
     async findActive() {

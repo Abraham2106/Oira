@@ -52,14 +52,18 @@ const ENCOUNTER_ID =
 
 export const nodeFileWriter: FileWriterPort = {
   async mkdir(dir) {
-    await fsp.mkdir(dir, { recursive: true })
+    await fsp.mkdir(dir, { recursive: true, mode: 0o700 })
   },
   async writeFile(path, contents) {
+    // Atomic + private: write to a sibling tmp file with 0600, then rename,
+    // so a crash can never leave a half-written clinical export behind.
+    const tmp = `${path}.${process.pid}.tmp`
     if (typeof contents === "string") {
-      await fsp.writeFile(path, contents, "utf8")
-      return
+      await fsp.writeFile(tmp, contents, { encoding: "utf8", mode: 0o600 })
+    } else {
+      await fsp.writeFile(tmp, contents, { mode: 0o600 })
     }
-    await fsp.writeFile(path, contents)
+    await fsp.rename(tmp, path)
   },
 }
 

@@ -144,12 +144,23 @@ export class BrowserAudioCapture implements AudioCapturePort {
     recorder.ondataavailable = (event) => {
       if (event.data && event.data.size > 0) this.chunks.push(event.data)
     }
+    try {
+      recorder.start()
+    } catch {
+      // Never leave a half-started capture behind: the next start() must not
+      // see ERR_ALREADY_ACTIVE nor leak the mic stream.
+      this.stream = null
+      this.recorder = null
+      this.startedAtMs = null
+      this.stopped = null
+      for (const track of stream.getTracks()) track.stop()
+      throw new Error(ERR_START)
+    }
     this.recorder = recorder
     this.startedAtMs = Date.now()
     this.stopped = new Promise<void>((resolve) => {
       recorder.onstop = () => resolve()
     })
-    recorder.start()
 
     try {
       const context = new factory.AudioContextCtor()

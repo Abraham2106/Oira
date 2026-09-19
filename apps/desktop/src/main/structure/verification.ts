@@ -14,6 +14,17 @@ export type VerificationSeverity = "blocking" | "warning"
 
 export type VerificationIssue = GenerationIssue & { severity: VerificationSeverity }
 
+/** Invoke a single-issue detector once (never condition + assertion double-call). */
+function collectSingle(
+  text: string,
+  sourceText: string,
+  id: SectionId,
+  detector: (draftText: string, transcriptText: string, sectionId: SectionId) => GenerationIssue | undefined,
+): GenerationIssue[] {
+  const found = detector(text, sourceText, id)
+  return found ? [found] : []
+}
+
 export function runHeuristicVerification(
   output: StructuringOutput,
   transcript: readonly TranscriptSegment[],
@@ -36,15 +47,17 @@ export function runHeuristicVerification(
     const sourceText = sourceTexts.join(" ")
 
     semanticIssues.push(
-      ...(detectNegationFlip(text, sourceText, id) ? [detectNegationFlip(text, sourceText, id)!] : []),
-      ...(detectNegationScopeShift(text, sourceText, id) ? [detectNegationScopeShift(text, sourceText, id)!] : []),
-      ...(detectInventedNegation(text, sourceText, id) ? [detectInventedNegation(text, sourceText, id)!] : []),
-      ...(detectSubjectShift(text, sourceText, id) ? [detectSubjectShift(text, sourceText, id)!] : []),
-      ...(detectTenseShift(text, sourceText, id) ? [detectTenseShift(text, sourceText, id)!] : []),
-      ...(detectCertaintyEscalation(text, sourceText, id) ? [detectCertaintyEscalation(text, sourceText, id)!] : []),
-      ...(detectInventedCertainty(text, sourceText, id) ? [detectInventedCertainty(text, sourceText, id)!] : []),
-      ...(verifyMeasurementCitation(id, text, sourceText) ? [verifyMeasurementCitation(id, text, sourceText)!] : []),
-      ...(detectCriticalOmission(text, sourceText, id) ? [detectCriticalOmission(text, sourceText, id)!] : []),
+      ...collectSingle(text, sourceText, id, detectNegationFlip),
+      ...collectSingle(text, sourceText, id, detectNegationScopeShift),
+      ...collectSingle(text, sourceText, id, detectInventedNegation),
+      ...collectSingle(text, sourceText, id, detectSubjectShift),
+      ...collectSingle(text, sourceText, id, detectTenseShift),
+      ...collectSingle(text, sourceText, id, detectCertaintyEscalation),
+      ...collectSingle(text, sourceText, id, detectInventedCertainty),
+      ...collectSingle(text, sourceText, id, (draftText, transcriptText, sectionId) =>
+        verifyMeasurementCitation(sectionId, draftText, transcriptText),
+      ),
+      ...collectSingle(text, sourceText, id, detectCriticalOmission),
       ...verifyUnitConsistency(text, sourceText, id),
     )
   }

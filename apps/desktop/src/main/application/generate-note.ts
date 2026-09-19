@@ -55,7 +55,9 @@ export async function runGenerateNote(
   deps: GenerateNoteWorkflowDeps,
 ): Promise<GenerateNoteResult> {
   assertEncounterId(encounterId)
-  const attempts = deps.structureAttempts ?? DEFAULT_STRUCTURE_ATTEMPTS
+  const rawAttempts = deps.structureAttempts ?? DEFAULT_STRUCTURE_ATTEMPTS
+  const attempts = Number.isInteger(rawAttempts) ? rawAttempts : DEFAULT_STRUCTURE_ATTEMPTS
+  if (attempts <= 0) throw invalidStructuredOutputError()
 
   if (deps.encounters) {
     const record = await deps.encounters.getById(encounterId)
@@ -129,11 +131,17 @@ export async function runGenerateNote(
           break
         }
 
-        // Run Qwen reviewer if available (F3)
+        // Run Qwen reviewer if available (F3). A reviewer crash must never
+        // discard an otherwise valid note: degrade to a warning result.
         let reviewerResult: NoteVerificationResult | undefined
         if (deps.reviewer) {
           deps.progress?.emit({ encounterId, phase: "reviewing" })
-          reviewerResult = await deps.reviewer.verify({ transcript: segments, note: parsed.data })
+          try {
+            reviewerResult = await deps.reviewer.verify({ transcript: segments, note: parsed.data })
+          } catch (reviewerError) {
+            const detail = reviewerError instanceof Error ? reviewerError.message : "Reviewer failed."
+            reviewerResult = { status: "not_completed", error: detail }
+          }
         }
 
         await advanceEncounter(deps.encounters, encounterId, "transcribed")
@@ -156,7 +164,7 @@ export async function runGenerateNote(
         if (!retryable) throw error
       }
     }
-    if (!generated) throw lastError
+    if (!generated) throw lastError ?? invalidStructuredOutputError()
   } catch (error) {
     primaryFailure = error
     try {

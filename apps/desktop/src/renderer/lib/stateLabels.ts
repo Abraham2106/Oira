@@ -11,5 +11,6 @@ const STATE_LABELS: Record<string, string> = {
 }
 
 export function stateLabel(state: string): string {
-  return STATE_LABELS[state] ?? state
+  // Never leak a raw state code into the UI (privacy copy convention).
+  return STATE_LABELS[state] ?? "Sin determinar"
 }

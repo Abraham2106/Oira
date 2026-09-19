@@ -1,4 +1,4 @@
-import { appendFileSync, writeFileSync } from "node:fs"
+import { appendFileSync, statSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
 import { stringEnv } from "./gateway-model-paths"
@@ -42,6 +42,35 @@ export type QvacGatewayClientDeps = QvacInferenceRuntimeDeps & {
   probeEntry?: string
   probeVulkanIndex?: (env: NodeJS.ProcessEnv) => Promise<number | undefined>
   readyTimeoutMs?: number
+  /** Per-call timeout so a dead gateway can never hang IPC forever. */
+  callTimeoutMs?: number
+}
+
+const DEFAULT_CALL_TIMEOUT_MS = 300_000
+const MAX_GATEWAY_LOG_BYTES = 5 * 1024 * 1024
+
+function appendGatewayLog(logPath: string, data: Buffer): void {
+  try {
+    try {
+      if (statSync(logPath).size >= MAX_GATEWAY_LOG_BYTES) {
+        writeFileSync(logPath, data)
+        return
+      }
+    } catch {
+      /* missing file: fall through to append */
+    }
+    appendFileSync(logPath, data)
+  } catch { /* diagnostics are best effort */ }
+}
+
+function rejectAllPending(
+  pending: Map<string, { resolve: (value: unknown) => void; reject: (error: unknown) => void }>,
+  error: unknown,
+): void {
+  for (const [id, request] of pending) {
+    pending.delete(id)
+    request.reject(error)
+  }
 }
 
 export function createQvacGatewayClient(deps: QvacGatewayClientDeps = {}): QvacInferenceRuntime {
@@ -106,7 +135,7 @@ export function createQvacGatewayClient(deps: QvacGatewayClientDeps = {}): QvacI
       })
       const logPath = join(paths.userData ?? tmpdir(), "qvac-gateway.log")
       for (const stream of [child.stdout, child.stderr]) stream?.on("data", (data: Buffer) => {
-        try { appendFileSync(logPath, data) } catch { /* diagnostics are best effort */ }
+        appendGatewayLog(logPath, data)
       })
       await new Promise<void>((resolve, reject) => {
         const timeout = setTimeout(() => reject(new Error("QVAC_GATEWAY_READY_TIMEOUT")), deps.readyTimeoutMs ?? 15_000)
@@ -135,6 +164,13 @@ export function createQvacGatewayClient(deps: QvacGatewayClientDeps = {}): QvacI
         child?.once("exit", () => {
           if (child) child = undefined
           boot = undefined
+          // A dead gateway must release every in-flight call: without this,
+          // pending promises hang forever when the process dies after ready.
+          rejectAllPending(pending, createAppError(
+            "TRANSCRIPTION_FAILED",
+            "QVAC_GATEWAY_EXITED",
+            { retryable: true, hint: "El proceso de inferencia local terminó inesperadamente." },
+          ))
           reject(new Error("QVAC_GATEWAY_EXITED"))
         })
       })
@@ -153,9 +189,44 @@ export function createQvacGatewayClient(deps: QvacGatewayClientDeps = {}): QvacI
   const call = async <T>(method: string, ...args: unknown[]): Promise<T> => {
     await start()
     const id = `${++sequence}`
+    const timeoutMs = deps.callTimeoutMs ?? DEFAULT_CALL_TIMEOUT_MS
     return new Promise<T>((resolve, reject) => {
-      pending.set(id, { resolve: resolve as (value: unknown) => void, reject })
-      child?.postMessage({ id, type: "call", method, args })
+      const timer = setTimeout(() => {
+        if (!pending.has(id)) return
+        pending.delete(id)
+        reject(createAppError(
+          "TRANSCRIPTION_FAILED",
+          `QVAC_GATEWAY_CALL_TIMEOUT:${method}`,
+          { retryable: true, hint: "El proceso de inferencia local no respondió a tiempo." },
+        ))
+      }, timeoutMs)
+      if (timer.unref) timer.unref()
+      pending.set(id, {
+        resolve: (value) => { clearTimeout(timer); resolve(value as T) },
+        reject: (error) => { clearTimeout(timer); reject(error as Error) },
+      })
+      try {
+        child?.postMessage({ id, type: "call", method, args })
+      } catch (postError) {
+        // Lost postMessage (child gone between start() and post): fail fast
+        // instead of leaving the call pending until the timeout.
+        pending.delete(id)
+        clearTimeout(timer)
+        reject(createAppError(
+          "TRANSCRIPTION_FAILED",
+          "QVAC_GATEWAY_POST_FAILED",
+          { retryable: true, cause: postError },
+        ))
+      }
+      if (!child) {
+        pending.delete(id)
+        clearTimeout(timer)
+        reject(createAppError(
+          "TRANSCRIPTION_FAILED",
+          "QVAC_GATEWAY_UNAVAILABLE",
+          { retryable: true, hint: "El proceso de inferencia local no está disponible." },
+        ))
+      }
     })
   }
   const shutdown = async (): Promise<void> => {

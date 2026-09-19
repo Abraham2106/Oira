@@ -53,10 +53,17 @@ export function createSqliteNoteStore(filePath: string): SqliteNoteStore {
   }
 
   let queue: Promise<unknown> = Promise.resolve()
+  let closed = false
   function enqueue<T>(task: () => T): Promise<T> {
     const run = queue.then(task, task)
     queue = run.then(() => undefined, () => undefined)
     return run
+  }
+
+  function parseRowOrThrow(raw: unknown, context: string): StoredNoteRecord {
+    const parsed = parseRow(raw)
+    if (!parsed) throw databaseReadFailedError(`${context}: corrupt note row`)
+    return parsed
   }
 
   function parseRow(raw: unknown): StoredNoteRecord | null {
@@ -120,10 +127,9 @@ export function createSqliteNoteStore(filePath: string): SqliteNoteStore {
           const rows = db.prepare(
             "SELECT id, encounter_id, accepted_at, label, visit_type, note_json, transcript_json FROM accepted_notes ORDER BY accepted_at ASC, id ASC",
           ).all()
-          return rows.flatMap((row) => {
-            const parsed = parseRow(row)
-            return parsed ? [structuredClone(parsed)] : []
-          })
+          // Fail loudly on a corrupt row: silently dropping an accepted
+          // clinical note is worse than surfacing a read error.
+          return rows.map((row) => structuredClone(parseRowOrThrow(row, "list")))
         } catch (error) {
           if (isAppError(error)) throw error
           throw databaseReadFailedError(error)
@@ -137,8 +143,8 @@ export function createSqliteNoteStore(filePath: string): SqliteNoteStore {
           const row = db.prepare(
             "SELECT id, encounter_id, accepted_at, label, visit_type, note_json, transcript_json FROM accepted_notes WHERE id = ?",
           ).get(id)
-          const parsed = row ? parseRow(row) : null
-          return parsed ? structuredClone(parsed) : null
+          if (!row) return null
+          return structuredClone(parseRowOrThrow(row, "get"))
         } catch (error) {
           if (isAppError(error)) throw error
           throw databaseReadFailedError(error)
@@ -157,6 +163,8 @@ export function createSqliteNoteStore(filePath: string): SqliteNoteStore {
     },
 
     close() {
+      if (closed) return
+      closed = true
       db.close()
     },
   }

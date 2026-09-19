@@ -11,5 +11,11 @@ export function resolveBundledMainScript(
 ): string {
   const start = dirname(fileURLToPath(fromUrl))
   const candidates = [join(start, filename), join(start, "..", filename)]
-  return candidates.find((path) => existsSync(path)) ?? candidates[0]
+  const found = candidates.find((path) => existsSync(path))
+  if (!found) {
+    throw new Error(
+      `Bundled worker script not found: ${filename} (searched ${candidates.join(", ")})`,
+    )
+  }
+  return found
 }

@@ -74,6 +74,10 @@ export function createQvacInferenceRuntime(deps: QvacInferenceRuntimeDeps = {}):
   let settledLateId: string | undefined
   let completionRequestId: string | undefined
   let completionPromise: Promise<StructuringCompletion | string> | undefined
+  // Serialize Qwen completions: the SDK slot (request id + promise) is
+  // single-occupancy, so concurrent completeStructuring/completeQwen calls
+  // must queue instead of clobbering each other's cancellation handles.
+  let completionChain: Promise<unknown> = Promise.resolve()
   let activeTranscription = false
   let generation = 0
   let gpu: { id: string; name: string; index?: number; vulkanIndex?: number; llmMainGpu: number | "dedicated" | "integrated"; vendor?: string; label?: string } | undefined
@@ -231,6 +235,12 @@ export function createQvacInferenceRuntime(deps: QvacInferenceRuntimeDeps = {}):
     const id = await load("qwen", current.QWEN3_4B_Q4_K_M, createQwenLlmConfig({
       mainGpu: selectedMainGpu(),
     }))
+    // A shutdown may have landed while Qwen was loading: never install a
+    // resident model on a closing runtime (use-after-close).
+    if (closing()) {
+      await current.unloadModel({ modelId: id }).catch(() => undefined)
+      throw notReady()
+    }
     resident = "qwen"; residentId = id
     state = "QWEN_READY"
     report({
@@ -278,11 +288,19 @@ export function createQvacInferenceRuntime(deps: QvacInferenceRuntimeDeps = {}):
     if (handoffPromise) return handoffPromise
     if (closing()) return Promise.resolve()
     const run = (async () => {
-      if (releasePromise) await releasePromise.catch(() => undefined)
-      if (state === "QWEN_READY" || state === "STRUCTURING") return
-      state = "HANDING_OFF"
-      if (resident === "whisper" && residentId) await unload("whisper", residentId)
-      await loadQwen()
+      try {
+        if (releasePromise) await releasePromise.catch(() => undefined)
+        if (state === "QWEN_READY" || state === "STRUCTURING") return
+        state = "HANDING_OFF"
+        if (resident === "whisper" && residentId) await unload("whisper", residentId)
+        await loadQwen()
+      } catch (error) {
+        // A failed Qwen load must not wedge the runtime in HANDING_OFF
+        // forever. unload() already maps its own failures to FAILED, so only
+        // reset the untouched handoff marker here.
+        if (state === "HANDING_OFF") state = "IDLE"
+        throw error
+      }
     })()
     handoffPromise = run
     void run.then(
@@ -315,12 +333,19 @@ export function createQvacInferenceRuntime(deps: QvacInferenceRuntimeDeps = {}):
     return generation
   }
 
-  const completeStructuring = async (input: {
+  const serializeCompletion = <T>(task: () => Promise<T>): Promise<T> => {
+    const run = completionChain.catch(() => undefined).then(task)
+    completionChain = run.catch(() => undefined)
+    return run
+  }
+
+  const completeStructuringInner = async (input: {
     history: Array<{ role: string; content: string }>
     schema: Record<string, unknown>
     generation: number
   }): Promise<StructuringCompletion> => {
     await handoffToStructuring()
+    if (closing()) throw notReady()
     if (input.generation !== generation) throw cancelled()
     if (!sdk || !residentId || resident !== "qwen") throw notReady()
     state = "STRUCTURING"
@@ -376,8 +401,9 @@ export function createQvacInferenceRuntime(deps: QvacInferenceRuntimeDeps = {}):
     }
   }
 
-  const completeQwen = async (input: { role: "generator" | "reviewer"; prompt: string; schema?: unknown }): Promise<string> => {
+  const completeQwenInner = async (input: { role: "generator" | "reviewer"; prompt: string; schema?: unknown }): Promise<string> => {
     await handoffToStructuring()
+    if (closing()) throw notReady()
     if (!sdk || !residentId || resident !== "qwen") throw notReady()
     state = "STRUCTURING"
     report({
@@ -425,6 +451,14 @@ export function createQvacInferenceRuntime(deps: QvacInferenceRuntimeDeps = {}):
     }
   }
 
+  const completeStructuring = (
+    input: Parameters<typeof completeStructuringInner>[0],
+  ): Promise<StructuringCompletion> => serializeCompletion(() => completeStructuringInner(input))
+
+  const completeQwen = (
+    input: Parameters<typeof completeQwenInner>[0],
+  ): Promise<string> => serializeCompletion(() => completeQwenInner(input))
+
   const transcribe = async (input: { filePath: string }): Promise<SttSegmentInput[]> => {
     if (activeTranscription) throw transcriptionFailedError("INFERENCE_BUSY")
     activeTranscription = true
@@ -449,6 +483,7 @@ export function createQvacInferenceRuntime(deps: QvacInferenceRuntimeDeps = {}):
       if (completionRequestId && sdk) await sdk.cancel({ requestId: completionRequestId, kind: "completion" }).catch(() => undefined)
       if (pendingLoadRequestId && sdk) await sdk.cancel({ requestId: pendingLoadRequestId }).catch(() => undefined)
       if (completionPromise) await completionPromise.catch(() => undefined)
+      await completionChain.catch(() => undefined)
       if (loadSettlement) await loadSettlement
       if (lateLoadPending) await lateLoadPending
       if (warmPromise) await warmPromise.catch(() => undefined)

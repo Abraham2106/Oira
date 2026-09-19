@@ -2,6 +2,7 @@ import { IPC_CHANNELS } from "./channels"
 import { warmTranscriptionInputSchema } from "../../shared/schemas/ipc.schema"
 import type { SessionPort } from "../auth"
 import type { InferenceRuntimePort } from "../inference/port"
+import { modelNotReadyError } from "../errors/inference"
 import { withValidation, type IpcLogger } from "./withValidation"
 import type { IpcHandle } from "./types"
 
@@ -18,7 +19,10 @@ export function registerInferenceIpc(
       session: deps.session,
       logger: deps.logger,
       run: async () => {
-        await deps.inferenceRuntime?.warmTranscription()
+        // Never report a warm-up that did not happen: without a runtime the
+        // renderer would open the recorder believing Whisper is ready.
+        if (!deps.inferenceRuntime) throw modelNotReadyError()
+        await deps.inferenceRuntime.warmTranscription()
         return { warmed: true as const }
       },
     })(raw),

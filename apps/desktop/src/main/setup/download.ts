@@ -32,6 +32,20 @@ export async function downloadModel(
   entry: ModelManifestEntry,
   onProgress?: (progress: DownloadProgress) => void,
 ): Promise<string> {
+  // Defense in depth: the manifest is bundled, but a manipulated entry must
+  // never turn the updater into an arbitrary-file downloader/writer.
+  let parsedUrl: URL
+  try {
+    parsedUrl = new URL(entry.url)
+  } catch {
+    throw new Error(`Model download refused: invalid URL for ${entry.filename}`)
+  }
+  if (parsedUrl.protocol !== "https:") {
+    throw new Error(`Model download refused: non-https URL for ${entry.filename}`)
+  }
+  if (basename(entry.filename) !== entry.filename || entry.filename.includes("\0")) {
+    throw new Error(`Model download refused: unsafe filename ${entry.filename}`)
+  }
   mkdirSync(directory, { recursive: true })
   const target = join(directory, entry.filename)
   const partial = `${target}.partial`

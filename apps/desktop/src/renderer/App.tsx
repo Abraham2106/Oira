@@ -73,7 +73,11 @@ export function App() {
 
   useEffect(() => {
     let cancelled = false
-    const minimumVisible = new Promise<void>((resolve) => window.setTimeout(resolve, 4_500))
+    let minimumVisibleResolve: () => void = () => undefined
+    const minimumVisible = new Promise<void>((resolve) => {
+      minimumVisibleResolve = resolve
+    })
+    const timer = window.setTimeout(minimumVisibleResolve, 4_500)
     void Promise.all([
       getBridge().getSettings().catch(() => undefined),
       getBridge().getSetupStatus().then(setSetupStatus).catch(() => setSetupStatus({
@@ -94,6 +98,8 @@ export function App() {
     })
     return () => {
       cancelled = true
+      window.clearTimeout(timer)
+      minimumVisibleResolve()
     }
   }, [t])
 
@@ -142,10 +148,11 @@ export function App() {
     try {
       await encounter.exportNote(format, presentation)
     } catch (error) {
+      const code = (error as { code?: string } | null)?.code
       const message = error instanceof Error ? error.message : ""
-      setFileError(
-        message.includes("cancelled") ? t("export.cancelled") : t("export.fileFailed"),
-      )
+      const cancelled = code === "OPERATION_CANCELLED" ||
+        message.toLowerCase().includes("cancelled")
+      setFileError(cancelled ? t("export.cancelled") : t("export.fileFailed"))
     }
   }
 

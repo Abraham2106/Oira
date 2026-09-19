@@ -19,28 +19,28 @@ type RouteRule = {
 const ROUTES: readonly RouteRule[] = [
   {
     section: "visit_context",
-    pattern: /(motivo|acude|consulta por|trae hoy|primera vez)/,
+    pattern: /\b(?:motivo|acude|consulta por|trae hoy|primera vez)\b/,
   },
   {
     section: "follow_up",
-    pattern: /(seguimiento|control en|retorno|pr[óo]xima cita|revisamos en|vuelva)/,
+    pattern: /\b(?:seguimiento|control en|retorno|pr[óo]xima cita|revisamos en|vuelva)\b/,
   },
   {
     section: "clinician_documented_plan",
-    pattern: /(plan|receta|indicaci[óo]|prescri|orden[ée]|reposo)/,
+    pattern: /\b(?:plan|receta|indicaci[óo]|prescri|orden[ée]|reposo)\b/,
   },
   {
     section: "clinician_documented_assessment",
-    pattern: /(evaluaci[óo]n|diagn[óo]stico|impresi[óo]n cl[íi]nica|sugiere|probable)/,
+    pattern: /\b(?:evaluaci[óo]n|diagn[óo]stico|impresi[óo]n cl[íi]nica|sugiere|probable)\b/,
   },
   {
     section: "reported_findings",
-    pattern: /(exploraci[óo]n|examen f[íi]sico|presenta|signos?|tensión arterial|auscult)/,
+    pattern: /\b(?:exploraci[óo]n|examen f[íi]sico|presenta|signos?|tensi[óo]n arterial|auscult)\b/,
   },
   {
     section: "relevant_history",
     pattern:
-      /(antecedente|padece|diagnosticad[oa] de|operad[oa]|cirug[íi]a previa|medicaci[óo]n cr[óo]nica|historia familiar)/,
+      /\b(?:antecedente|padece|diagnosticad[oa] de|operad[oa]|cirug[íi]a previa|medicaci[óo]n cr[óo]nica|historia familiar)\b/,
   },
 ]
 

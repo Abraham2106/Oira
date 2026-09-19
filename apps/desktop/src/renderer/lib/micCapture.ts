@@ -40,44 +40,89 @@ export async function startMicCapture(options: {
       autoGainControl: true,
     },
   })
-  const audioContext = new AudioContext({ sampleRate: TARGET_RATE })
-  const source = audioContext.createMediaStreamSource(mediaStream)
-  const processor = audioContext.createScriptProcessor(4096, 1, 1)
-  let sequence = 0
-  let queue = Promise.resolve()
-  let failed: Error | null = null
+  // From here on, any failure must release the mic tracks: otherwise the
+  // microphone stays open (privacy leak) with no handle to stop it.
+  let audioContext: AudioContext | null = null
+  try {
+    audioContext = new AudioContext({ sampleRate: TARGET_RATE })
+    const ctx: AudioContext = audioContext
+    const source = ctx.createMediaStreamSource(mediaStream)
+    const processor = ctx.createScriptProcessor(4096, 1, 1)
+    let sequence = 0
+    let queue = Promise.resolve()
+    let failed: Error | null = null
+    // Bound the upload backlog: at most MAX_PENDING chunks wait for the IPC
+    // sink; beyond that, newest audio is dropped instead of OOMing the
+    // renderer when the sink stalls.
+    const MAX_PENDING = 512
+    let pending = 0
 
-  processor.onaudioprocess = (event) => {
-    if (failed) return
-    const copied = new Float32Array(event.inputBuffer.getChannelData(0))
-    const pcm = floatToPcmBytes(downsampleTo16k(copied, audioContext.sampleRate))
-    const next = sequence
-    sequence += 1
-    queue = queue
-      .then(() => options.onChunk(pcm, next))
-      .catch((error: unknown) => {
-        failed = error instanceof Error ? error : new Error(String(error))
-      })
-  }
+    processor.onaudioprocess = (event) => {
+      if (failed) return
+      if (pending >= MAX_PENDING) {
+        // Sink stalled: drop newest audio instead of OOMing. The resulting
+        // sequence gap fails loudly on the main side (out-of-order error)
+        // rather than silently producing partial audio.
+        return
+      }
+      const copied = new Float32Array(event.inputBuffer.getChannelData(0))
+      const pcm = floatToPcmBytes(downsampleTo16k(copied, ctx.sampleRate))
+      const next = sequence
+      sequence += 1
+      pending += 1
+      queue = queue
+        .then(() => options.onChunk(pcm, next))
+        .catch((error: unknown) => {
+          failed = error instanceof Error ? error : new Error(String(error))
+        })
+        .finally(() => {
+          pending -= 1
+        })
+    }
 
-  source.connect(processor)
-  const mute = audioContext.createGain()
-  mute.gain.value = 0
-  processor.connect(mute)
-  mute.connect(audioContext.destination)
-  // Electron can leave a newly-created context suspended even when this was
-  // initiated by a click. Without resuming it, ScriptProcessor emits no PCM.
-  await audioContext.resume()
+    source.connect(processor)
+    const mute = ctx.createGain()
+    mute.gain.value = 0
+    processor.connect(mute)
+    mute.connect(audioContext.destination)
+    // Electron can leave a newly-created context suspended even when this was
+    // initiated by a click. Without resuming it, ScriptProcessor emits no PCM.
+    await ctx.resume()
 
-  return {
-    async stop() {
-      // Let the final audio callback arrive before severing the graph.
-      await new Promise((resolve) => setTimeout(resolve, 300))
-      processor.disconnect()
-      await audioContext.close()
+    const context = ctx
+    return {
+      async stop() {
+        try {
+          // Let the final audio callback arrive before severing the graph.
+          await new Promise((resolve) => setTimeout(resolve, 300))
+          try {
+            processor.disconnect()
+          } catch {
+            /* already torn down */
+          }
+          await context.close().catch(() => undefined)
+        } finally {
+          mediaStream.getTracks().forEach((track) => track.stop())
+        }
+        // Never wait forever: a hung IPC sink must not wedge stop().
+        await Promise.race([
+          queue,
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error("Audio upload timed out.")), 15_000),
+          ),
+        ]).catch((error: unknown) => {
+          if (failed) throw failed
+          throw error
+        })
+        if (failed) throw failed
+      },
+    }
+  } catch (error) {
+    try {
+      if (audioContext) await audioContext.close().catch(() => undefined)
+    } finally {
       mediaStream.getTracks().forEach((track) => track.stop())
-      await queue
-      if (failed) throw failed
-    },
+    }
+    throw error
   }
 }

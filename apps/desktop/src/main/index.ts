@@ -99,7 +99,17 @@ function createWindow(trusted: Map<number, TrustedRenderer>): void {
   window.webContents.on("will-frame-navigate", blockUnexpectedNavigation)
   window.webContents.on("will-redirect", blockUnexpectedNavigation)
   window.webContents.setWindowOpenHandler((details) => {
-    void shell.openExternal(details.url)
+    // Allowlist: only https: links may leave the app. file:, data:, custom
+    // protocols and plain http are never opened externally.
+    let protocol: string | null = null
+    try {
+      protocol = new URL(details.url).protocol
+    } catch {
+      protocol = null
+    }
+    if (protocol === "https:") {
+      void shell.openExternal(details.url)
+    }
     return { action: "deny" }
   })
 
@@ -178,7 +188,11 @@ if (squirrelEvent) {
     app.quit()
     return
   }
-  audio.sweepOrphans()
+  try {
+    audio.sweepOrphans()
+  } catch {
+    logger.log({ action: "app.audio_sweep", status: "error" })
+  }
 
   const application = composeApplication(createIpcLogger(logger), {
     audio,
@@ -212,10 +226,20 @@ if (squirrelEvent) {
 
   let shutdownStarted = false
   app.on("before-quit", (event) => {
-    if (shutdownStarted || !application.inferenceRuntime) return
+    if (shutdownStarted) return
     shutdownStarted = true
     event.preventDefault()
-    void application.inferenceRuntime.shutdown().finally(() => app.quit())
+    const quit = (): void => {
+      shutdownStarted = true
+      app.quit()
+    }
+    // Never hang quit: force it after 5s even if GPU/DB shutdown stalls.
+    const forceQuit = setTimeout(quit, 5000)
+    forceQuit.unref?.()
+    void application.shutdown().finally(() => {
+      clearTimeout(forceQuit)
+      quit()
+    })
   })
 
   app.on("activate", () => {

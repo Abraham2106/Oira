@@ -171,19 +171,20 @@ export function createJsonFileStore(
   return {
     save(record) {
       return enqueue(async () => {
+        const snapshot = structuredClone(record)
         const records = [...(await loadRecords())]
-        const index = records.findIndex((existing) => existing.id === record.id)
+        const index = records.findIndex((existing) => existing.id === snapshot.id)
         if (index === -1) {
-          records.push(record)
+          records.push(snapshot)
         } else {
-          records[index] = record
+          records[index] = snapshot
         }
         try {
           await persist(records)
         } catch (error) {
           throw databaseWriteFailedError(error)
         }
-        cache = records
+        cache = structuredClone(records)
         log(LOG_SAVE)
       })
     },
@@ -209,7 +210,7 @@ export function createJsonFileStore(
         } catch (error) {
           throw databaseWriteFailedError(error)
         }
-        cache = next
+        cache = structuredClone(next)
         log(LOG_REMOVE)
       })
     },

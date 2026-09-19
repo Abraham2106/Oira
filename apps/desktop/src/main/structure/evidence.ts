@@ -23,20 +23,6 @@ export function applyEvidenceCheck(
   return validation
 }
 
-export function collectEmptyDraftIssues(
-  _output: StructuringOutput,
-  _transcript: readonly TranscriptSegment[],
-): string[] {
-  return []
-}
-
-export function assertTranscriptGrounded(
-  output: StructuringOutput,
-  _transcript: readonly TranscriptSegment[],
-): StructuringValidation {
-  return { ok: true, value: output }
-}
-
 /** Run full heuristic verification and return typed issues for consumption by callers. */
 export function runVerification(
   output: StructuringOutput,

@@ -192,7 +192,7 @@ async function settleDrafted(
   if (!encounters) return
   const current = await encounters.getById(encounterId)
   if (!current) throw encounterNotFoundError()
-  if (current.status === "drafted") return
+  if (current.status === "drafted" || current.status === "completed") return
   if (current.status === "transcribed") await encounters.advance(encounterId, "drafting")
   const afterDrafting = await encounters.getById(encounterId)
   if (!afterDrafting) throw encounterNotFoundError()

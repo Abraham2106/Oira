@@ -66,6 +66,12 @@ export function useEncounter(): EncounterView {
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const captureRef = useRef<MicCapture | null>(null)
+  // Guards against concurrent double-clicks and stale async completions
+  // after reset()/unmount (last-write-wins resurrections).
+  const generationRef = useRef(0)
+  const startInFlightRef = useRef(false)
+  const stopInFlightRef = useRef(false)
+  const acceptInFlightRef = useRef(false)
 
   const apply = useCallback((event: Parameters<typeof reduceMachine>[1]) => {
     setMachine((current) => {
@@ -78,15 +84,19 @@ export function useEncounter(): EncounterView {
     setErrorMessage(message)
     setMachine((current) => {
       if (current.state === "ERROR") return current
+      if (!canTransition(current.state, "FAIL")) return current
       return reduceMachine(current, "FAIL")
     })
   }, [])
 
   const startRecording = useCallback(async () => {
-    if (captureStarting) return
+    if (captureStarting || startInFlightRef.current) return
+    startInFlightRef.current = true
     setCaptureStarting(true)
+    const generation = generationRef.current
     try {
       const started = await bridge.startEncounter({ label, visitType })
+      if (generation !== generationRef.current) return
       try {
         captureRef.current = await startMicCapture({
           onChunk: (pcm, sequence) =>
@@ -94,11 +104,15 @@ export function useEncounter(): EncounterView {
               encounterId: started.encounterId,
               sequence,
               pcm,
-            }),
+            }).catch(() => undefined).then(() => undefined),
         })
       } catch {
         await bridge.stopEncounter(started.encounterId).catch(() => undefined)
         fail("No se pudo usar el micrófono.")
+        return
+      }
+      if (generation !== generationRef.current) {
+        await bridge.stopEncounter(started.encounterId).catch(() => undefined)
         return
       }
       setEncounter({
@@ -115,6 +129,7 @@ export function useEncounter(): EncounterView {
     } catch {
       fail("No se pudo iniciar la consulta.")
     } finally {
+      startInFlightRef.current = false
       setCaptureStarting(false)
     }
   }, [apply, bridge, captureStarting, fail, label, visitType])
@@ -124,10 +139,14 @@ export function useEncounter(): EncounterView {
   }, [bridge])
 
   const stopRecording = useCallback(async () => {
-    if (!encounter) return
+    if (!encounter || stopInFlightRef.current) return
+    stopInFlightRef.current = true
+    const generation = generationRef.current
+    const encounterId = encounter.id
     let transcriptReceived = false
     const unsubscribe = bridge.onInferenceProgress((event) => {
-      if (event.encounterId !== encounter.id) return
+      if (event.encounterId !== encounterId) return
+      if (generation !== generationRef.current) return
       if (event.phase === "structuring") {
         if (event.transcript) {
           transcriptReceived = true
@@ -153,10 +172,12 @@ export function useEncounter(): EncounterView {
         await captureRef.current.stop()
         captureRef.current = null
       }
-      await bridge.stopEncounter(encounter.id)
+      await bridge.stopEncounter(encounterId)
+      if (generation !== generationRef.current) return
       setRecordingStartedAt(null)
       apply("STOP")
-      const generated = await bridge.generateNote(encounter.id)
+      const generated = await bridge.generateNote(encounterId)
+      if (generation !== generationRef.current) return
       setReviewing(false)
       setTranscript(generated.transcript)
       if (generated.cleanup) setErrorMessage("La eliminación local del audio queda pendiente de reintento.")
@@ -183,20 +204,23 @@ export function useEncounter(): EncounterView {
         return next
       })
     } catch {
+      if (generation !== generationRef.current) return
       setReviewing(false)
       fail(
-        transcriptReceived || transcript.length > 0
+        transcriptReceived
           ? "No pudimos organizar el borrador. La transcripción queda disponible para revisión."
           : "No pudimos transcribir esta consulta. Puedes reintentar.",
       )
     } finally {
+      stopInFlightRef.current = false
       unsubscribe()
     }
-  }, [apply, bridge, encounter, fail, transcript])
+  }, [apply, bridge, encounter, fail])
 
   const editNote = useCallback((sectionId: keyof ClinicalNote["sections"], text: string) => {
     setNote((current) => {
       if (!current) return current
+      const trimmed = text.trim()
       return {
         sections: {
           ...current.sections,
@@ -205,7 +229,8 @@ export function useEncounter(): EncounterView {
             text,
             provenance: "CLINICIAN_EDITED",
             sourceSegmentIds: [],
-            presence: text.trim() ? "STATED" : current.sections[sectionId].presence,
+            // An emptied field is NOT_STATED, never a sourceless STATED claim.
+            presence: trimmed ? "STATED" : "NOT_STATED",
           },
         },
       }
@@ -237,16 +262,22 @@ export function useEncounter(): EncounterView {
   )
 
   const acceptNote = useCallback(async (clinicianConfirmed: true) => {
-    if (!encounter || !note) return
+    if (!encounter || !note || acceptInFlightRef.current) return
+    acceptInFlightRef.current = true
+    const generation = generationRef.current
     try {
       const saved = await bridge.saveNote(encounter.id, note, clinicianConfirmed)
+      if (generation !== generationRef.current) return
       if (saved.status === "PERSISTED_TRANSITION_PENDING") {
         setErrorMessage("La nota se guardó, pero su estado requiere reconciliación. Reintenta guardar.")
         return
       }
       apply("ACCEPT")
     } catch {
+      if (generation !== generationRef.current) return
       fail("No se pudo guardar el borrador.")
+    } finally {
+      acceptInFlightRef.current = false
     }
   }, [apply, bridge, encounter, fail, note])
 
@@ -254,18 +285,28 @@ export function useEncounter(): EncounterView {
     format: "txt" | "json" | "pdf" | "fhir" = "txt",
     presentation?: "sections" | "soap",
   ) => {
-    if (encounter) {
-      try {
-        await bridge.exportNote(encounter.id, format, presentation)
-      } catch (error) {
-        if (format !== "txt") throw error
-      }
+    if (!encounter) return
+    try {
+      await bridge.exportNote(encounter.id, format, presentation)
+    } catch (error) {
+      if (format !== "txt") throw error
+      // txt export failed: do not mark as exported/copied (no false positive).
+      fail("No se pudo copiar el borrador.")
+      return
     }
-    apply("EXPORT")
+    setMachine((current) => {
+      if (!canTransition(current.state, "EXPORT")) return current
+      return reduceMachine(current, "EXPORT")
+    })
     if (format === "txt") setCopied(true)
-  }, [apply, bridge, encounter])
+  }, [bridge, encounter, fail])
 
   const reset = useCallback(() => {
+    // Invalidate any in-flight start/stop/generate/save completions.
+    generationRef.current += 1
+    startInFlightRef.current = false
+    stopInFlightRef.current = false
+    acceptInFlightRef.current = false
     if (captureRef.current) {
       void captureRef.current.stop().catch(() => undefined)
       captureRef.current = null

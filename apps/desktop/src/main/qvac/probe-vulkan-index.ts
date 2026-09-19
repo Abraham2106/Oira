@@ -32,7 +32,17 @@ export function probeDiscreteVulkanIndex(input: {
     })
     let stdout = ""
     let settled = false
-    child.stdout?.on("data", (chunk: Buffer | string) => { stdout += chunk.toString() })
+    // Bound probe output: a misbehaving probe must not grow memory without limit.
+    const MAX_PROBE_BYTES = 256 * 1024
+    let truncated = false
+    child.stdout?.on("data", (chunk: Buffer | string) => {
+      if (truncated) return
+      stdout += chunk.toString()
+      if (stdout.length > MAX_PROBE_BYTES) {
+        stdout = stdout.slice(-MAX_PROBE_BYTES)
+        truncated = true
+      }
+    })
     const finish = () => {
       if (settled) return
       settled = true

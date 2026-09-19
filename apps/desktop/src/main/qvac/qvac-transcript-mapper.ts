@@ -14,15 +14,18 @@ export type SttSegmentInput = {
  * `append` is ignored until its semantics are confirmed on the pinned SDK.
  */
 export function mapSttSegments(raw: SttSegmentInput[]): TranscriptSegment[] {
+  if (!Array.isArray(raw)) throw new Error("STT segments must be an array")
   return raw.map((segment, index) => {
-    const rawId = segment.id == null ? "" : String(segment.id)
+    const rawId = segment?.id == null ? "" : String(segment.id)
+    const startMs = segment ? segment.startMs : undefined
+    const text = typeof segment?.text === "string" ? segment.text : ""
     return {
       id: rawId.length > 0 ? rawId : `seg-${index + 1}`,
       speaker: null,
-      startMs: Number.isFinite(segment.startMs)
-        ? Math.max(0, Math.round(segment.startMs))
+      startMs: Number.isFinite(startMs)
+        ? Math.max(0, Math.round(startMs as number))
         : 0,
-      text: segment.text,
+      text,
     }
   })
 }

@@ -15,6 +15,9 @@ export function registerSetupIpc(
     onProgress?: (event: SetupProgress) => void
   },
 ): void {
+  // Setup status/provisioning are intentionally session-free: first-run model
+  // download happens before any login exists. Revisit when auth is re-enabled
+  // if provisioning must become an authenticated action.
   handle(IPC_CHANNELS.SETUP_GET_STATUS, (_event, raw) =>
     withValidation({
       channel: IPC_CHANNELS.SETUP_GET_STATUS,

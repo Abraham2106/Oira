@@ -15,6 +15,22 @@ function escapeHtml(value: string): string {
     .replaceAll(">", "&gt;")
 }
 
+const PDF_RENDER_TIMEOUT_MS = 60_000
+
+async function withPdfTimeout<T>(task: Promise<T>, step: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  try {
+    return await Promise.race([
+      task,
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`PDF_RENDER_TIMEOUT:${step}`)), PDF_RENDER_TIMEOUT_MS)
+      }),
+    ])
+  } finally {
+    if (timer) clearTimeout(timer)
+  }
+}
+
 export function createElectronPdfRenderer(): PdfRendererPort {
   return {
     async render(projection: DocumentProjection, presentation: ExportPresentation) {
@@ -30,13 +46,13 @@ export function createElectronPdfRenderer(): PdfRendererPort {
         },
       })
       try {
-        await window.loadURL(
+        await withPdfTimeout(window.loadURL(
           `data:text/html;charset=utf-8,${encodeURIComponent(PRINT_SHELL)}`,
-        )
-        await window.webContents.executeJavaScript(
+        ), "load")
+        await withPdfTimeout(window.webContents.executeJavaScript(
           `window.__oiraFill(${JSON.stringify(payload)})`,
-        )
-        return await window.webContents.printToPDF({
+        ), "fill")
+        return await withPdfTimeout(window.webContents.printToPDF({
           pageSize: "A4",
           printBackground: true,
           displayHeaderFooter: true,
@@ -45,7 +61,7 @@ export function createElectronPdfRenderer(): PdfRendererPort {
             `<div style="font-size:9px;width:100%;padding:0 12px;display:flex;justify-content:space-between;color:#444;">` +
             `<span>${escapeHtml(projection.noteId)}</span>` +
             `<span><span class="pageNumber"></span> / <span class="totalPages"></span></span></div>`,
-        })
+        }), "print")
       } finally {
         window.destroy()
       }

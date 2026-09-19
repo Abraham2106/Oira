@@ -17,7 +17,9 @@ export function registerAudioIpc(
       session: deps.session,
       logger: deps.logger,
       run: async (input) => {
-        deps.audio.append(
+        // Awaited (not fire-and-forget) so a future async adapter surfaces
+        // its errors through the Result instead of racing the response.
+        await deps.audio.append(
           input.encounterId,
           Buffer.from(input.pcm),
           input.sequence,

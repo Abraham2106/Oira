@@ -143,10 +143,13 @@ function isIntegrated(gpu: GpuDescriptor): boolean {
   )
 }
 
-/** Known VRAM wins; unknown iGPU ranks at 0; unknown discrete ranks above any iGPU. */
+/** Known VRAM wins; unknown discrete ranks above any iGPU but below known VRAM. */
 export function vramRank(gpu: GpuDescriptor): number {
   if (gpu.vramBytes != null) return gpu.vramBytes
-  return isIntegrated(gpu) ? 0 : Number.POSITIVE_INFINITY
+  // Unknown discrete (-1) beats unknown iGPU (-2) but loses to any known
+  // VRAM (>= 0). Never Infinity: an unknown discrete must not outrank a
+  // known 8 GiB discrete.
+  return isIntegrated(gpu) ? -2 : -1
 }
 
 function formatVram(bytes: number): string {

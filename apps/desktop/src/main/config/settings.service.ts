@@ -13,7 +13,7 @@ function readJsonFile(filePath: string): unknown {
 
 export function loadSettings(settingsFile: string): AppSettings {
   if (!fs.existsSync(settingsFile)) {
-    return defaultSettings
+    return structuredClone(defaultSettings)
   }
   try {
     return parseSettings(readJsonFile(settingsFile))

@@ -23,7 +23,8 @@ export function registerClipboardIpc(
       session: deps.session,
       logger: deps.logger,
       run: async (input) => {
-        deps.clipboard.writeText(input.text)
+        // Awaited so a future async clipboard adapter cannot lose errors/races.
+        await deps.clipboard.writeText(input.text)
         return { written: true }
       },
     })(raw),

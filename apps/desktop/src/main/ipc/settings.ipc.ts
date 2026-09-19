@@ -14,6 +14,8 @@ export function registerSettingsIpc(
   handle: IpcHandle,
   deps: { settings: SettingsIpcPort; session: SessionPort; logger: IpcLogger },
 ): void {
+  // SETTINGS_GET is intentionally session-free: the boot/login screens need
+  // the persisted locale before any session exists. SETTINGS_SAVE stays gated.
   handle(IPC_CHANNELS.SETTINGS_GET, (_event, raw) =>
     withValidation({
       channel: IPC_CHANNELS.SETTINGS_GET,

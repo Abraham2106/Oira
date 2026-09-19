@@ -38,7 +38,7 @@ const statusLabel = (t: (key: string) => string, s: NoteClaimObservation["status
     CONTRADICTED: t("review.statusContradicted"),
     INSUFFICIENT_EVIDENCE: t("review.statusInsufficient"),
     AMBIGUOUS: t("review.statusAmbiguous"),
-  })[s]
+  })[s] ?? t("review.statusAmbiguous")
 
 function FindingsPanel({ review, onJumpToSource }: { review: NoteVerificationResult; onJumpToSource: (segmentId: string) => void }) {
   const { t } = useI18n()
@@ -153,20 +153,31 @@ export function ReviewScreen({
       <div className="review-split">
         <Card title={t("review.draftCardTitle")}>
           <div className="review-pane">
-            {SECTION_IDS.map((id) => (
-              <ClinicalNoteSection
-                key={id}
-                id={id}
-                value={note.sections[id]}
-                readOnly={accepted}
-                transcript={transcript}
-                active={activeSectionId === id}
-                onChange={(text) => onEdit(id, text)}
-                onFocusSection={() => onFocusSection(id)}
-                onJumpToSource={onJumpToSource}
-                onToggleReviewed={(reviewed) => onToggleReviewed(id, reviewed)}
-              />
-            ))}
+            {SECTION_IDS.map((id) => {
+              // Defensive: the contract guarantees all 7 sections, but a single
+              // malformed field must never unmount the whole shell.
+              const value = note.sections[id] ?? {
+                text: "",
+                presence: "UNKNOWN" as const,
+                sourceSegmentIds: [],
+                provenance: "EXTRACTED" as const,
+                reviewed: false,
+              }
+              return (
+                <ClinicalNoteSection
+                  key={id}
+                  id={id}
+                  value={value}
+                  readOnly={accepted}
+                  transcript={transcript}
+                  active={activeSectionId === id}
+                  onChange={(text) => onEdit(id, text)}
+                  onFocusSection={() => onFocusSection(id)}
+                  onJumpToSource={onJumpToSource}
+                  onToggleReviewed={(reviewed) => onToggleReviewed(id, reviewed)}
+                />
+              )
+            })}
             {reviewerResult ? <FindingsPanel review={reviewerResult} onJumpToSource={onJumpToSource} /> : null}
           </div>
         </Card>
