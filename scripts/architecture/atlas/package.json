@@ -1,7 +1,6 @@
 {
   "name": "oira-architecture-atlas",
   "private": true,
-  "license": "Apache-2.0",
   "type": "module",
   "description": "Isolated documentation capture tooling; no Electron or QVAC dependencies.",
   "devDependencies": {
