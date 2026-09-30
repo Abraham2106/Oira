@@ -1,6 +1,7 @@
 {
   "name": "oira",
   "private": true,
+  "license": "Apache-2.0",
   "scripts": {
     "atlas:check": "node scripts/architecture/atlas/check.mjs",
     "atlas:capture": "node scripts/architecture/atlas/capture.mjs",
