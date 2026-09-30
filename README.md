@@ -504,7 +504,9 @@ Enlace del proyecto: [github.com/Abraham2106/Oira](https://github.com/Abraham210
 
 ## Licencia
 
-Este repositorio **aún no publica un archivo `LICENSE`**. No asumas MIT ni otro régimen hasta que el equipo lo declare.
+Este proyecto se distribuye bajo la [Apache License 2.0](LICENSE).
+
+Este software es una estructura base. No es un dispositivo médico ni software médico, no ha sido validado clínicamente y se ofrece sin garantía de ningún tipo.
 
 ## Agradecimientos
 
